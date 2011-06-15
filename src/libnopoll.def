@@ -1,0 +1,4 @@
+EXPORTS
+nopoll_calloc
+nopoll_free
+nopoll_realloc
