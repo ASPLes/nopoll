@@ -16,7 +16,8 @@ libnopoll_la_SOURCES     = \
 	nopoll_decl.c \
 	nopoll_ctx.c \
 	nopoll_conn.c \
-	nopoll_log.c
+	nopoll_log.c \
+	nopoll_listener.c
 libnopollinclude_HEADERS = \
 	nopoll.h \
 	nopoll_config.h \
@@ -24,7 +25,8 @@ libnopollinclude_HEADERS = \
 	nopoll_private.h \
 	nopoll_ctx.h \
 	nopoll_conn.h \
-	nopoll_log.c
+	nopoll_log.h \
+	nopoll_listener.h
 
 libnopoll_la_LDFLAGS = -no-undefined -export-symbols-regex '^(nopoll|__nopoll|_nopoll).*'
 

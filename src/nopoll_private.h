@@ -39,7 +39,7 @@
 #ifndef __NOPOLL_PRIVATE_H__
 #define __NOPOLL_PRIVATE_H__
 
-struct _nopollCtx {
+struct _noPollCtx {
 	/**
 	 * @internal Controls logs output..
 	 */
@@ -52,16 +52,21 @@ struct _nopollCtx {
 	nopoll_bool     debug_color_enabled;
 
 	/** 
-	 * @internal nopollConn connection timeout.
+	 * @internal noPollConn connection timeout.
 	 */
 	long        conn_connect_std_timeout;
+
+	/** 
+	 * @internal Default listener connection backlog
+	 */
+	int         backlog;
 };
 
-struct _nopollConn {
-	nopollCtx      * ctx;
+struct _noPollConn {
+	noPollCtx      * ctx;
 	/** 
 	 * @internal This is the actual socket handler associated to
-	 * the nopollConn object.
+	 * the noPollConn object.
 	 */
 	NOPOLL_SOCKET    session;
 };

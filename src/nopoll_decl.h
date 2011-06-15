@@ -205,12 +205,12 @@ typedef void * nopollPtr;
  * @brief Execution context object used by the API to provide default
  * settings.
  */
-typedef struct _nopollCtx nopollCtx;
+typedef struct _noPollCtx noPollCtx;
 
 /** 
  * @brief Abstraction that represents a connection.
  */
-typedef struct _nopollConn nopollConn;
+typedef struct _noPollConn noPollConn;
 
 /** 
  * @brief Nopoll debug levels.

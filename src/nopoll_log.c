@@ -54,7 +54,7 @@
  *
  * @return nopoll_true if the log is enabled or nopoll_false
  */
-nopoll_bool      nopoll_log_is_enabled (nopollCtx * ctx) 
+nopoll_bool      nopoll_log_is_enabled (noPollCtx * ctx) 
 {
 	if (ctx == NULL)
 		return nopoll_false;
@@ -69,7 +69,7 @@ nopoll_bool      nopoll_log_is_enabled (nopollCtx * ctx)
  * 
  * @return nopoll_true if the color log is enabled or nopoll_false
  */
-nopoll_bool    nopoll_log_color_is_enabled (nopollCtx * ctx)
+nopoll_bool    nopoll_log_color_is_enabled (noPollCtx * ctx)
 {
 
 	if (ctx == NULL)
@@ -86,7 +86,7 @@ nopoll_bool    nopoll_log_color_is_enabled (nopollCtx * ctx)
  * @param value nopoll_true to enable log to console, otherwise nopoll_false is
  * returned.
  */
-void     nopoll_log_enable (nopollCtx * ctx, nopoll_bool value)
+void     nopoll_log_enable (noPollCtx * ctx, nopoll_bool value)
 {
 	if (ctx == NULL)
 		return;
@@ -103,7 +103,7 @@ void     nopoll_log_enable (nopollCtx * ctx, nopoll_bool value)
  * @param value nopoll_true to enable log to console, otherwise nopoll_false is
  * returned.
  */
-void     nopoll_log_color_enable (nopollCtx * ctx, nopoll_bool value)
+void     nopoll_log_color_enable (noPollCtx * ctx, nopoll_bool value)
 {
 	if (ctx == NULL)
 		return;
@@ -138,7 +138,7 @@ void     nopoll_log_color_enable (nopollCtx * ctx, nopoll_bool value)
  * @param message The message to report. The message to report must be
  * not NULL.
  */
-void nopoll_log (nopollCtx * ctx, noPollDebugLevel level, char * message, ...)
+void nopoll_log (noPollCtx * ctx, noPollDebugLevel level, char * message, ...)
 {
 
 #ifdef SHOW_DEBUG_LOG

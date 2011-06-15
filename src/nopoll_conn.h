@@ -41,15 +41,15 @@
 
 #include <nopoll.h>
 
-nopollConn * nopoll_conn_new (nopollCtx  * ctx,
+noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * host_ip, 
 			      const char * host_port, 
 			      const char * host_name,
 			      const char * get_url, 
 			      const char * protocol);
 
-nopoll_bool    no_poll_conn_is_connected (nopollConn * conn);
+nopoll_bool    no_poll_conn_is_connected (noPollConn * conn);
 
-NOPOLL_SOCKET nopoll_conn_socket (nopollConn * conn);
+NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn);
 
 #endif
