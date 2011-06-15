@@ -113,7 +113,7 @@ nopoll_bool                 nopoll_conn_set_sock_block         (NOPOLL_SOCKET so
 
 
 /** 
- * @brief Allows to get current timeout set for \ref nopollConn
+ * @brief Allows to get current timeout set for \ref noPollConn
  * connect operation.
  *
  * See also \ref nopoll_conn_connect_timeout.
@@ -122,7 +122,7 @@ nopoll_bool                 nopoll_conn_set_sock_block         (NOPOLL_SOCKET so
  * microseconds (1 second = 1000000 microseconds). If a null value is
  * received, 0 is return and no timeout is implemented.
  */
-long              nopoll_conn_get_connect_timeout (nopollCtx * ctx)
+long              nopoll_conn_get_connect_timeout (noPollCtx * ctx)
 {
 	/* check context recevied */
 	if (ctx == NULL) {
@@ -146,7 +146,7 @@ long              nopoll_conn_get_connect_timeout (nopollCtx * ctx)
  * provided is measured in microseconds. Use 0 to restore the connect
  * timeout to the default value.
  */
-void               nopoll_conn_connect_timeout (nopollCtx * ctx,
+void               nopoll_conn_connect_timeout (noPollCtx * ctx,
 						long        microseconds_to_wait)
 {
 	/* check reference received */
@@ -204,7 +204,7 @@ nopoll_bool                 nopoll_conn_set_sock_tcp_nodelay   (NOPOLL_SOCKET so
  *
  * @return A connected socket or -1 if it fails. 
  */
-NOPOLL_SOCKET nopoll_conn_sock_connect (nopollCtx   * ctx,
+NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
 					const char  * host,
 					const char  * port)
 {
@@ -278,14 +278,14 @@ NOPOLL_SOCKET nopoll_conn_sock_connect (nopollCtx   * ctx,
  * @param protocol Optional protocol requested to be activated for
  * this connection.
  */
-nopollConn * nopoll_conn_new (nopollCtx  * ctx,
+noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * host_ip, 
 			      const char * host_port, 
 			      const char * host_name,
 			      const char * get_url, 
 			      const char * protocol)
 {
-	nopollConn     * conn;
+	noPollConn     * conn;
 	NOPOLL_SOCKET    session;
 
 	nopoll_return_val_if_fail (ctx, ctx && host_ip, NULL);
@@ -302,7 +302,7 @@ nopollConn * nopoll_conn_new (nopollCtx  * ctx,
 	} /* end if */
 
 	/* create the connection */
-	conn = nopoll_new (nopollConn, 1);
+	conn = nopoll_new (noPollConn, 1);
 	if (conn == NULL) 
 		return NULL;
 	
@@ -323,7 +323,7 @@ nopollConn * nopoll_conn_new (nopollCtx  * ctx,
  * @return nopoll_true in the case the connection is working otherwise
  * nopoll_false is returned.
  */
-nopoll_bool    no_poll_conn_is_connected (nopollConn * conn)
+nopoll_bool    no_poll_conn_is_connected (noPollConn * conn)
 {
 	if (conn == NULL)
 		return nopoll_false;
@@ -338,7 +338,7 @@ nopoll_bool    no_poll_conn_is_connected (nopollConn * conn)
  *
  * @return The socket reference or -1 if it fails.
  */
-NOPOLL_SOCKET nopoll_conn_socket (nopollConn * conn)
+NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn)
 {
 	if (conn == NULL)
 		return -1;

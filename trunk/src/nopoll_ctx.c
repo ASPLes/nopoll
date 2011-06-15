@@ -42,8 +42,8 @@
 /** 
  * @brief Creates an empty Nopoll context. 
  */
-nopollCtx * nopoll_ctx_new (void) {
-	nopollCtx * result = nopoll_new (nopollCtx, 1);
+noPollCtx * nopoll_ctx_new (void) {
+	noPollCtx * result = nopoll_new (noPollCtx, 1);
 	if (result == NULL)
 		return NULL;
 	/* 20 seconds for connection timeout */
@@ -56,6 +56,9 @@ nopollCtx * nopoll_ctx_new (void) {
 	/* colored log */
 	result->not_executed_color  = nopoll_true;
 	result->debug_color_enabled = nopoll_false;
+
+	/* default back log */
+	result->backlog = 5;
 
 	return result;
 }

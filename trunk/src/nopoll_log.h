@@ -48,13 +48,13 @@ BEGIN_C_DECLS
  * @{
  */
 
-nopoll_bool     nopoll_log_is_enabled (nopollCtx * ctx);
+nopoll_bool     nopoll_log_is_enabled (noPollCtx * ctx);
 
-nopoll_bool     nopoll_log_color_is_enabled (nopollCtx * ctx);
+nopoll_bool     nopoll_log_color_is_enabled (noPollCtx * ctx);
 
-void            nopoll_log_enable (nopollCtx * ctx, nopoll_bool value);
+void            nopoll_log_enable (noPollCtx * ctx, nopoll_bool value);
  
-void            nopoll_log_color_enable (nopollCtx * ctx, nopoll_bool value);
+void            nopoll_log_color_enable (noPollCtx * ctx, nopoll_bool value);
 
 
 #if defined(SHOW_DEBUG_LOG)
@@ -69,7 +69,7 @@ void            nopoll_log_color_enable (nopollCtx * ctx, nopoll_bool value);
 # endif
 #endif
 
-void nopoll_log (nopollCtx * ctx, noPollDebugLevel level, char * message, ...);
+void nopoll_log (noPollCtx * ctx, noPollDebugLevel level, char * message, ...);
 
 /* @} */
 

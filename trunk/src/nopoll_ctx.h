@@ -41,6 +41,6 @@
 
 #include <nopoll.h>
 
-nopollCtx * nopoll_ctx_new (void);
+noPollCtx * nopoll_ctx_new (void);
 
 #endif

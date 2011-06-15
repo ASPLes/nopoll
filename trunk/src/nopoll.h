@@ -44,6 +44,7 @@
 #include <nopoll_handlers.h>
 #include <nopoll_conn.h>
 #include <nopoll_log.h>
+#include <nopoll_listener.h>
 
 BEGIN_C_DECLS
 
