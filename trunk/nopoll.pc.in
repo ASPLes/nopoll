@@ -1,0 +1,10 @@
+prefix=@prefix@ 
+exec_prefix=@exec_prefix@ 
+libdir=@libdir@ 
+includedir=@includedir@ 
+
+Name: libNoPoll
+Description: LibNoPoll: websocket toolkit library
+Version: @NOPOLL_VERSION@ 
+Libs: -L${libdir} -lnopoll 
+Cflags: -I${includedir}/nopoll
