@@ -36,25 +36,20 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#ifndef __NOPOLL_H__
-#define __NOPOLL_H__
+#ifndef __NOPOLL_CONN_H__
+#define __NOPOLL_CONN_H__
 
-#include <nopoll_decl.h>
-#include <nopoll_ctx.h>
-#include <nopoll_handlers.h>
-#include <nopoll_conn.h>
-#include <nopoll_log.h>
+#include <nopoll.h>
 
-BEGIN_C_DECLS
+nopollConn * nopoll_conn_new (nopollCtx  * ctx,
+			      const char * host_ip, 
+			      const char * host_port, 
+			      const char * host_name,
+			      const char * get_url, 
+			      const char * protocol);
 
-/** 
- * \addtogroup nopoll_module
- * @{
- */
+nopoll_bool    no_poll_conn_is_connected (nopollConn * conn);
 
-
-/* @} */
-
-END_C_DECLS
+NOPOLL_SOCKET nopoll_conn_socket (nopollConn * conn);
 
 #endif

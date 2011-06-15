@@ -91,6 +91,136 @@ AM_CONDITIONAL(DEFAULT_POLL, test "x$default_platform" = "xpoll")
 AC_ARG_ENABLE(nopoll-log, [  --enable-nopoll-log     Enable building Nopoll with debug log support [default=yes]], enable_nopoll_log="$enableval", enable_nopoll_log=yes)
 AM_CONDITIONAL(ENABLE_NOPOLL_LOG, test "x$enable_nopoll_log" = "xyes")
 
+# The following command also comes to produce the nopoll_config.h file
+# required by the tool. If you update this, remember to update the
+# af-arch main configure.ac
+AC_TRY_LINK([#define _GNU_SOURCE
+#include <stdio.h>], 
+[
+  char * result;
+  return vasprintf (&result, "This is a test: %d", NULL);
+], [have_vasprintf=yes],[have_vasprintf=no])
+echo "Checking vasprintf support: $have_vasprintf"
+
+
+# produce nopoll_config.h file 
+AC_CONFIG_COMMANDS([nopoll_config.h],
+[
+	outfile=nopoll_config.h-tmp
+	cat > $outfile <<_______EOF
+/* 
+ * Nopoll Library nopoll_config.h
+ * Platform dependant definitions.
+ *
+ * This is a generated file.  Please modify 'configure.in'
+ */
+
+#ifndef __NOPOLL_CONFIG_H__
+#define __NOPOLL_CONFIG_H__
+
+/** 
+ * \addtogroup nopoll_decl_module
+ * @{
+ */
+
+/** 
+ * @brief Allows to convert integer value (including constant values)
+ * into a pointer representation. 
+ *
+ * Use the oposite function to restore the value from a pointer to a
+ * integer: \ref PTR_TO_INT. 
+ *
+ * @param integer The integer value to cast to pointer.
+ *
+ * @return A \ref nopollPointer reference.
+ */
+#ifndef INT_TO_PTR
+#define INT_TO_PTR(integer)   ((nopollPtr) ${pti_cast} ((int)integer))
+#endif
+
+/** 
+ * @brief Allows to convert a pointer reference (\ref nopollPtr),
+ * which stores an integer that was stored using \ref INT_TO_PTR.
+ *
+ * Use the oposite function to restore the pointer value stored in the
+ * integer value.
+ * 
+ * @param ptr The pointer to cast to a integer value.
+ * 
+ * @return A int value.
+ */
+#ifndef PTR_TO_INT
+#define PTR_TO_INT(ptr) ((int) ${pti_cast} (ptr))
+#endif
+
+/**
+ * @brief Allows to get current platform configuration. This is used
+ * by Nopoll library but could be used by applications built on top of
+ * Nopoll to change its configuration based on the platform information.
+ */
+$nopoll_platform
+
+$vasprintf_status
+
+/* @} */
+
+#endif
+_______EOF
+
+	# Check if the file exists and it is equal, if not, overwrite it 
+	if cmp -s $outfile src/nopoll_config.h; then
+	  AC_MSG_NOTICE([nopoll_config.h is unchanged])
+	  rm -f $outfile
+	else
+	  mv $outfile src/nopoll_config.h
+	fi
+],[
+
+# Check size of void pointer against the size of a single
+# integer. This will allow us to know if we can cast directly a
+# integer to pointer and viceversa.
+case $ac_cv_sizeof_void_p in
+$ac_cv_sizeof_int)  	pti_cast=''        ptui_cast=''                ;;
+$ac_cv_sizeof_long) 	pti_cast='(long)'  ptui_cast='(unsigned long)' ;;
+*) 			pti_unknown_void_p=yes                         ;;
+esac
+
+# Get current configure for the platform and the os we are running.
+echo "Host detected: $host"
+case $host in
+  *-*-beos*)
+    nopoll_platform="#define NOPOLL_OS_BEOS (1)"
+    ;;
+  *-*-cygwin*)
+    nopoll_platform="#define NOPOLL_OS_UNIX (1)
+#define NOPOLL_PLATFORM_WIN32 (1)
+#define NOPOLL_WITH_CYGWIN (1)"
+    ;;
+  *-*-mingw*)
+    nopoll_platform="#define NOPOLL_OS_WIN32 (1)
+#define NOPOLL_PLATFORM_WIN32 (1)"
+    ;;
+  *)
+    nopoll_platform="#define NOPOLL_OS_UNIX (1)"
+    ;;
+esac
+
+case $have_vasprintf in
+yes)
+     vasprintf_status="/**
+ * @internal Allows to now if the platform support vasprintf
+ * function. Do not use this macro as it is supposed to be for
+ * internal use.
+ */
+#define NOPOLL_HAVE_VASPRINTF (1)"
+     ;;
+no)
+     vasprintf_status=""
+     ;;
+esac
+
+])
+
 
 AC_OUTPUT([
 Makefile

@@ -36,25 +36,34 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#ifndef __NOPOLL_H__
-#define __NOPOLL_H__
+#ifndef __NOPOLL_PRIVATE_H__
+#define __NOPOLL_PRIVATE_H__
 
-#include <nopoll_decl.h>
-#include <nopoll_ctx.h>
-#include <nopoll_handlers.h>
-#include <nopoll_conn.h>
-#include <nopoll_log.h>
+struct _nopollCtx {
+	/**
+	 * @internal Controls logs output..
+	 */
+	/* console log */
+	nopoll_bool     not_executed;
+	nopoll_bool     debug_enabled;
+	
+	/* colored log */
+	nopoll_bool     not_executed_color;
+	nopoll_bool     debug_color_enabled;
 
-BEGIN_C_DECLS
+	/** 
+	 * @internal nopollConn connection timeout.
+	 */
+	long        conn_connect_std_timeout;
+};
 
-/** 
- * \addtogroup nopoll_module
- * @{
- */
-
-
-/* @} */
-
-END_C_DECLS
+struct _nopollConn {
+	nopollCtx      * ctx;
+	/** 
+	 * @internal This is the actual socket handler associated to
+	 * the nopollConn object.
+	 */
+	NOPOLL_SOCKET    session;
+};
 
 #endif
