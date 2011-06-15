@@ -12,8 +12,19 @@ libnopollincludedir = $(includedir)/nopoll
 
 lib_LTLIBRARIES = libnopoll.la
 
-libnopoll_la_SOURCES     = nopoll_decl.c
-libnopollinclude_HEADERS = nopoll.h nopoll_decl.h
+libnopoll_la_SOURCES     = \
+	nopoll_decl.c \
+	nopoll_ctx.c \
+	nopoll_conn.c \
+	nopoll_log.c
+libnopollinclude_HEADERS = \
+	nopoll.h \
+	nopoll_config.h \
+	nopoll_decl.h \
+	nopoll_private.h \
+	nopoll_ctx.h \
+	nopoll_conn.h \
+	nopoll_log.c
 
 libnopoll_la_LDFLAGS = -no-undefined -export-symbols-regex '^(nopoll|__nopoll|_nopoll).*'
 

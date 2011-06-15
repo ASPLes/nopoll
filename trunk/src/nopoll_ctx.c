@@ -36,25 +36,28 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#ifndef __NOPOLL_H__
-#define __NOPOLL_H__
-
-#include <nopoll_decl.h>
 #include <nopoll_ctx.h>
-#include <nopoll_handlers.h>
-#include <nopoll_conn.h>
-#include <nopoll_log.h>
-
-BEGIN_C_DECLS
+#include <nopoll_private.h>
 
 /** 
- * \addtogroup nopoll_module
- * @{
+ * @brief Creates an empty Nopoll context. 
  */
+nopollCtx * nopoll_ctx_new (void) {
+	nopollCtx * result = nopoll_new (nopollCtx, 1);
+	if (result == NULL)
+		return NULL;
+	/* 20 seconds for connection timeout */
+	result->conn_connect_std_timeout = 20000000;
+
+	/* default log initialization */
+	result->not_executed  = nopoll_true;
+	result->debug_enabled = nopoll_false;
+	
+	/* colored log */
+	result->not_executed_color  = nopoll_true;
+	result->debug_color_enabled = nopoll_false;
+
+	return result;
+}
 
 
-/* @} */
-
-END_C_DECLS
-
-#endif

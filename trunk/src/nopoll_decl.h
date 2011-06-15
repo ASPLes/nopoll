@@ -39,6 +39,9 @@
 #ifndef __NOPOLL_DECL_H__
 #define __NOPOLL_DECL_H__
 
+/* include platform specific configuration */
+#include <nopoll_config.h>
+
 /* include this at this place to load GNU extensions */
 #if defined(__GNUC__)
 #  ifndef _GNU_SOURCE
@@ -74,6 +77,96 @@
 #include <fcntl.h>
 #include <ctype.h>
 
+/* Direct portable mapping definitions */
+#if defined(NOPOLL_OS_UNIX)
+
+/* Portable definitions while using Vortex Library */
+#define NOPOLL_EINTR           EINTR
+#define NOPOLL_EWOULDBLOCK     EWOULDBLOCK
+#define NOPOLL_EINPROGRESS     EINPROGRESS
+#define NOPOLL_EAGAIN          EAGAIN
+#define NOPOLL_SOCKET          int
+#define NOPOLL_INVALID_SOCKET  -1
+#define NOPOLL_SOCKET_ERROR    -1
+#define nopoll_close_socket(s) do {if ( s >= 0) {close (s);}} while (0)
+#define nopoll_is_disconnected (errno == EPIPE)
+
+#endif /* end defined(AXL_OS_UNIX) */
+
+#if defined(NOPOLL_OS_WIN32)
+
+/* additional includes for the windows platform */
+
+/* _WIN32_WINNT note: If the application including the header defines
+ * the _WIN32_WINNT, it must include the bit defined by the value
+ * 0x400. */
+#ifndef _WIN32_WINNT
+#  define _WIN32_WINNT 0x400
+#endif
+#include <winsock2.h>
+#include <windows.h>
+#include <fcntl.h>
+#include <io.h>
+#include <process.h>
+#include <time.h>
+
+#define NOPOLL_EINTR           WSAEINTR
+#define NOPOLL_EWOULDBLOCK     WSAEWOULDBLOCK
+#define NOPOLL_EINPROGRESS     WSAEINPROGRESS
+#define NOPOLL_EAGAIN          WSAEWOULDBLOCK
+#define SHUT_RDWR              SD_BOTH
+#define SHUT_WR                SD_SEND
+#define NOPOLL_SOCKET          SOCKET
+#define NOPOLL_INVALID_SOCKET  INVALID_SOCKET
+#define NOPOLL_SOCKET_ERROR    SOCKET_ERROR
+#define nopoll_close_socket(s) do {if ( s >= 0) {closesocket (s);}} while (0)
+#define uint16_t               u_short
+#define nopoll_is_disconnected ((errno == WSAESHUTDOWN) || (errno == WSAECONNABORTED) || (errno == WSAECONNRESET))
+
+/* a definition to avoid warnings */
+#define strlen (int) strlen
+
+/* no link support windows */
+#define S_ISLNK(m) (0)
+
+#endif /* end defined(AXL_OS_WINDOWS) */
+
+#if defined(NOPOLL_OS_UNIX)
+#include <sys/types.h>
+#include <fcntl.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <sys/select.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <time.h>
+#include <unistd.h>
+#endif
+
+/* additional headers for poll support */
+#if defined(NOPOLL_HAVE_POLL)
+#include <sys/poll.h>
+#endif
+
+/* additional headers for linux epoll support */
+#if defined(NOPOLL_HAVE_EPOLL)
+#include <sys/epoll.h>
+#endif
+
+#include <errno.h>
+
+#if defined(NOPOLL_OS_WIN32)
+/* errno redefinition for windows platform. this declaration must
+ * follow the previous include. */
+#ifdef  errno
+#undef  errno
+#endif
+#define errno (WSAGetLastError())
+#endif
+
+
 /** 
  * \defgroup nopoll_decl_module Nopoll Declarations: Common Nopoll declarations, Types, macros, and support functions.
  */
@@ -93,12 +186,31 @@
 #define nopoll_true  ((int)1)
 
 /** 
+ * @brief Bool definition for the Nopoll toolkit. This type built on
+ * top of <b>int</b> is used along with \ref nopoll_false and \ref
+ * nopoll_true to model those API functions and attributes that
+ * returns or receive a boolean state.
+ */
+typedef int nopoll_bool;
+
+/** 
  * @brief Pointer to any structure definition. It should be required
  * to use this definition, however, some platforms doesn't support the
  * <b>void *</b> making it necessary to use the <b>char *</b>
  * definition as a general way to represent references.
  */
 typedef void * nopollPtr;
+
+/** 
+ * @brief Execution context object used by the API to provide default
+ * settings.
+ */
+typedef struct _nopollCtx nopollCtx;
+
+/** 
+ * @brief Abstraction that represents a connection.
+ */
+typedef struct _nopollConn nopollConn;
 
 /** 
  * @brief Nopoll debug levels.
@@ -126,7 +238,7 @@ typedef enum {
 	 * situations.
 	 */
 	NOPOLL_LEVEL_CRITICAL}  
-NopollDebugLevel;
+noPollDebugLevel;
 
 /** 
  * @brief Support macro to allocate memory using nopoll_calloc function,
@@ -144,8 +256,8 @@ NopollDebugLevel;
  * 
  * @param expr The expresion to check.
  */
-#define nopoll_return_if_fail(expr) \
-if (!(expr)) {__nopoll_log ("", NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed at %s (%s:%d)", #expr, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return;}
+#define nopoll_return_if_fail(ctx, expr)					\
+if (!(expr)) {__nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed at %s (%s:%d)", #expr, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return;}
 
 /** 
  * @brief Allows to check a condition and return the given value if it
@@ -155,8 +267,8 @@ if (!(expr)) {__nopoll_log ("", NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have fail
  *
  * @param val The value to return if the expression is not meet.
  */
-#define nopoll_return_val_if_fail(expr, val) \
-if (!(expr)) { __nopoll_log ("", NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed, returning: %s at %s (%s:%d)", #expr, #val, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return val;}
+#define nopoll_return_val_if_fail(ctx, expr, val)			\
+if (!(expr)) { __nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed, returning: %s at %s (%s:%d)", #expr, #val, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return val;}
 
 
 /** 
@@ -185,7 +297,7 @@ nopollPtr  nopoll_calloc  (size_t count, size_t size);
 
 nopollPtr  nopoll_realloc (nopollPtr ref, size_t size);
 
-void        nopoll_free    (nopollPtr ref);
+void       nopoll_free    (nopollPtr ref);
 
 END_C_DECLS
 

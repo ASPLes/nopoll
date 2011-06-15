@@ -36,25 +36,44 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#ifndef __NOPOLL_H__
-#define __NOPOLL_H__
+#ifndef __NOPOLL_LOG_H__
+#define __NOPOLL_LOG_H__
 
 #include <nopoll_decl.h>
-#include <nopoll_ctx.h>
-#include <nopoll_handlers.h>
-#include <nopoll_conn.h>
-#include <nopoll_log.h>
 
 BEGIN_C_DECLS
 
 /** 
- * \addtogroup nopoll_module
+ * \addtogroup nopoll_log_module
  * @{
  */
 
+nopoll_bool     nopoll_log_is_enabled (nopollCtx * ctx);
+
+nopoll_bool     nopoll_log_color_is_enabled (nopollCtx * ctx);
+
+void            nopoll_log_enable (nopollCtx * ctx, nopoll_bool value);
+ 
+void            nopoll_log_color_enable (nopollCtx * ctx, nopoll_bool value);
+
+
+#if defined(SHOW_DEBUG_LOG)
+# define __nopoll_log nopoll_log
+#else
+# if defined(NOPOLL_OS_WIN32) && !( defined (__GNUC__) || _MSC_VER >= 1400)
+/* default case where '...' is not supported but log is still
+ * disabled */
+#   define __nopoll_log nopoll_log 
+# else
+#   define __nopoll_log(domain, level, message, ...) /* nothing */
+# endif
+#endif
+
+void nopoll_log (nopollCtx * ctx, noPollDebugLevel level, char * message, ...);
 
 /* @} */
 
 END_C_DECLS
 
 #endif
+
