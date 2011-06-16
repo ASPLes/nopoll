@@ -41,8 +41,23 @@
 
 #include <nopoll.h>
 
-noPollCtx * nopoll_ctx_new (void);
+noPollCtx    * nopoll_ctx_new (void);
 
-void        nopoll_ctx_free (noPollCtx * ctx);
+nopoll_bool    nopoll_ctx_ref (noPollCtx * ctx);
+
+void           nopoll_ctx_unref (noPollCtx * ctx);
+
+
+void           nopoll_ctx_register_conn (noPollCtx  * ctx, 
+					 noPollConn * conn);
+
+void           nopoll_ctx_unregister_conn (noPollCtx  * ctx, 
+					   noPollConn * conn);
+
+void           nopoll_ctx_set_action_handler (noPollCtx            * ctx, 
+					      noPollActionHandler    action_handler,
+					      noPollPtr              user_data);
+
+void           nopoll_ctx_free (noPollCtx * ctx);
 
 #endif

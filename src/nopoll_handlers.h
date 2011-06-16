@@ -39,5 +39,96 @@
 #ifndef __NOPOLL_HANDLERS_H__
 #define __NOPOLL_HANDLERS_H__
 
+/** 
+ * @brief Async handler definition that is configured at \ref
+ * nopoll_ctx_set_action_handler and called by \ref nopoll_loop_wait
+ * to notify that a connection has activity. Inside this handler the
+ * developer must implement handling required to accept connections,
+ * or read data from the remote end point.
+ *
+ * @param ctx The context where the wait is happening.
+ *
+ * @param conn The connection where the data or something meaningful
+ * was detected.
+ *
+ * @param user_data Optional user data pointer defined by the user at
+ * \ref nopoll_ctx_set_action_handler
+ *
+ */
+typedef void (*noPollActionHandler) (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data);
+
+/** 
+ * @brief Handler used to define the create function for an IO mechanism.
+ *
+ * @param ctx The context where the io mechanism will be created.
+ */
+typedef noPollPtr (*noPollIoMechCreate)  (noPollCtx * ctx);
+
+/** 
+ * @brief Handler used to define the IO wait set destroy function for
+ * an IO mechanism.
+ *
+ * @param ctx The context where the io mechanism will be destroyed.
+ *
+ * @param io_object The io object to be destroyed as created by \ref
+ * noPollIoMechCreate handler.
+ */
+typedef void (*noPollIoMechDestroy)  (noPollCtx * ctx, noPollPtr io_object);
+
+/** 
+ * @brief Handler used to define the IO wait set clear function for an
+ * IO mechanism.
+ *
+ * @param ctx The context where the io mechanism will be cleared.
+ *
+ * @param io_object The io object to be created as created by \ref
+ * noPollIoMechCreate handler.
+ */
+typedef void (*noPollIoMechClear)  (noPollCtx * ctx, noPollPtr io_object);
+
+
+/** 
+ * @brief Handler used to define the IO wait function for an IO
+ * mechanism.
+ *
+ * @param ctx The context where the io mechanism was created.
+ *
+ * @param io_object The io object to be created as created by \ref
+ * noPollIoMechCreate handler where the wait will be implemented.
+ */
+typedef int (*noPollIoMechWait)  (noPollCtx * ctx, noPollPtr io_object);
+
+
+/** 
+ * @brief Handler used to define the IO add to set function for an IO
+ * mechanism.
+ *
+ * @param ctx The context where the io mechanism was created.
+ *
+ * @param conn The noPollConn to be added to the working set.
+ *
+ * @param io_object The io object to be created as created by \ref
+ * noPollIoMechCreate handler where the wait will be implemented.
+ */
+typedef nopoll_bool (*noPollIoMechAddTo)  (int               fds, 
+					   noPollCtx       * ctx,
+					   noPollConn      * conn,
+					   noPollPtr         io_object);
+
+
+/** 
+ * @brief Handler used to define the IO is set function for an IO
+ * mechanism.
+ *
+ * @param ctx The context where the io mechanism was created.
+ *
+ * @param conn The noPollConn to be added to the working set.
+ *
+ * @param io_object The io object to be created as created by \ref
+ * noPollIoMechCreate handler where the wait will be implemented.
+ */
+typedef nopoll_bool (*noPollIoMechIsSet)  (noPollCtx       * ctx,
+					   int               fds, 
+					   noPollPtr         io_object);
 
 #endif

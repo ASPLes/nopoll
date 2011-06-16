@@ -36,29 +36,11 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#ifndef __NOPOLL_H__
-#define __NOPOLL_H__
+#ifndef __NOPOLL_LOOP_H__
+#define __NOPOLL_LOOP_H__
 
-#include <nopoll_decl.h>
-#include <nopoll_handlers.h>
-#include <nopoll_ctx.h>
-#include <nopoll_io.h>
-#include <nopoll_conn.h>
-#include <nopoll_log.h>
-#include <nopoll_listener.h>
-#include <nopoll_io.h>
-#include <nopoll_loop.h>
+#include <nopoll.h>
 
-BEGIN_C_DECLS
-
-/** 
- * \addtogroup nopoll_module
- * @{
- */
-
-
-/* @} */
-
-END_C_DECLS
+int nopoll_loop_wait (noPollCtx * ctx, long timeout);
 
 #endif

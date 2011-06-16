@@ -199,7 +199,7 @@ typedef int nopoll_bool;
  * <b>void *</b> making it necessary to use the <b>char *</b>
  * definition as a general way to represent references.
  */
-typedef void * nopollPtr;
+typedef void * noPollPtr;
 
 /** 
  * @brief Execution context object used by the API to provide default
@@ -211,6 +211,11 @@ typedef struct _noPollCtx noPollCtx;
  * @brief Abstraction that represents a connection.
  */
 typedef struct _noPollConn noPollConn;
+
+/** 
+ * @brief Abstraction that represents a selected IO wait mechanism..
+ */
+typedef struct _noPollIoEngine noPollIoEngine;
 
 /** 
  * @brief Nopoll debug levels.
@@ -266,6 +271,29 @@ typedef enum {
 } noPollRole;
 
 /** 
+ * @brief List of supported IO waiting mechanism available.
+ */
+typedef enum {
+	/** 
+	 * @brief Selects the default (best) IO mechanism found on the
+	 * system.
+	 */
+	NOPOLL_IO_ENGINE_DEFAULT,
+	/** 
+	 * @brief Selects the select(2) based IO wait mechanism.
+	 */
+	NOPOLL_IO_ENGINE_SELECT,
+	/** 
+	 * @brief Selects the poll(2) based IO wait mechanism.
+	 */
+	NOPOLL_IO_ENGINE_POLL,
+	/** 
+	 * @brief Selects the epoll(2) based IO wait mechanism.
+	 */
+	NOPOLL_IO_ENGINE_EPOLL
+} noPollIoEngineType;
+
+/** 
  * @brief Support macro to allocate memory using nopoll_calloc function,
  * making a casting and using the sizeof keyword.
  *
@@ -318,11 +346,11 @@ if (!(expr)) { __nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have fa
 
 BEGIN_C_DECLS
 
-nopollPtr  nopoll_calloc  (size_t count, size_t size);
+noPollPtr  nopoll_calloc  (size_t count, size_t size);
 
-nopollPtr  nopoll_realloc (nopollPtr ref, size_t size);
+noPollPtr  nopoll_realloc (noPollPtr ref, size_t size);
 
-void       nopoll_free    (nopollPtr ref);
+void       nopoll_free    (noPollPtr ref);
 
 END_C_DECLS
 

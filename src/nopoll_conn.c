@@ -305,6 +305,16 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 	conn = nopoll_new (noPollConn, 1);
 	if (conn == NULL) 
 		return NULL;
+
+	/* call to acquire reference */
+	if (! nopoll_ctx_ref (ctx))   {
+		nopoll_free (conn);
+		nopoll_close_socket (session);
+		return NULL;
+	} /* end if */
+
+	/* register connection into context */
+	nopoll_ctx_register_conn (ctx, conn);
 	
 	/* configure context */
 	conn->ctx     = ctx;
@@ -407,6 +417,14 @@ void          nopoll_conn_close  (noPollConn  * conn)
 	/* call to shutdown connection and release memory */
 	nopoll_close_socket (conn->session);
 	conn->session = -1;
+
+	/* unregister connection from context */
+	nopoll_ctx_unregister_conn (conn->ctx, conn);
+
+	/* release ctx */
+	nopoll_ctx_unref (conn->ctx);
+	conn->ctx = NULL;
+
 	nopoll_free (conn);
 
 	return;
