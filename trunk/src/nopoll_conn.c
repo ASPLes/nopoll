@@ -309,6 +309,11 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 	/* configure context */
 	conn->ctx     = ctx;
 	conn->session = session;
+	conn->role    = NOPOLL_ROLE_CLIENT;
+
+	/* record host and port */
+	conn->host    = strdup (host_ip);
+	conn->port    = strdup (host_port);
 
 	/* return connection created */
 	return conn;
@@ -323,7 +328,7 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
  * @return nopoll_true in the case the connection is working otherwise
  * nopoll_false is returned.
  */
-nopoll_bool    no_poll_conn_is_connected (noPollConn * conn)
+nopoll_bool    nopoll_conn_is_ok (noPollConn * conn)
 {
 	if (conn == NULL)
 		return nopoll_false;
@@ -345,4 +350,64 @@ NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn)
 	return conn->session;
 }
 
+/** 
+ * @brief Allows to get the connection role.
+ *
+ * @return The connection role, see \ref noPollRole for details.
+ */
+noPollRole    nopoll_conn_role   (noPollConn * conn)
+{
+	if (conn == NULL)
+		return NOPOLL_ROLE_UNKNOWN;
+	return conn->role;
+}
 
+/** 
+ * @brief Returns the host location this connection connects to or it is
+ * listening (according to the connection role \ref noPollRole).
+ *
+ * @param conn The connection to check for the host value.
+ *
+ * @return The host location value or NULL if it fails.
+ */
+const char  * nopoll_conn_host   (noPollConn * conn)
+{
+	if (conn == NULL)
+		return NULL;
+	return conn->host;
+}
+
+/** 
+ * @brief Returns the port location this connection connects to or it
+ * is listening (according to the connection role \ref noPollRole).
+ *
+ * @param conn The connection to check for the port value.
+ *
+ * @return The port location value or NULL if it fails.
+ */
+const char  * nopoll_conn_port   (noPollConn * conn)
+{
+	if (conn == NULL)
+		return NULL;
+	return conn->port;
+}
+
+/** 
+ * @brief Allows to close an opened \ref noPollConn no matter its role
+ * (\ref noPollRole).
+ *
+ * @param conn The connection to close.
+ */ 
+void          nopoll_conn_close  (noPollConn  * conn)
+{
+	/* check input data */
+	if (conn == NULL)
+		return;
+	
+	/* call to shutdown connection and release memory */
+	nopoll_close_socket (conn->session);
+	conn->session = -1;
+	nopoll_free (conn);
+
+	return;
+}

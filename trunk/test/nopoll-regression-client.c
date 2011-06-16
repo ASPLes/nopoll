@@ -36,47 +36,62 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#include <nopoll_ctx.h>
-#include <nopoll_private.h>
+#include <nopoll.h>
 
-/** 
- * @brief Creates an empty Nopoll context. 
- */
-noPollCtx * nopoll_ctx_new (void) {
-	noPollCtx * result = nopoll_new (noPollCtx, 1);
-	if (result == NULL)
-		return NULL;
-	/* 20 seconds for connection timeout */
-	result->conn_connect_std_timeout = 20000000;
+nopoll_bool test_01 (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
 
-	/* default log initialization */
-	result->not_executed  = nopoll_true;
-	result->debug_enabled = nopoll_false;
-	
-	/* colored log */
-	result->not_executed_color  = nopoll_true;
-	result->debug_color_enabled = nopoll_false;
-
-	/* default back log */
-	result->backlog = 5;
-
-	return result;
-}
-
-/** 
- * @brief Allows to finish the reference created by \ref
- * nopoll_ctx_new.
- *
- * @param ctx The context to finish
- */
-void        nopoll_ctx_free (noPollCtx * ctx)
-{
+	/* create a context */
+	ctx = nopoll_ctx_new ();
 	if (ctx == NULL)
-		return;
+		return nopoll_false;
+	nopoll_ctx_free (ctx);
 
-	/* call to finish */
-	nopoll_free (ctx);
-	return;
+	/* reinit again */
+	ctx = nopoll_ctx_new ();
+
+	/* call to create a listener */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* call to send content */
+
+	/* receive reply */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_free (ctx);
+
+	return nopoll_true;
 }
 
+int main (int argc, char ** argv)
+{
+	printf ("** NoPoll: Websocket toolkit (regression test).\n");
+	printf ("** Copyright (C) 2011 Advanced Software Production Line, S.L.\n**\n");
+	printf ("** NoPoll regression tests: version=%s\n**\n",
+		VERSION);
+	printf ("** To gather information about time performance you can use:\n**\n");
+	printf ("**     >> time ./test_01\n**\n");
+	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
+	printf ("**     >> libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./test_01\n**\n");
+	printf ("**\n");
+	printf ("** Report bugs to:\n**\n");
+	printf ("**     <info@aspl.es> NoPoll mailing list\n**\n");
 
+
+	if (test_01 ()) {	
+		printf ("Test 01: Library initialization and finalization [   OK   ]\n");
+	}else {
+		printf ("Test 01: Library initialization and finalization [ FAILED ]\n");
+		return -1;
+	}
+
+	return 0;
+}

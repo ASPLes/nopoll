@@ -241,6 +241,31 @@ typedef enum {
 noPollDebugLevel;
 
 /** 
+ * @brief Describes the connection role (how it was initiated).
+ */
+typedef enum {
+	/** 
+	 * @brief Unknown role, returned/used when the connection isn't defined.
+	 */
+	NOPOLL_ROLE_UNKNOWN,
+	/** 
+	 * @brief When the connection was created connecting to a web
+	 * socket server (see \ref nopoll_conn_connect).
+	 */
+	NOPOLL_ROLE_CLIENT,
+	/** 
+	 * @brief When the connection was accepted being a listener
+	 * process.
+	 */
+	NOPOLL_ROLE_LISTENER,
+	/** 
+	 * @brief When the connection was created by \ref
+	 * nopoll_listener_new to accept incoming connections.
+	 */
+	NOPOLL_ROLE_MAIN_LISTENER
+} noPollRole;
+
+/** 
  * @brief Support macro to allocate memory using nopoll_calloc function,
  * making a casting and using the sizeof keyword.
  *

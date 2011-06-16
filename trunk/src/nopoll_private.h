@@ -63,12 +63,32 @@ struct _noPollCtx {
 };
 
 struct _noPollConn {
+	/** 
+	 * @internal The context associated to this connection.
+	 */
 	noPollCtx      * ctx;
+
 	/** 
 	 * @internal This is the actual socket handler associated to
 	 * the noPollConn object.
 	 */
 	NOPOLL_SOCKET    session;
+
+	/** 
+	 * @internal The connection role.
+	 */
+	noPollRole       role;
+
+	/** 
+	 * @internal Conection host ip location (connecting or listening).
+	 */
+	char           * host;
+
+	/** 
+	 * @internal Connection port location (connecting or
+	 * listening).
+	 */ 
+	char           * port;
 };
 
 #endif
