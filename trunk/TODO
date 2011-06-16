@@ -1,0 +1,2 @@
+* Add external mutex support to ensure the library is thread safe.
+  - Add into nopoll_conn_sock_conect to protect gethostbyname
