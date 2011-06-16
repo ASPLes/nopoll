@@ -43,4 +43,6 @@
 
 noPollCtx * nopoll_ctx_new (void);
 
+void        nopoll_ctx_free (noPollCtx * ctx);
+
 #endif

@@ -38,31 +38,25 @@
  */
 #include <nopoll.h>
 
-nopoll_bool test_01 (void) {
-	return nopoll_true;
-}
-
 int main (int argc, char ** argv)
 {
-	printf ("** NoPoll: Websocket toolkit (regression test).\n");
-	printf ("** Copyright (C) 2011 Advanced Software Production Line, S.L.\n**\n");
-	printf ("** NoPoll regression tests: version=%s\n**\n",
-		VERSION);
-	printf ("** To gather information about time performance you can use:\n**\n");
-	printf ("**     >> time ./test_01\n**\n");
-	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
-	printf ("**     >> libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./test_01\n**\n");
-	printf ("**\n");
-	printf ("** Report bugs to:\n**\n");
-	printf ("**     <info@aspl.es> NoPoll mailing list\n**\n");
+	noPollCtx      * ctx;
+	noPollConn     * listener;
 
+	/* create the context */
+	ctx = nopoll_ctx_new ();
 
-	if (test_01 ()) {	
-		printf ("Test 01: Library initialization and finalization [   OK   ]\n");
-	}else {
-		printf ("Test 01: Library initialization and finalization [ FAILED ]\n");
+	/* call to create a listener */
+	listener = nopoll_listener_new (ctx, "localhost", "1234");
+	if (! nopoll_conn_is_ok (listener)) {
+		printf ("ERROR: Expected to find proper listener connection status, but found..\n");
 		return -1;
 	}
+
+	printf ("noPoll listener started at: %s:%s..\n", nopoll_conn_host (listener), nopoll_conn_port (listener));
+
+	/* process events */
+	
 
 	return 0;
 }

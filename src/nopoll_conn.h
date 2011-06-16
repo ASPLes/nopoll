@@ -48,8 +48,16 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * get_url, 
 			      const char * protocol);
 
-nopoll_bool    no_poll_conn_is_connected (noPollConn * conn);
+nopoll_bool    nopoll_conn_is_ok (noPollConn * conn);
 
 NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn);
+
+noPollRole    nopoll_conn_role   (noPollConn * conn);
+
+const char  * nopoll_conn_host   (noPollConn * conn);
+
+const char  * nopoll_conn_port   (noPollConn * conn);
+
+void          nopoll_conn_close  (noPollConn  * conn);
 
 #endif

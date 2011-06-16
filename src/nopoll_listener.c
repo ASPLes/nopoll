@@ -154,6 +154,11 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 	listener          = nopoll_new (noPollConn, 1);
 	listener->session = session;
 	listener->ctx     = ctx;
+	listener->role    = NOPOLL_ROLE_LISTENER;
+
+	/* record host and port */
+	listener->host    = strdup (host);
+	listener ->port    = strdup (port);
 
 	return listener;
 
