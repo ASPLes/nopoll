@@ -39,10 +39,16 @@
 #ifndef __NOPOLL_PRIVATE_H__
 #define __NOPOLL_PRIVATE_H__
 
+#include <nopoll_handlers.h>
+
 struct _noPollCtx {
 	/**
 	 * @internal Controls logs output..
 	 */
+	/* context reference counting */
+	int             refs;
+	int             conn_id;
+
 	/* console log */
 	nopoll_bool     not_executed;
 	nopoll_bool     debug_enabled;
@@ -60,9 +66,25 @@ struct _noPollCtx {
 	 * @internal Default listener connection backlog
 	 */
 	int         backlog;
+
+	/** 
+	 * @internal Currently selected io engine on this context.
+	 */
+	noPollIoEngine * io_engine;
+
+	/** 
+	 * @internal Connection list and its length.
+	 */
+	noPollConn     ** conn_list;
+	int               conn_length;
 };
 
 struct _noPollConn {
+	/** 
+	 * @internal Connection id.
+	 */
+	int              id;
+
 	/** 
 	 * @internal The context associated to this connection.
 	 */
@@ -89,6 +111,17 @@ struct _noPollConn {
 	 * listening).
 	 */ 
 	char           * port;
+};
+
+struct _noPollIoEngine {
+	noPollPtr              io_object;
+	noPollCtx            * ctx;
+	noPollIoMechCreate     create;
+	noPollIoMechDestroy    destroy;
+	noPollIoMechClear      clear;
+	noPollIoMechWait       wait;
+	noPollIoMechAddTo      addto;
+	noPollIoMechIsSet      isset;
 };
 
 #endif

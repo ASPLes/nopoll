@@ -52,7 +52,7 @@
  * @return A newly allocated pointer.
  * @see nopoll_free
  */
-nopollPtr nopoll_calloc(size_t count, size_t size)
+noPollPtr nopoll_calloc(size_t count, size_t size)
 {
    return calloc (count, size);
 }
@@ -66,7 +66,7 @@ nopollPtr nopoll_calloc(size_t count, size_t size)
  * @return A newly allocated pointer.
  * @see nopoll_free
  */
-nopollPtr nopoll_realloc(nopollPtr ref, size_t size)
+noPollPtr nopoll_realloc(noPollPtr ref, size_t size)
 {
    return realloc (ref, size);
 }
@@ -77,7 +77,7 @@ nopollPtr nopoll_realloc(nopollPtr ref, size_t size)
  * 
  * @param ref The reference to clear.
  */
-void nopoll_free (nopollPtr ref)
+void nopoll_free (noPollPtr ref)
 {
 	free (ref);
 	return;
