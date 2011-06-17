@@ -191,7 +191,7 @@
  * nopoll_true to model those API functions and attributes that
  * returns or receive a boolean state.
  */
-typedef int nopoll_bool;
+typedef short nopoll_bool;
 
 /** 
  * @brief Pointer to any structure definition. It should be required
@@ -216,6 +216,18 @@ typedef struct _noPollConn noPollConn;
  * @brief Abstraction that represents a selected IO wait mechanism..
  */
 typedef struct _noPollIoEngine noPollIoEngine;
+
+/** 
+ * @brief Abstraction that represents a single websocket message
+ * received.
+ */
+typedef struct _noPollMsg noPollMsg;
+
+/** 
+ * @brief Abstraction that represents the status and data exchanged
+ * during the handshake.
+ */
+typedef struct _noPollHandshake noPollHandShake;
 
 /** 
  * @brief Nopoll debug levels.

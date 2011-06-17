@@ -46,7 +46,14 @@ nopoll_bool test_01 (void) {
 	ctx = nopoll_ctx_new ();
 	if (ctx == NULL)
 		return nopoll_false;
-	nopoll_ctx_free (ctx);
+
+	/* check connections registered */
+	if (nopoll_ctx_conns (ctx) != 0) {
+		printf ("ERROR: expected to find 0 registered connections but found: %d\n", nopoll_ctx_conns (ctx));
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
 
 	/* reinit again */
 	ctx = nopoll_ctx_new ();
@@ -58,6 +65,12 @@ nopoll_bool test_01 (void) {
 		return nopoll_false;
 	}
 
+	/* check connections registered */
+	if (nopoll_ctx_conns (ctx) != 1) {
+		printf ("ERROR: expected to find 1 registered connections but found: %d\n", nopoll_ctx_conns (ctx));
+		return nopoll_false;
+	} /* end if */
+
 	/* call to send content */
 
 	/* receive reply */
@@ -66,7 +79,7 @@ nopoll_bool test_01 (void) {
 	nopoll_conn_close (conn);
 	
 	/* finish */
-	nopoll_ctx_free (ctx);
+	nopoll_ctx_unref (ctx);
 
 	return nopoll_true;
 }

@@ -154,12 +154,134 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 	listener          = nopoll_new (noPollConn, 1);
 	listener->session = session;
 	listener->ctx     = ctx;
-	listener->role    = NOPOLL_ROLE_LISTENER;
+	listener->role    = NOPOLL_ROLE_MAIN_LISTENER;
 
 	/* record host and port */
 	listener->host    = strdup (host);
-	listener ->port    = strdup (port);
+	listener->port    = strdup (port);
+
+	/* register connection into context */
+	nopoll_ctx_register_conn (ctx, listener);
+
+	/* configure default handlers */
+	listener->receive = nopoll_conn_default_receive;
 
 	return listener;
+}
 
+/** 
+ * @brief Creates a websocket listener from the socket provided.
+ *
+ * @param ctx The context where the listener will be associated.
+ *
+ * @param session The session to associate to the listener.
+ *
+ * @return A reference to a listener connection object or NULL if it
+ * fails.
+ */
+noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
+					    NOPOLL_SOCKET    session)
+{
+	noPollConn * listener;
+
+	struct sockaddr_in   sin;
+#if defined(NOPOLL_OS_WIN32)
+	/* windows flavors */
+	int                  sin_size = sizeof (sin);
+#else
+	/* unix flavors */
+	socklen_t            sin_size = sizeof (sin);
+#endif
+
+	nopoll_return_val_if_fail (ctx, ctx && session > 0, NULL);
+	
+	/* create noPollConn ection object */
+	listener          = nopoll_new (noPollConn, 1);
+	listener->session = session;
+	listener->ctx     = ctx;
+	listener->role    = NOPOLL_ROLE_LISTENER;
+
+	/* get peer value */
+	if (getpeername (session, (struct sockaddr *) &sin, &sin_size) < -1) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to get remote hostname and port");
+		return nopoll_false;
+	} /* end if */
+
+	/* record host and port */
+	/* lock mutex here to protect inet_ntoa */
+	listener->host    = strdup (inet_ntoa (sin.sin_addr));
+	/* release mutex here to protect inet_ntoa */
+	listener->port    = nopoll_strdup_printf ("%d", ntohs (sin.sin_port));
+
+	/* register connection into context */
+	nopoll_ctx_register_conn (ctx, listener);
+
+	/* configure default handlers */
+	listener->receive = nopoll_conn_default_receive;
+
+	return listener;
+}
+
+/** 
+ * @brief Allows to configure the accept handler that will be called
+ * when a connection is received due the provided listener.
+ *
+ * @param listener The listener object where the accept connection
+ * will be received. The listener must be a \ref
+ * NOPOLL_ROLE_MAIN_LISTENER, otherwise the function won't set the
+ * handler.
+ *
+ * @param on_accept The handler to be called when a connection is
+ * received. Here the handler must return nopoll_true to accept the
+ * connection, otherwise nopoll_false should be returned.
+ *
+ * @param user_data Optional user data pointer passed to the on accept
+ * handler.
+ *
+ */
+void              nopoll_listener_set_on_accept (noPollConn           * listener,
+						 noPollActionHandler    on_accept,
+						 noPollPtr              user_data)
+{
+	noPollCtx * ctx = listener ? listener->ctx : NULL;
+
+	nopoll_return_if_fail (ctx, listener && on_accept);
+
+	/* configure the handler */
+	if (listener->role != NOPOLL_ROLE_MAIN_LISTENER) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
+			    "Called to configure a listener on accept action on a connection which is not main listener (was not created with nopoll_listener_new)");
+		return;
+	} /* end if */
+	
+	/* set the handler */
+	listener->on_accept = on_accept;
+	if (listener->on_accept == NULL)
+		listener->on_accept_data = NULL;
+	else
+		listener->on_accept_data = user_data;
+	return;
+}
+
+
+/** 
+ * @brief Public function that performs a TCP listener accept.
+ *
+ * @param server_socket The listener socket where the accept()
+ * operation will be called.
+ *
+ * @return Returns a connected socket descriptor or -1 if it fails.
+ */
+NOPOLL_SOCKET nopoll_listener_accept (NOPOLL_SOCKET server_socket)
+{
+	struct sockaddr_in inet_addr;
+#if defined(AXL_OS_WIN32)
+	int               addrlen;
+#else
+	socklen_t         addrlen;
+#endif
+	addrlen       = sizeof(struct sockaddr_in);
+
+	/* accept the connection new connection */
+	return accept (server_socket, (struct sockaddr *)&inet_addr, &addrlen);
 }

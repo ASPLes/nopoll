@@ -325,6 +325,9 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 	conn->host    = strdup (host_ip);
 	conn->port    = strdup (host_port);
 
+	/* configure default handlers */
+	conn->receive = nopoll_conn_default_receive;
+
 	/* return connection created */
 	return conn;
 }
@@ -403,6 +406,24 @@ const char  * nopoll_conn_port   (noPollConn * conn)
 }
 
 /** 
+ * @brief Call to close the connection immediately without going
+ * through websocket close negotiation.
+ *
+ * @param conn The connection to be shutted down.
+ */
+void          nopoll_conn_shutdown (noPollConn * conn)
+{
+	/* shutdown connection here */
+	nopoll_close_socket (conn->session);
+	conn->session = -1;
+
+	/* call to close */
+	nopoll_conn_close (conn);
+	
+	return;
+}
+
+/** 
  * @brief Allows to close an opened \ref noPollConn no matter its role
  * (\ref noPollRole).
  *
@@ -413,10 +434,14 @@ void          nopoll_conn_close  (noPollConn  * conn)
 	/* check input data */
 	if (conn == NULL)
 		return;
-	
-	/* call to shutdown connection and release memory */
-	nopoll_close_socket (conn->session);
-	conn->session = -1;
+
+	if (conn->session) {
+		/* send close message */
+
+		/* call to shutdown connection and release memory */
+		nopoll_close_socket (conn->session);
+		conn->session = -1;
+	} /* end if */
 
 	/* unregister connection from context */
 	nopoll_ctx_unregister_conn (conn->ctx, conn);
@@ -429,3 +454,155 @@ void          nopoll_conn_close  (noPollConn  * conn)
 
 	return;
 }
+
+/** 
+ * @internal Default connection receive until handshake is complete.
+ */
+int nopoll_conn_default_receive (noPollConn * conn, char * buffer, int buffer_size)
+{
+	return recv (conn->session, buffer, buffer_size, 0);
+}
+
+/** 
+ * @internal Function that completes the handshake in an non-blocking
+ * manner taking into consideration the connection type (listener or
+ * client).
+ */
+void nopoll_conn_complete_handshake (noPollConn * conn)
+{
+	/* ensure handshake object is created */
+	if (conn->handshake == NULL)
+		conn->handshake = nopoll_new (noPollHandShake, 1);
+
+	/* handling listener */
+	if (conn->role == NOPOLL_ROLE_LISTENER) {
+		/* get lines and complete the handshake data */
+		
+		
+		
+
+		return;
+	}
+
+	return;
+}
+
+/** 
+ * @internal Read the next line, byte by byte until it gets a \n or
+ * maxlen is reached. Some code errors are used to manage exceptions
+ * (see return values)
+ * 
+ * @param connection The connection where the read operation will be done.
+ *
+ * @param buffer A buffer to store content read from the network.
+ *
+ * @param maxlen max content to read from the network.
+ * 
+ * @return  values returned by this function follows:
+ *  0 - remote peer have closed the connection
+ * -1 - an error have happened while reading
+ * -2 - could read because this connection is on non-blocking mode and there is no data.
+ *  n - some data was read.
+ * 
+ **/
+int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxlen)
+{
+	int         n, rc;
+	int         desp;
+	char        c, *ptr;
+	noPollCtx * ctx = conn->ctx;
+
+	/* clear the buffer received */
+	/* memset (buffer, 0, maxlen * sizeof (char ));  */
+
+	/* check for pending line read */
+	desp         = 0;
+	if (conn->pending_line) {
+		/* get size and check exceeded values */
+		desp = strlen (conn->pending_line);
+		if (desp >= maxlen) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
+				    "found fragmented frame line header but allowed size was exceeded (desp:%d >= maxlen:%d)",
+				    desp, maxlen);
+			nopoll_conn_shutdown (conn);
+			return -1;
+		} /* end if */
+
+		/* now store content into the buffer */
+		memcpy (buffer, conn->pending_line, desp);
+
+		/* clear from the conn the line */
+		nopoll_free (conn->pending_line);
+		conn->pending_line = NULL;
+	}
+
+	/* read current next line */
+	ptr = (buffer + desp);
+	for (n = 1; n < (maxlen - desp); n++) {
+	nopoll_readline_again:
+		if (( rc = conn->receive (conn, &c, 1)) == 1) {
+			*ptr++ = c;
+			if (c == '\x0A')
+				break;
+		}else if (rc == 0) {
+			if (n == 1)
+				return 0;
+			else
+				break;
+		} else {
+			if (errno == NOPOLL_EINTR) 
+				goto nopoll_readline_again;
+			if ((errno == NOPOLL_EWOULDBLOCK) || (errno == NOPOLL_EAGAIN) || (rc == -2)) {
+				if (n > 0) {
+					/* store content read until now */
+					if ((n + desp - 1) > 0) {
+						buffer[n+desp - 1] = 0;
+						conn->pending_line = strdup (buffer);
+					} /* end if */
+				} /* end if */
+				return (-2);
+			}
+			
+			/* if the conn is closed, just return
+			 * without logging a message */
+			if (nopoll_conn_is_ok (conn)) {
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to read a line, error code errno: %d", errno);
+			}
+			return (-1);
+		}
+	}
+	*ptr = 0;
+	return (n + desp);
+
+}
+
+
+/** 
+ * @brief Allows to get the next message available on the provided
+ * connection. The function returns NULL in the case no message is
+ * still ready to be returned. 
+ *
+ * The function do not block.
+ *
+ * @param conn The connection where the read operation will take
+ * place.
+ * 
+ * @return A reference to a noPollMsg object or NULL if there is
+ * nothing available. In case the function returns NULL, check
+ * connection status with \ref nopoll_conn_is_ok.
+ */
+noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
+{
+	if (conn == NULL)
+		return NULL;
+	
+	/* check connection status */
+	if (! conn->handshake_ok) {
+		/* complete handshake */
+		nopoll_conn_complete_handshake (conn);
+		return NULL;
+	} /* end if */
+
+	return NULL;
+}
+

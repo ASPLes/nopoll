@@ -56,6 +56,11 @@ BEGIN_C_DECLS
  * @{
  */
 
+nopoll_bool nopoll_cmp (const char * string1, const char * string2);
+
+char      * nopoll_strdup_printf   (const char * chunk, ...);
+
+char      * nopoll_strdup_printfv  (const char * chunk, va_list args);
 
 /* @} */
 

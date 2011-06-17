@@ -43,6 +43,7 @@
  * @brief Creates an empty Nopoll context. 
  */
 noPollCtx * nopoll_ctx_new (void) {
+
 	noPollCtx * result = nopoll_new (noPollCtx, 1);
 	if (result == NULL)
 		return NULL;
@@ -137,14 +138,18 @@ void           nopoll_ctx_register_conn (noPollCtx  * ctx,
 	ctx->conn_id ++;
 
 	/* register connection */
-	
 	iterator = 0;
 	while (iterator < ctx->conn_length) {
 
 		/* register reference */
 		if (ctx->conn_list[iterator] == 0) {
 			ctx->conn_list[iterator] = conn;
+
+			/* update connection list number */
+			ctx->conn_num++;
+
 			/* release mutex here */
+
 			return;
 		}
 		
@@ -187,30 +192,104 @@ void           nopoll_ctx_register_conn (noPollCtx  * ctx,
 void           nopoll_ctx_unregister_conn (noPollCtx  * ctx, 
 					   noPollConn * conn)
 {
+	int iterator;
+
+	nopoll_return_if_fail (ctx, ctx && conn);
+
+	/* acquire mutex here */
+
+	/* find the connection and remove it from the array */
+	iterator = 0;
+	while (iterator < ctx->conn_length) {
+
+		/* check the connection reference */
+		if (ctx->conn_list[iterator]->id == conn->id) {
+			/* remove reference */
+			ctx->conn_list[iterator] = NULL;
+
+			/* update connection list number */
+			ctx->conn_num--;
+
+			break;
+		} /* end if */
+		
+		iterator++;
+	} /* end while */
+
+	/* release mutex here */
+
 	return;
 }
 
 /** 
- * @brief Allows to configure the context action handler that will be
- * called to notify connection changes when called to \ref
- * nopoll_loop_wait.
+ * @brief Allows to get number of connections currently registered.
  *
- * @param ctx The context object to be configured.
+ * @param ctx The context where the operation is requested.
  *
- * @param action_handler The action handler to be called for each
- * connection status change to be notified.
- *
- * @param user_data Optional user defined pointer to be passed to the
- * action handler.
- */
-void        nopoll_ctx_set_action_handler (noPollCtx            * ctx, 
-					   noPollActionHandler    action_handler,
-					   noPollPtr              user_data)
+ * @return Number of connections registered on this context or -1 if it fails.
+ */ 
+int            nopoll_ctx_conns (noPollCtx * ctx)
 {
-	nopoll_return_if_fail (ctx, ctx && action_handler);
-
-	return;
+	nopoll_return_val_if_fail (ctx, ctx, -1);
+	return ctx->conn_num;
 }
+
+/** 
+ * @brief Allows to iterate over all connections currently registered
+ * on the provided context, optionally stopping the foreach process,
+ * returning the connection reference selected if the foreach handler
+ * returns nopoll_true.
+ *
+ * @param ctx The nopoll context where the foreach operation will take
+ * place.
+ *
+ * @param foreach The foreach handler to be called for each connection
+ * registered.
+ *
+ * @param user_data An optional reference to a pointer that will be
+ * passed to the handler.
+ *
+ * @return Returns the connection selected (in the case the foreach
+ * function returns nopoll_false) or NULL in the case all foreach
+ * executions returned nopoll_true. Keep in mind the function also
+ * returns NULL if ctx or foreach parameter is NULL.
+ *
+ * See \ref noPollForeachConn for a signature example.
+ */
+noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx, 
+					noPollForeachConn    foreach, 
+					noPollPtr            user_data)
+{
+	noPollConn * result;
+	int          iterator;
+	nopoll_return_val_if_fail (ctx, ctx && foreach, NULL);
+
+	/* acquire here the mutex to protect connection list */
+	/* find the connection and remove it from the array */
+	iterator = 0;
+	while (iterator < ctx->conn_length) {
+
+		/* check the connection reference */
+		if (ctx->conn_list[iterator]) {
+			/* call to notify connection */
+			if (foreach (ctx, ctx->conn_list[iterator], user_data)) {
+				/* get a reference to avoid races
+				 * after releasing the mutex */
+				result = ctx->conn_list[iterator];
+
+				/* release here the mutex to protect connection list */
+				return result;
+			} /* end if */
+		} /* end if */
+		
+		iterator++;
+	} /* end while */
+
+	/* release here the mutex to protect connection list */
+
+	return NULL;
+}
+
 
 
 
