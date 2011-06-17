@@ -42,9 +42,24 @@ int main (int argc, char ** argv)
 {
 	noPollCtx      * ctx;
 	noPollConn     * listener;
+	int              iterator;
 
 	/* create the context */
 	ctx = nopoll_ctx_new ();
+
+	iterator = 1;
+	while (iterator < argc) {
+		/* check for debug */
+		printf ("Checking agument: %s\n", argv[iterator]);
+		if (nopoll_cmp (argv[iterator], "--debug")) {
+			printf ("Activating debug..\n");
+			nopoll_log_enable (ctx, nopoll_true);
+			nopoll_log_color_enable (ctx, nopoll_true);
+		} /* end if */
+
+		/* next position */
+		iterator++;
+	}
 
 	/* call to create a listener */
 	listener = nopoll_listener_new (ctx, "localhost", "1234");
@@ -56,7 +71,7 @@ int main (int argc, char ** argv)
 	printf ("noPoll listener started at: %s:%s..\n", nopoll_conn_host (listener), nopoll_conn_port (listener));
 
 	/* process events */
-	
+	nopoll_loop_wait (ctx, 0);
 
 	return 0;
 }

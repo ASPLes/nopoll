@@ -40,11 +40,11 @@
 #define __NOPOLL_HANDLERS_H__
 
 /** 
- * @brief Async handler definition that is configured at \ref
- * nopoll_ctx_set_action_handler and called by \ref nopoll_loop_wait
- * to notify that a connection has activity. Inside this handler the
- * developer must implement handling required to accept connections,
- * or read data from the remote end point.
+ * @brief General async handler definition used to notify generic
+ * events associated to a connection.
+ *
+ * Currently this handler is used by:
+ * - \ref nopoll_listener_set_on_accept
  *
  * @param ctx The context where the wait is happening.
  *
@@ -54,8 +54,10 @@
  * @param user_data Optional user data pointer defined by the user at
  * \ref nopoll_ctx_set_action_handler
  *
+ * @return The function returns a boolean value which is interpreted
+ * in an especific form according to the event.
  */
-typedef void (*noPollActionHandler) (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data);
+typedef nopoll_bool (*noPollActionHandler) (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data);
 
 /** 
  * @brief Handler used to define the create function for an IO mechanism.
@@ -130,5 +132,37 @@ typedef nopoll_bool (*noPollIoMechAddTo)  (int               fds,
 typedef nopoll_bool (*noPollIoMechIsSet)  (noPollCtx       * ctx,
 					   int               fds, 
 					   noPollPtr         io_object);
+
+/** 
+ * @brief Handler used to define the foreach function that is used by
+ * \ref nopoll_ctx_foreach_conn
+ *
+ * @param ctx The context where the foreach operation is taking place.
+ *
+ * @param conn The connection notified
+ *
+ * @param user_data Optional user defined pointer received at \ref
+ * nopoll_ctx_foreach_conn.
+ *
+ * @return nopoll_true to stop the foreach process, otherwise
+ * nopoll_false to keep checking the next connection until all
+ * connections are notified.
+ */
+typedef nopoll_bool (*noPollForeachConn)  (noPollCtx  * ctx,
+					   noPollConn * conn,
+					   noPollPtr    user_data);
+
+/** 
+ * @brief Handler definition used to describe read functions used by \ref noPollConn.
+ *
+ * @param conn The connection where the readOperation will take place.
+ *
+ * @param buffer The buffer where data read from socket will be placed.
+ *
+ * @param buffer_size The buffer size that is receiving the function.
+ */
+typedef int (*noPollRead) (noPollConn * conn,
+			   char       * buffer,
+			   int          buffer_size);
 
 #endif

@@ -36,41 +36,11 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#ifndef __NOPOLL_CONN_H__
-#define __NOPOLL_CONN_H__
+#ifndef __NOPOLL_MSG_H__
+#define __NOPOLL_MSG_H__
 
-#include <nopoll.h>
+noPollPtr    nopoll_msg_get_payload (noPollMsg * msg);
 
-noPollConn * nopoll_conn_new (noPollCtx  * ctx,
-			      const char * host_ip, 
-			      const char * host_port, 
-			      const char * host_name,
-			      const char * get_url, 
-			      const char * protocol);
-
-nopoll_bool    nopoll_conn_is_ok (noPollConn * conn);
-
-NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn);
-
-noPollRole    nopoll_conn_role   (noPollConn * conn);
-
-const char  * nopoll_conn_host   (noPollConn * conn);
-
-const char  * nopoll_conn_port   (noPollConn * conn);
-
-void          nopoll_conn_shutdown (noPollConn * conn);
-
-void          nopoll_conn_close  (noPollConn  * conn);
-
-nopoll_bool   nopoll_conn_set_sock_block         (NOPOLL_SOCKET socket,
-						  nopoll_bool   enable);
-
-noPollMsg   * nopoll_conn_get_msg (noPollConn * conn);
-
-
-/** internal api **/
-void nopoll_conn_complete_handshake (noPollConn * conn);
-
-int nopoll_conn_default_receive (noPollConn * conn, char * buffer, int buffer_size);
+int          nopoll_msg_get_pyaload_size (noPollMsg * msg);
 
 #endif

@@ -43,4 +43,6 @@
 
 int nopoll_loop_wait (noPollCtx * ctx, long timeout);
 
+int nopoll_loop_stop (noPollCtx * ctx);
+
 #endif

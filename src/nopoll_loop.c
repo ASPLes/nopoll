@@ -81,6 +81,110 @@ int     nopoll_timeval_substract                  (struct timeval * a,
 }
 
 /** 
+ * @internal Function used by nopoll_loop_wait to register all
+ * connections into the io waiting object.
+ */
+nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	/* register the connection socket */
+	ctx->io_engine->addto (conn->session, ctx, conn, ctx->io_engine->io_object); 
+
+	return nopoll_false; /* keep foreach, don't stop */
+}
+
+/** 
+ * @internal Function used by nopool_loop_process to handle new
+ * incoming connections.
+ */
+void nopoll_loop_process_listener (noPollCtx * ctx, noPollConn * conn)
+{
+	NOPOLL_SOCKET   session;
+	noPollConn    * listener;
+
+	/* recevied a new connection: accept the
+	 * connection and ask the app level to accept
+	 * or not */
+	session = nopoll_listener_accept (conn->session);
+	if (session <= 0) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received invalid socket value from accept(2): %d, error code errno=: %d", 
+			    session, errno);
+		return;
+	} /* end if */
+
+	/* configure non blocking mode */
+	nopoll_conn_set_sock_block (session, nopoll_true);
+	
+	/* create the connection */
+	listener = nopoll_listener_from_socket (ctx, session);
+	if (listener == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received NULL pointer after calling to create listener from session..");
+		return;
+	} /* end if */
+	
+	/* now check for accept handler */
+	if (conn->on_accept) {
+		/* call to on accept */
+		if (! conn->on_accept (ctx, conn, conn->on_accept_data)) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Application level denied accepting connection from %s:%s, closing", 
+				    listener->host, listener->port);
+			nopoll_conn_shutdown (listener);
+			nopoll_ctx_unregister_conn (ctx, listener);
+		} /* end if */
+	} /* end if */
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Connection received and accepted from %s:%s", listener->host, listener->port);
+
+	return;
+}
+
+/** 
+ * @internal Function used to handle incoming data from from the
+ * connection and to notify this data on the connection.
+ */
+void nopoll_loop_process_data (noPollCtx * ctx, noPollConn * conn)
+{
+	
+
+	return;
+}
+
+/** 
+ * @internal Function used to detected which connections has something
+ * interesting to be notified.
+ *
+ */
+nopoll_bool nopoll_loop_process (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	int        * conn_changed = user_data;
+
+	/* check if the connection have something to notify */
+	if (ctx->io_engine->isset (ctx, conn->session, ctx->io_engine->io_object)) {
+
+		/* call to notify action according to role */
+		switch (conn->role) {
+		case NOPOLL_ROLE_CLIENT:
+		case NOPOLL_ROLE_LISTENER:
+			/* received data, notify */
+			nopoll_loop_process_data (ctx, conn);
+			break;
+		case NOPOLL_ROLE_MAIN_LISTENER:
+			/* call to handle */
+			nopoll_loop_process_listener (ctx, conn);
+			break;
+		default:
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Found connection with unknown role, closing and dropping");
+			nopoll_conn_shutdown (conn);
+			break;
+		}
+		
+		/* reduce connection changed */
+		(*conn_changed)--;
+	} /* end if */
+	
+	return (*conn_changed) == 0;
+}
+
+/** 
  * @brief Allows to implement a wait over all connections registered
  * under the provided context during the provided timeout until
  * something is detected meaningful to the user, calling to the action
@@ -89,12 +193,12 @@ int     nopoll_timeval_substract                  (struct timeval * a,
  * @param ctx The context object where the wait will be implemented.
  *
  * @param timeout The timeout to wait for changes. If no changes
- * happens, the function returns.
+ * happens, the function returns. The function will block the caller
+ * until a call to \ref nopoll_loop_stop is done in the case timeout
+ * passed is 0.
  *
- * @return The function returns the number of connections that changed
- * its status during the wait or -1 in the case timeout was
- * reached. The function returns -2 in the case ctx is NULL or timeout
- * is negative.
+ * @return The function returns 0 when finished or -2 in the case ctx
+ * is NULL or timeout is negative.
  */
 int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 {
@@ -105,7 +209,7 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 	int            wait_status;
 
 	nopoll_return_val_if_fail (ctx, ctx, -2);
-	nopoll_return_val_if_fail (ctx, timeout < 0, -2);
+	nopoll_return_val_if_fail (ctx, timeout >= 0, -2);
 	
 	/* grab the mutex for the following check */
 	if (ctx->io_engine == NULL) {
@@ -118,31 +222,46 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 	/* release the mutex */
 
 	/* get as reference current time */
-	gettimeofday (&start, NULL);
+	if (timeout > 0)
+		gettimeofday (&start, NULL);
 	
 	while (nopoll_true) {
 		/* ok, now implement wait operation */
 		ctx->io_engine->clear (ctx, ctx->io_engine->io_object);
 
 		/* add all connections */
+		nopoll_ctx_foreach_conn (ctx, nopoll_loop_register, NULL);
 		
 		/* implement wait operation */
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Waiting for changes into %d connections", ctx->conn_num);
 		wait_status = ctx->io_engine->wait (ctx, ctx->io_engine->io_object);
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Waiting finished with result %d", wait_status);
+		if (wait_status == -1) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received error from wait operation, error code was: %d", errno);
+			break;
+		} /* end if */
+
+		/* check how many connections changed and restart */
+		if (wait_status == 0) 
+			continue;
 
 		/* check and call for connections with something
 		 * interesting */
+		nopoll_ctx_foreach_conn (ctx, nopoll_loop_process, &wait_status);
 
 		/* check to stop wait operation */
-		
-		/* get as reference current time */
-		gettimeofday (&stop, NULL);
-		nopoll_timeval_substract (&stop, &start, &diff);
-		elapsed = (stop.tv_sec * 1000000) + stop.tv_usec;
-		if (elapsed > timeout)
-			break;
+		if (timeout > 0) {
+			gettimeofday (&stop, NULL);
+			nopoll_timeval_substract (&stop, &start, &diff);
+			elapsed = (diff.tv_sec * 1000000) + diff.tv_usec;
+			if (elapsed > timeout)
+				break;
+		} /* end if */
 	} /* end while */
 
 	return 0;
 }
+
+
 
 

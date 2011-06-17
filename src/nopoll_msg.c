@@ -36,41 +36,37 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#ifndef __NOPOLL_CONN_H__
-#define __NOPOLL_CONN_H__
+#include <nopoll_msg.h>
 
-#include <nopoll.h>
+/** 
+ * @brief Allows to get a reference to the payload content inside the
+ * provided websocket message.
+ *
+ * @param msg The websocket message to get the payload from.
+ *
+ * @return A reference to the payload or NULL if it fails. See \ref
+ * nopoll_msg_get_payload_size to get payload size.
+ */
+const void * nopoll_msg_get_payload (noPollMsg * msg)
+{
+	if (msg == NULL)
+		return NULL;
+	return msg->payload;
+}
 
-noPollConn * nopoll_conn_new (noPollCtx  * ctx,
-			      const char * host_ip, 
-			      const char * host_port, 
-			      const char * host_name,
-			      const char * get_url, 
-			      const char * protocol);
-
-nopoll_bool    nopoll_conn_is_ok (noPollConn * conn);
-
-NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn);
-
-noPollRole    nopoll_conn_role   (noPollConn * conn);
-
-const char  * nopoll_conn_host   (noPollConn * conn);
-
-const char  * nopoll_conn_port   (noPollConn * conn);
-
-void          nopoll_conn_shutdown (noPollConn * conn);
-
-void          nopoll_conn_close  (noPollConn  * conn);
-
-nopoll_bool   nopoll_conn_set_sock_block         (NOPOLL_SOCKET socket,
-						  nopoll_bool   enable);
-
-noPollMsg   * nopoll_conn_get_msg (noPollConn * conn);
+/** 
+ * @brief Allows to get the payload byte length stored on the provided
+ * message.
+ *
+ * @param msg The websocket message to get the payload from.
+ *
+ * @return The payload size or -1 if it fails (only when msg is NULL).
+ */
+int          nopoll_msg_get_payload_size (noPollMsg * msg)
+{
+	if (msg == NULL)
+		return -1;
+	return msg->payload_size;
+}
 
 
-/** internal api **/
-void nopoll_conn_complete_handshake (noPollConn * conn);
-
-int nopoll_conn_default_receive (noPollConn * conn, char * buffer, int buffer_size);
-
-#endif

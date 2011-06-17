@@ -13,6 +13,7 @@ libnopollincludedir = $(includedir)/nopoll
 lib_LTLIBRARIES = libnopoll.la
 
 libnopoll_la_SOURCES     = \
+	nopoll.c \
 	nopoll_decl.c \
 	nopoll_ctx.c \
 	nopoll_conn.c \

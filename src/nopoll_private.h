@@ -73,10 +73,20 @@ struct _noPollCtx {
 	noPollIoEngine * io_engine;
 
 	/** 
-	 * @internal Connection list and its length.
+	 * @internal Connection array list and its length.
 	 */
 	noPollConn     ** conn_list;
 	int               conn_length;
+	/** 
+	 * @internal Number of connections registered on this context.
+	 */
+	int               conn_num;
+
+	/** 
+	 * @internal Action handler reference that will be called when som
+	 */
+	noPollActionHandler  action_handler;
+	noPollPtr            action_handler_data;
 };
 
 struct _noPollConn {
@@ -97,6 +107,17 @@ struct _noPollConn {
 	NOPOLL_SOCKET    session;
 
 	/** 
+	 * @internal Flag to signal this connection has finished its
+	 * handshake.
+	 */
+	nopoll_bool      handshake_ok;
+
+	/** 
+	 * @internal Current connection receive function.
+	 */
+	noPollRead       receive;
+
+	/** 
 	 * @internal The connection role.
 	 */
 	noPollRole       role;
@@ -111,6 +132,18 @@ struct _noPollConn {
 	 * listening).
 	 */ 
 	char           * port;
+
+	/** 
+	 * @internal Reference to defined on accept handling.
+	 */
+	noPollActionHandler on_accept;
+	noPollPtr           on_accept_data;
+
+	/* reference to the handshake */
+	noPollHandShake  * handshake;
+
+	/* reference to a buffer with pending content */
+	char * pending_line;
 };
 
 struct _noPollIoEngine {
@@ -122,6 +155,22 @@ struct _noPollIoEngine {
 	noPollIoMechWait       wait;
 	noPollIoMechAddTo      addto;
 	noPollIoMechIsSet      isset;
+};
+
+struct _noPollMsg {
+	noPollPtr  payload;
+	int        payload_size;
+};
+
+struct _noPollHandshake {
+	char          * get_url;
+	char          * host;
+	nopoll_bool     upgrade_websocket;
+	nopoll_bool     connection_upgrade;
+	char          * websocket_key;
+	char          * websocket_origin;
+	char          * websocket_protocol;
+	char          * websocket_version;
 };
 
 #endif
