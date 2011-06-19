@@ -44,6 +44,7 @@
 #include <nopoll_ctx.h>
 #include <nopoll_io.h>
 #include <nopoll_conn.h>
+#include <nopoll_msg.h>
 #include <nopoll_log.h>
 #include <nopoll_listener.h>
 #include <nopoll_io.h>
@@ -58,9 +59,15 @@ BEGIN_C_DECLS
 
 nopoll_bool nopoll_cmp (const char * string1, const char * string2);
 
+nopoll_bool nopoll_ncmp (const char * string1, const char * string2, int bytes);
+
 char      * nopoll_strdup_printf   (const char * chunk, ...);
 
 char      * nopoll_strdup_printfv  (const char * chunk, va_list args);
+
+void        nopoll_trim  (char * chunk, int * trimmed);
+
+void        nopoll_sleep (long microseconds);
 
 /* @} */
 

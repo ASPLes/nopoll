@@ -46,9 +46,16 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * host_port, 
 			      const char * host_name,
 			      const char * get_url, 
-			      const char * protocol);
+			      const char * protocols,
+			      const char * origin);
+
+nopoll_bool    nopoll_conn_ref (noPollConn * conn);
+
+void           nopoll_conn_unref (noPollConn * conn);
 
 nopoll_bool    nopoll_conn_is_ok (noPollConn * conn);
+
+nopoll_bool    nopoll_conn_is_ready (noPollConn * conn);
 
 NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn);
 
@@ -72,5 +79,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn);
 void nopoll_conn_complete_handshake (noPollConn * conn);
 
 int nopoll_conn_default_receive (noPollConn * conn, char * buffer, int buffer_size);
+
+int nopoll_conn_default_send (noPollConn * conn, char * buffer, int buffer_size);
 
 #endif

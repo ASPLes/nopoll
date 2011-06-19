@@ -86,7 +86,15 @@ int     nopoll_timeval_substract                  (struct timeval * a,
  */
 nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
 {
+	/* do not add connections that aren't working */
+	if (! nopoll_conn_is_ok (conn)) {
+		/* remove this connection from registry */
+		nopoll_ctx_unregister_conn (ctx, conn);
+		return nopoll_false; /* keep foreach, don't stop */
+	}
+
 	/* register the connection socket */
+	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding socket id: %d", conn->session);*/
 	ctx->io_engine->addto (conn->session, ctx, conn, ctx->io_engine->io_object); 
 
 	return nopoll_false; /* keep foreach, don't stop */
@@ -122,9 +130,9 @@ void nopoll_loop_process_listener (noPollCtx * ctx, noPollConn * conn)
 	} /* end if */
 	
 	/* now check for accept handler */
-	if (conn->on_accept) {
+	if (ctx->on_accept) {
 		/* call to on accept */
-		if (! conn->on_accept (ctx, conn, conn->on_accept_data)) {
+		if (! ctx->on_accept (ctx, conn, ctx->on_accept_data)) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Application level denied accepting connection from %s:%s, closing", 
 				    listener->host, listener->port);
 			nopoll_conn_shutdown (listener);
@@ -143,8 +151,20 @@ void nopoll_loop_process_listener (noPollCtx * ctx, noPollConn * conn)
  */
 void nopoll_loop_process_data (noPollCtx * ctx, noPollConn * conn)
 {
-	
+	noPollMsg * msg;
 
+	/* call to get messages from the connection */
+	msg = nopoll_conn_get_msg (conn);
+	if (msg == NULL)
+		return;
+
+	/* found message, notify it */
+	if (conn->on_msg) {
+		conn->on_msg (ctx, conn, msg, conn->on_msg_data);
+	} /* end if */
+
+	/* release message */
+	nopoll_msg_unref (msg);
 	return;
 }
 
@@ -185,6 +205,29 @@ nopoll_bool nopoll_loop_process (noPollCtx * ctx, noPollConn * conn, noPollPtr u
 }
 
 /** 
+ * @internal Function used to init internal io wait mechanism...
+ *
+ * @param ctx The noPoll context to be initialized if it wasn't
+ */
+void nopoll_loop_init (noPollCtx * ctx) 
+{
+	if (ctx == NULL)
+		return;
+
+	/* grab the mutex for the following check */
+	if (ctx->io_engine == NULL) {
+		ctx->io_engine = nopoll_io_get_engine (ctx, NOPOLL_IO_ENGINE_DEFAULT);
+		if (ctx->io_engine == NULL) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to create IO wait engine, unable to implement wait call");
+			return;
+		} 
+	} /* end if */
+	/* release the mutex */
+
+	return;
+}
+
+/** 
  * @brief Allows to implement a wait over all connections registered
  * under the provided context during the provided timeout until
  * something is detected meaningful to the user, calling to the action
@@ -205,21 +248,14 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 	struct timeval start;
 	struct timeval stop;
 	struct timeval diff;
-	long           elapsed;
+	long           ellapsed;
 	int            wait_status;
 
 	nopoll_return_val_if_fail (ctx, ctx, -2);
 	nopoll_return_val_if_fail (ctx, timeout >= 0, -2);
 	
-	/* grab the mutex for the following check */
-	if (ctx->io_engine == NULL) {
-		ctx->io_engine = nopoll_io_get_engine (ctx, NOPOLL_IO_ENGINE_DEFAULT);
-		if (ctx->io_engine == NULL) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to create IO wait engine, unable to implement wait call");
-			return -2;
-		} 
-	} /* end if */
-	/* release the mutex */
+	/* call to init io engine */
+	nopoll_loop_init (ctx);
 
 	/* get as reference current time */
 	if (timeout > 0)
@@ -228,14 +264,15 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 	while (nopoll_true) {
 		/* ok, now implement wait operation */
 		ctx->io_engine->clear (ctx, ctx->io_engine->io_object);
-
+		
 		/* add all connections */
+		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding connections to watch: %d", ctx->conn_num); */
 		nopoll_ctx_foreach_conn (ctx, nopoll_loop_register, NULL);
 		
 		/* implement wait operation */
-		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Waiting for changes into %d connections", ctx->conn_num);
+		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Waiting for changes into %d connections", ctx->conn_num); */
 		wait_status = ctx->io_engine->wait (ctx, ctx->io_engine->io_object);
-		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Waiting finished with result %d", wait_status);
+		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Waiting finished with result %d", wait_status); */
 		if (wait_status == -1) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received error from wait operation, error code was: %d", errno);
 			break;
@@ -253,8 +290,8 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 		if (timeout > 0) {
 			gettimeofday (&stop, NULL);
 			nopoll_timeval_substract (&stop, &start, &diff);
-			elapsed = (diff.tv_sec * 1000000) + diff.tv_usec;
-			if (elapsed > timeout)
+			ellapsed = (diff.tv_sec * 1000000) + diff.tv_usec;
+			if (ellapsed > timeout)
 				break;
 		} /* end if */
 	} /* end while */

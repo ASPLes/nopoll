@@ -5,7 +5,9 @@ nopoll_conn_close
 nopoll_conn_complete_handshake
 nopoll_conn_connect_timeout
 nopoll_conn_default_receive
+nopoll_conn_default_send
 nopoll_conn_get_connect_timeout
+nopoll_conn_get_http_url
 nopoll_conn_get_msg
 nopoll_conn_host
 nopoll_conn_is_ok
@@ -48,6 +50,11 @@ nopoll_loop_process_data
 nopoll_loop_process_listener
 nopoll_loop_register
 nopoll_loop_wait
+nopoll_msg_get_payload
+nopoll_msg_get_payload_size
+nopoll_msg_ref
+nopoll_msg_unref
+nopoll_ncmp
 nopoll_realloc
 nopoll_strdup_printf
 nopoll_strdup_printfv

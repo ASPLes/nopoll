@@ -39,8 +39,14 @@
 #ifndef __NOPOLL_MSG_H__
 #define __NOPOLL_MSG_H__
 
-noPollPtr    nopoll_msg_get_payload (noPollMsg * msg);
+#include <nopoll.h>
+
+const noPollPtr  nopoll_msg_get_payload (noPollMsg * msg);
 
 int          nopoll_msg_get_pyaload_size (noPollMsg * msg);
+
+nopoll_bool  nopoll_msg_ref (noPollMsg * msg);
+
+void         nopoll_msg_unref (noPollMsg * msg);
 
 #endif

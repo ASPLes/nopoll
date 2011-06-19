@@ -216,4 +216,18 @@ noPollIoEngine * nopoll_io_get_engine (noPollCtx * ctx, noPollIoEngineType engin
 	return engine;
 }
 
+/** 
+ * @brief Release the io engine created by \ref nopoll_io_get_engine.
+ *
+ * @param engine The engine to be released.
+ */
+void             nopoll_io_release_engine (noPollIoEngine * engine)
+{
+	if (engine == NULL)
+		return;
+	engine->destroy (engine->ctx, engine->io_object);
+	nopoll_free (engine);
+	return;
+}
+
 

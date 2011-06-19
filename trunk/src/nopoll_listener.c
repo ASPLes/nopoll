@@ -152,6 +152,7 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 
 	/* create noPollConn ection object */
 	listener          = nopoll_new (noPollConn, 1);
+	listener->refs    = 1;
 	listener->session = session;
 	listener->ctx     = ctx;
 	listener->role    = NOPOLL_ROLE_MAIN_LISTENER;
@@ -165,6 +166,7 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 
 	/* configure default handlers */
 	listener->receive = nopoll_conn_default_receive;
+	listener->send    = nopoll_conn_default_send;
 
 	return listener;
 }
@@ -197,6 +199,7 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 	
 	/* create noPollConn ection object */
 	listener          = nopoll_new (noPollConn, 1);
+	listener->refs    = 1;
 	listener->session = session;
 	listener->ctx     = ctx;
 	listener->role    = NOPOLL_ROLE_LISTENER;
@@ -218,51 +221,10 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 
 	/* configure default handlers */
 	listener->receive = nopoll_conn_default_receive;
+	listener->send    = nopoll_conn_default_send;
 
 	return listener;
 }
-
-/** 
- * @brief Allows to configure the accept handler that will be called
- * when a connection is received due the provided listener.
- *
- * @param listener The listener object where the accept connection
- * will be received. The listener must be a \ref
- * NOPOLL_ROLE_MAIN_LISTENER, otherwise the function won't set the
- * handler.
- *
- * @param on_accept The handler to be called when a connection is
- * received. Here the handler must return nopoll_true to accept the
- * connection, otherwise nopoll_false should be returned.
- *
- * @param user_data Optional user data pointer passed to the on accept
- * handler.
- *
- */
-void              nopoll_listener_set_on_accept (noPollConn           * listener,
-						 noPollActionHandler    on_accept,
-						 noPollPtr              user_data)
-{
-	noPollCtx * ctx = listener ? listener->ctx : NULL;
-
-	nopoll_return_if_fail (ctx, listener && on_accept);
-
-	/* configure the handler */
-	if (listener->role != NOPOLL_ROLE_MAIN_LISTENER) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
-			    "Called to configure a listener on accept action on a connection which is not main listener (was not created with nopoll_listener_new)");
-		return;
-	} /* end if */
-	
-	/* set the handler */
-	listener->on_accept = on_accept;
-	if (listener->on_accept == NULL)
-		listener->on_accept_data = NULL;
-	else
-		listener->on_accept_data = user_data;
-	return;
-}
-
 
 /** 
  * @brief Public function that performs a TCP listener accept.

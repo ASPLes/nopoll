@@ -214,7 +214,7 @@ NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
 
 	/* resolve hosting name */
 	hostent = gethostbyname (host);
-	if (hostent != NULL) {
+	if (hostent == NULL) {
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "unable to resolve host name %s", host);
 		return -1;
 	} /* end if */
@@ -275,18 +275,24 @@ NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
  * to the remote server inside a GET method. This parameter allows to
  * configure this. If NULL is provided, then / will be used.
  *
- * @param protocol Optional protocol requested to be activated for
- * this connection.
+ * @param origin Websocket origin to be notified to the server.
+ *
+ * @param protocols Optional protocols requested to be activated for
+ * this connection (an string of list of strings separated by a white
+ * space).
  */
 noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * host_ip, 
 			      const char * host_port, 
 			      const char * host_name,
 			      const char * get_url, 
-			      const char * protocol)
+			      const char * protocols,
+			      const char * origin)
 {
 	noPollConn     * conn;
 	NOPOLL_SOCKET    session;
+	char           * content;
+	int              size;
 
 	nopoll_return_val_if_fail (ctx, ctx && host_ip, NULL);
 
@@ -305,13 +311,7 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 	conn = nopoll_new (noPollConn, 1);
 	if (conn == NULL) 
 		return NULL;
-
-	/* call to acquire reference */
-	if (! nopoll_ctx_ref (ctx))   {
-		nopoll_free (conn);
-		nopoll_close_socket (session);
-		return NULL;
-	} /* end if */
+	conn->refs = 1;
 
 	/* register connection into context */
 	nopoll_ctx_register_conn (ctx, conn);
@@ -327,14 +327,92 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 
 	/* configure default handlers */
 	conn->receive = nopoll_conn_default_receive;
+	conn->send    = nopoll_conn_default_send;
+
+	/* build host name */
+	if (host_name == NULL)
+		conn->host_name = strdup (host_ip);
+	else
+		conn->host_name = strdup (host_name);
+
+	/* build origin */
+	if (origin == NULL)
+		conn->origin = nopoll_strdup_printf ("http://%s", conn->host_name);
+	else
+		conn->origin = strdup (origin);
+
+	/* get url */
+	if (get_url == NULL)
+		conn->get_url = strdup ("/");
+	else
+		conn->get_url = strdup (get_url);
+
+	/* protocols */
+	if (protocols != NULL)
+		conn->protocols = strdup (protocols);
+	
+	/* send initial handshake */
+	content = nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Origin: %s\r\n%s%s%s%sSec-WebSocket-Version: 8\r\n\r\n", 
+					conn->get_url, conn->host_name, conn->origin, 
+					/* protocol part */
+					protocols ? "Sec-WebSocket-Protocol" : "",
+					protocols ? ": " : "",
+					protocols ? protocols : "",
+					protocols ? "\r\n" : "");
+					
+	if (content == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to build client init message, unable to connect");
+		nopoll_conn_shutdown (conn);
+		return NULL;
+	}
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sending websocket client init: %s", content);
+	size = strlen (content);
+
+	/* call to send content */
+	if (size != conn->send (conn, content, size)) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to send websocket init message, error code was: %d, closing session", errno);
+		nopoll_conn_shutdown (conn);
+		conn = NULL;
+	} /* end if */
+
+	/* release content */
+	nopoll_free (content);
 
 	/* return connection created */
 	return conn;
 }
 
 /** 
- * @brief Allows to check if the provided connection is working at
- * this moment.
+ * @brief Allows to acquire a reference to the provided connection.
+ *
+ * @param conn The conection to be referenced
+ *
+ * @return nopoll_true In the case the function acquired a reference
+ * otherwise nopoll_false is returned.
+ */
+nopoll_bool    nopoll_conn_ref (noPollConn * conn)
+{
+	if (conn == NULL)
+		return nopoll_false;
+
+	/* acquire here the mutex */
+	if (conn->refs <= 0) {
+		/* release here the mutex */
+		return nopoll_false;
+	}
+	
+	conn->refs++;
+
+	/* release here the mutex */
+
+	return nopoll_true;
+}
+
+/** 
+ * @brief Allows to check if the provided connection is in connected
+ * state. This is different to be ready to send and receive content
+ * because the session needs to be first established. You can use \ref
+ * nopoll_conn_is_ready to ensure the connection is ok.
  *
  * @param conn The websocket connection to be checked.
  *
@@ -348,6 +426,33 @@ nopoll_bool    nopoll_conn_is_ok (noPollConn * conn)
 
 	/* return current socket status */
 	return conn->session > 0;
+}
+
+/** 
+ * @brief Allows to check if the connection is ready to be used
+ * (handshake completed).
+ *
+ * @param conn The connection to be checked.
+ *
+ * @return nopoll_true in the case the handshake was completed
+ * otherwise nopoll_false is returned. The function also returns
+ * nopoll_false in case \ref nopoll_conn_is_ok is failing.
+ */
+nopoll_bool    nopoll_conn_is_ready (noPollConn * conn)
+{
+	if (conn == NULL)
+		return nopoll_false;
+	if (conn->session < 0)
+		return nopoll_false;
+	if (! conn->handshake_ok) {
+		/* acquire here handshake mutex */
+
+		/* complete handshake */
+		nopoll_conn_complete_handshake (conn);
+
+		/* release here handshake mutex */
+	}
+	return conn->handshake_ok;
 }
 
 /** 
@@ -413,13 +518,15 @@ const char  * nopoll_conn_port   (noPollConn * conn)
  */
 void          nopoll_conn_shutdown (noPollConn * conn)
 {
+	if (conn == NULL)
+		return;
+
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "shutting down connection id=%d (session %d)", conn->id, conn->session);
+
 	/* shutdown connection here */
 	nopoll_close_socket (conn->session);
 	conn->session = -1;
 
-	/* call to close */
-	nopoll_conn_close (conn);
-	
 	return;
 }
 
@@ -436,6 +543,8 @@ void          nopoll_conn_close  (noPollConn  * conn)
 		return;
 
 	if (conn->session) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "requested proper connection close id=%d (session %d)", conn->id, conn->session);
+
 		/* send close message */
 
 		/* call to shutdown connection and release memory */
@@ -446,11 +555,54 @@ void          nopoll_conn_close  (noPollConn  * conn)
 	/* unregister connection from context */
 	nopoll_ctx_unregister_conn (conn->ctx, conn);
 
+	/* call to unref connection */
+	nopoll_conn_unref (conn);
+
+	return;
+}
+
+/** 
+ * @brief Allows to unref connection reference acquired via \ref
+ * nopoll_conn_ref.
+ *
+ * @param conn The connection to be unrefered.
+ */
+void nopoll_conn_unref (noPollConn * conn)
+{
+	if (conn == NULL)
+		return;
+
+	/* acquire here the mutex */
+	conn->refs--;
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Releasing connection id %d reference, current ref count status is: %d", 
+		    conn->id, conn->refs);
+	if (conn->refs != 0) {
+		/* release here the mutex */
+		return;
+	}
+	/* release here the mutex */
+
 	/* release ctx */
 	nopoll_ctx_unref (conn->ctx);
 	conn->ctx = NULL;
 
-	nopoll_free (conn);
+	/* free all internal strings */
+	nopoll_free (conn->host);
+	nopoll_free (conn->port);
+	nopoll_free (conn->host_name);
+	nopoll_free (conn->origin);
+	nopoll_free (conn->protocols);
+	nopoll_free (conn->get_url);
+
+	/* release handshake internal data */
+	if (conn->handshake) {
+		nopoll_free (conn->handshake->websocket_key);
+		nopoll_free (conn->handshake->websocket_accept);
+		nopoll_free (conn->handshake->websocket_version);
+		nopoll_free (conn->handshake);
+	} /* end if */
+
+	nopoll_free (conn);	
 
 	return;
 }
@@ -464,27 +616,11 @@ int nopoll_conn_default_receive (noPollConn * conn, char * buffer, int buffer_si
 }
 
 /** 
- * @internal Function that completes the handshake in an non-blocking
- * manner taking into consideration the connection type (listener or
- * client).
+ * @internal Default connection send until handshake is complete.
  */
-void nopoll_conn_complete_handshake (noPollConn * conn)
+int nopoll_conn_default_send (noPollConn * conn, char * buffer, int buffer_size)
 {
-	/* ensure handshake object is created */
-	if (conn->handshake == NULL)
-		conn->handshake = nopoll_new (noPollHandShake, 1);
-
-	/* handling listener */
-	if (conn->role == NOPOLL_ROLE_LISTENER) {
-		/* get lines and complete the handshake data */
-		
-		
-		
-
-		return;
-	}
-
-	return;
+	return send (conn->session, buffer, buffer_size, 0);
 }
 
 /** 
@@ -576,6 +712,481 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 
 }
 
+/** 
+ * @internal Function used to read bytes from the wire..
+ */
+int         nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen)
+{
+	int         nread;
+
+ keep_reading:
+	/* clear buffer */
+	/* memset (buffer, 0, maxlen * sizeof (char )); */
+	if ((nread = conn->receive (conn, buffer, maxlen)) == NOPOLL_SOCKET_ERROR) {
+		if (errno == NOPOLL_EAGAIN) {
+			return 0;
+		}
+		if (errno == NOPOLL_EWOULDBLOCK) {
+			return 0;
+		}
+		if (errno == NOPOLL_EINTR)
+			goto keep_reading;
+		
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "unable to readn=%d, error code was: %d", maxlen, errno);
+	}
+
+	/* ensure we don't access outside the array */
+	if (nread < 0) 
+		nread = 0;
+
+	buffer[nread] = 0;
+	return nread;
+}
+
+nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, int buffer_size, char * method, char ** url)
+{
+	int          iterator;
+	int          iterator2;
+	noPollCtx  * ctx = conn->ctx;
+
+	/* check if we already received method */
+	if (conn->get_url) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received GET method declartion when it was already received during handshake..closing session");
+		nopoll_conn_shutdown (conn);
+		return nopoll_false;
+	} /* end if */
+	
+	/* the get url must have a minimum size: GET / HTTP/1.1\r\n 16 (15 if only \n) */
+	if (buffer_size < 15) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received uncomplete GET method during handshake, closing session");
+		nopoll_conn_shutdown (conn);
+		return nopoll_false;
+	} /* end if */
+	
+	/* skip white spaces */
+	iterator = 4;
+	while (iterator <  buffer_size && buffer[iterator] == ' ') 
+		iterator++;
+	if (buffer_size == iterator) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method without an starting request url, closing session", method);
+		nopoll_conn_shutdown (conn);
+		return nopoll_false;
+	} /* end if */
+
+	/* now check url format */
+	if (buffer[iterator] != '/') {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method with a request url that do not start with /, closing session", method);
+		nopoll_conn_shutdown (conn);
+		return nopoll_false;
+	}
+	
+	/* ok now find the rest of the url content util the next white space */
+	iterator2 = (iterator + 1);
+	while (iterator2 <  buffer_size && buffer[iterator2] != ' ') 
+		iterator2++;
+	if (buffer_size == iterator2) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method with an uncomplate request url, closing session", method);
+		nopoll_conn_shutdown (conn);
+		return nopoll_false;
+	} /* end if */
+	
+	(*url) = nopoll_new (char, iterator2 - iterator + 1);
+	memcpy (*url, buffer + iterator, iterator2 - iterator);
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Found url method: '%s'", *url);
+
+	/* now check final HTTP header */
+	iterator = iterator2 + 1;
+	while (iterator <  buffer_size && buffer[iterator] == ' ') 
+		iterator++;
+	if (buffer_size == iterator) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method with an uncomplate request url, closing session", method);
+		nopoll_conn_shutdown (conn);
+		return nopoll_false;
+	} /* end if */
+
+	/* now check trailing content */
+	return nopoll_cmp (buffer + iterator, "HTTP/1.1\r\n") || nopoll_cmp (buffer + iterator, "HTTP/1.1\n");
+}
+
+/** 
+ * @internal Function that parses the mime header found on the
+ * provided buffer.
+ */
+nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, const char * buffer, int buffer_size, char ** header, char ** value)
+{
+	int iterator = 0;
+	int iterator2 = 0;
+
+	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Processing content: %s", buffer); */
+	
+	/* ok, find the first : */
+	while (iterator < buffer_size && buffer[iterator] && buffer[iterator] != ':')
+		iterator++;
+	if (buffer[iterator] != ':') {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expected to find mime header separator : but it wasn't found..");
+		return nopoll_false;
+	} 
+
+	/* copy the header value */
+	(*header) = nopoll_new (char, iterator + 1);
+	memcpy (*header, buffer, iterator);
+	
+	/* now get the mime header value */
+	iterator2 = iterator + 1;
+	while (iterator2 < buffer_size && buffer[iterator2] && buffer[iterator2] != '\n')
+		iterator2++;
+	if (buffer[iterator2] != '\n') {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expected to find mime header value end (13) but it wasn't found..");
+		return nopoll_false;
+	} 
+
+	/* copy the value */
+	(*value) = nopoll_new (char, (iterator2 - iterator) + 1);
+	memcpy (*value, buffer + iterator + 1, iterator2 - iterator);
+
+	/* trim content */
+	nopoll_trim (*value, NULL);
+	nopoll_trim (*header, NULL);
+	
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Found MIME header: '%s' -> '%s'", *header, *value);
+	return nopoll_true;
+}
+
+/** 
+ * @internal Function that ensures we don't receive any 
+ */ 
+nopoll_bool nopoll_conn_check_mime_header_repeated (noPollConn   * conn, 
+						    char         * header, 
+						    char         * value, 
+						    const char   * ref_header, 
+						    noPollPtr      check)
+{
+	if (strcasecmp (ref_header, header) == 0) {
+		if (check) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Provided header %s twice, closing connection", header);
+			nopoll_free (header);
+			nopoll_free (value);
+			nopoll_conn_shutdown (conn);
+			return nopoll_true;
+		} /* end if */
+	} /* end if */
+	return nopoll_false;
+}
+
+nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPollConn * conn)
+{
+	char      * reply;
+	int         reply_size;
+
+	/* call to check listener handshake */
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking client handshake data..");
+
+	/* ensure we have all minumum data */
+	if (! conn->handshake->upgrade_websocket ||
+	    ! conn->handshake->connection_upgrade ||
+	    ! conn->handshake->websocket_key ||
+	    ! conn->origin ||
+	    ! conn->handshake->websocket_version) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s didn't provide all websocket handshake values required, closing session (%d, %d, %p, %p, %p)",
+			    conn->host, conn->port,
+			    conn->handshake->upgrade_websocket,
+			    conn->handshake->connection_upgrade,
+			    conn->handshake->websocket_key,
+			    conn->origin,
+			    conn->handshake->websocket_version);
+		return nopoll_false;
+	} /* end if */
+	
+	/* now call the user app level to accept the websocket
+	   connection */
+	if (ctx->on_open) {
+		if (! ctx->on_open (ctx, conn, ctx->on_open_data)) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s was denied by application level, clossing session", 
+				    conn->host, conn->port);
+			nopoll_conn_shutdown (conn);
+			return nopoll_false;
+		}
+	} /* end if */
+	
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Client from %s:%s was accepted, replying accept",
+		    conn->host, conn->port);
+	
+	/* ok, send handshake reply */
+	reply = nopoll_strdup_printf ("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\nSec-WebSocket-Protocol: %s\r\n\r\n", 
+				      "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
+				      "chat");
+	if (reply == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to build reply, closing session");
+		return nopoll_false;
+	} /* end if */
+	
+	reply_size = strlen (reply);
+	if (reply_size != conn->send (conn, reply, reply_size)) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to send reply, there was a failure, error code was: %d", errno);
+		nopoll_free (reply);
+		return nopoll_false;
+	} /* end if */
+	
+	/* free reply */
+	nopoll_free (reply);
+	
+	return nopoll_true; /* signal handshake was completed */
+}
+
+nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPollConn * conn)
+{
+	/* check all data received */
+	if (! conn->handshake->websocket_accept ||
+	    ! conn->handshake->upgrade_websocket ||
+	    ! conn->handshake->connection_upgrade) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received uncomplete listener handshake reply (%p %d %d)",
+			    conn->handshake->websocket_accept, conn->handshake->upgrade_websocket, conn->handshake->connection_upgrade);
+		return nopoll_false;
+	} /* end if */
+
+	/* check accept value here */
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking accept key from listener..");
+		
+
+	return nopoll_true;
+}
+
+
+/** 
+ * @internal Function used to validate all handshake received until
+ * now.
+ */
+void nopoll_conn_complete_handshake_check (noPollConn * conn)
+{
+	noPollCtx    * ctx    = conn->ctx;
+	nopoll_bool    result = nopoll_false;
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "calling to check handshake received on connection id %d role %d..",
+		    conn->id, conn->role);
+
+	if (conn->role == NOPOLL_ROLE_LISTENER) {
+		result = nopoll_conn_complete_handshake_check_listener (ctx, conn);
+	} else if (conn->role == NOPOLL_ROLE_CLIENT) {
+		result = nopoll_conn_complete_handshake_check_client (ctx, conn);
+	} /* end if */
+
+	/* flag connection as ready: now we can get messages */
+	if (result) {
+		conn->handshake_ok = nopoll_true;
+	} else {
+		nopoll_conn_shutdown (conn);
+	} /* end if */
+
+	return;
+}
+
+/** 
+ * @internal Handler that implements one step of the websocket
+ * listener handshake received from client, until it is completed.
+ *
+ * @return Returns 0 to return (because error or because no data is
+ * available) or 1 to signal the caller continue reading if it is
+ * possible.
+ */
+int nopoll_conn_complete_handshake_listener (noPollCtx * ctx, noPollConn * conn, char * buffer, int buffer_size)
+{
+	char * header;
+	char * value;
+
+	/* handle content */
+	if (nopoll_ncmp (buffer, "GET ", 4)) {
+		/* get url method */
+		nopoll_conn_get_http_url (conn, buffer, buffer_size, "GET", &conn->get_url);
+		return 1;
+	} /* end if */
+
+	/* get mime header */
+	if (! nopoll_conn_get_mime_header (ctx, conn, buffer, buffer_size, &header, &value)) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to acquire mime header from remote peer during handshake, closing connection");
+		nopoll_conn_shutdown (conn);
+		return 0;
+	}
+		
+	/* ok, process here predefined headers */
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Host", conn->host_name))
+		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Upgrade", INT_TO_PTR (conn->handshake->upgrade_websocket))) 
+		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Connection", INT_TO_PTR (conn->handshake->connection_upgrade))) 
+		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Key", conn->handshake->websocket_key)) 
+		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Origin", conn->origin)) 
+		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Protocol", conn->protocols)) 
+		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Version", conn->handshake->websocket_version)) 
+		return 0;
+	
+	/* set the value if required */
+	if (strcasecmp (header, "Host") == 0)
+		conn->host_name = value;
+	else if (strcasecmp (header, "Sec-Websocket-Key") == 0)
+		conn->handshake->websocket_key = value;
+	else if (strcasecmp (header, "Sec-Websocket-Origin") == 0)
+		conn->origin = value;
+	else if (strcasecmp (header, "Sec-Websocket-Protocol") == 0)
+		conn->protocols = value;
+	else if (strcasecmp (header, "Sec-Websocket-Version") == 0)
+		conn->handshake->websocket_version = value;
+	else if (strcasecmp (header, "Upgrade") == 0) {
+		conn->handshake->upgrade_websocket = 1;
+		nopoll_free (value);
+	} else if (strcasecmp (header, "Connection") == 0) {
+		conn->handshake->connection_upgrade = 1;
+		nopoll_free (value);
+	} else {
+		/* release value, no body claimed it */
+		nopoll_free (value);
+	} /* end if */
+	
+	/* release the header */
+	nopoll_free (header);
+
+	return 1; /* continue reading lines */
+}
+
+/** 
+ * @internal Handler that implements one step of the websocket
+ * client handshake received from the server, until it is completed. 
+ *
+ * @return Returns 0 to return (because error or because no data is
+ * available) or 1 to signal the caller continue reading if it is
+ * possible.
+ */
+int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, char * buffer, int buffer_size)
+{
+	char * header;
+	char * value;
+	int    iterator;
+
+	/* handle content */
+	if (! conn->handshake->received_101 && nopoll_ncmp (buffer, "HTTP/1.1 ", 9)) {
+		iterator = 9;
+		while (iterator < buffer_size && buffer[iterator] && buffer[iterator] == ' ')
+			iterator++;
+		if (! nopoll_ncmp (buffer + iterator, "101", 3)) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "websocket server denied connection with: %s", buffer + iterator);
+			return 0; /* do not continue */
+		} /* end if */
+
+		/* flag that we have received HTTP/1.1 101 indication */
+		conn->handshake->received_101 = nopoll_true;
+
+		return 1;
+	} /* end if */
+
+	/* get mime header */
+	if (! nopoll_conn_get_mime_header (ctx, conn, buffer, buffer_size, &header, &value)) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to acquire mime header from remote peer during handshake, closing connection");
+		nopoll_conn_shutdown (conn);
+		return 0;
+	}
+		
+	/* ok, process here predefined headers */
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Upgrade", INT_TO_PTR (conn->handshake->upgrade_websocket))) 
+		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Connection", INT_TO_PTR (conn->handshake->connection_upgrade))) 
+		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Accept", conn->handshake->websocket_accept)) 
+		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Protocol", conn->protocols)) 
+		return 0;
+	
+	/* set the value if required */
+	if (strcasecmp (header, "Sec-Websocket-Accept") == 0)
+		conn->handshake->websocket_accept = value;
+	else if (strcasecmp (header, "Sec-Websocket-Protocol") == 0)
+		conn->protocols = value;
+	else if (strcasecmp (header, "Upgrade") == 0) {
+		conn->handshake->upgrade_websocket = 1;
+		nopoll_free (value);
+	} else if (strcasecmp (header, "Connection") == 0) {
+		conn->handshake->connection_upgrade = 1;
+		nopoll_free (value);
+	} else {
+		/* release value, no body claimed it */
+		nopoll_free (value);
+	} /* end if */
+	
+	/* release the header */
+	nopoll_free (header);
+
+	return 1; /* continue reading lines */
+}
+
+/** 
+ * @internal Function that completes the handshake in an non-blocking
+ * manner taking into consideration the connection type (listener or
+ * client).
+ */
+void nopoll_conn_complete_handshake (noPollConn * conn)
+{
+	char        buffer[1024];
+	int         buffer_size;
+	noPollCtx * ctx = conn->ctx;
+
+	/* ensure we didn't complete handshake */
+	if (conn->handshake_ok)
+		return;
+
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Checking to complete connection id %d handshake, role %d", conn->id, conn->role);
+
+	/* ensure handshake object is created */
+	if (conn->handshake == NULL)
+		conn->handshake = nopoll_new (noPollHandShake, 1);
+
+	/* get lines and complete the handshake data */
+	while (nopoll_true) {
+		/* clear buffer for debugging functions */
+		buffer[0] = 0;
+		/* get next line to process */
+		buffer_size = nopoll_conn_readline (conn, buffer, 1024);
+		if (buffer_size == 0 || buffer_size == -1) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unexpected connection close during handshake..closing connection");
+			nopoll_conn_shutdown (conn);
+			return;
+		} /* end if */
+
+		/* no data at this moment, return to avoid consuming data */
+		if (buffer_size == -2) {
+			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "No more data available on connection id %d", conn->id);
+			return;
+		}
+
+		/* drop a debug line */
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Bytes read %d from connection id %d: %s", buffer_size, conn->id, buffer); 
+			
+		/* check if we have received the end of the
+		   websocket client handshake */
+		if (buffer_size == 2 && nopoll_ncmp (buffer, "\r\n", 2)) {
+			nopoll_conn_complete_handshake_check (conn);
+			return;
+		}
+
+		if (conn->role == NOPOLL_ROLE_LISTENER) {
+			/* call to complete listener handshake */
+			if (nopoll_conn_complete_handshake_listener (ctx, conn, buffer, buffer_size) == 1)
+				continue;
+		} else if (conn->role == NOPOLL_ROLE_CLIENT) {
+			/* call to complete listener handshake */
+			if (nopoll_conn_complete_handshake_client (ctx, conn, buffer, buffer_size) == 1)
+				continue;
+		} else {
+			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Called to handle connection handshake on a connection with an unexpected role: %d, closing session");
+			nopoll_conn_shutdown (conn);
+			return;
+		}
+	} /* end while */
+
+	return;
+}
+
 
 /** 
  * @brief Allows to get the next message available on the provided
@@ -593,15 +1204,58 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
  */
 noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 {
+	char buffer[20];
+	int  bytes;
+
 	if (conn == NULL)
 		return NULL;
 	
 	/* check connection status */
 	if (! conn->handshake_ok) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Connection id %d handshake is not complete, running..", conn->id);
+		/* acquire here handshake mutex */
+
 		/* complete handshake */
 		nopoll_conn_complete_handshake (conn);
+
+		/* release here handshake mutex */
+		if (! conn->handshake_ok) 
+			return NULL;
+	} /* end if */
+
+	/*
+	  0                   1                   2                   3
+	  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+	  +-+-+-+-+-------+-+-------------+-------------------------------+
+	  |F|R|R|R| opcode|M| Payload len |    Extended payload length    |
+	  |I|S|S|S|  (4)  |A|     (7)     |             (16/63)           |
+	  |N|V|V|V|       |S|             |   (if payload len==126/127)   |
+	  | |1|2|3|       |K|             |                               |
+	  +-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
+	  |     Extended payload length continued, if payload len == 127  |
+	  + - - - - - - - - - - - - - - - +-------------------------------+
+	  |                               |Masking-key, if MASK set to 1  |
+	  +-------------------------------+-------------------------------+
+	  | Masking-key (continued)       |          Payload Data         |
+	  +-------------------------------- - - - - - - - - - - - - - - - +
+	  :                     Payload Data continued ...                :
+	  + - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - +
+	  |                     Payload Data continued ...                |
+	  +---------------------------------------------------------------+
+	*/
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Found data in connection id %d..", conn->id);
+	/* get the first 4 bytes from the websocket header */
+	bytes = nopoll_conn_receive (conn, buffer, 4);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received %d bytes for websocket header", bytes);
+	if (bytes == 0) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received connection close, finishing connection session");
+		nopoll_conn_shutdown (conn);
 		return NULL;
 	} /* end if */
+
+
+
+	
 
 	return NULL;
 }

@@ -1,2 +1,19 @@
 * Add external mutex support to ensure the library is thread safe.
   - Add into nopoll_conn_sock_conect to protect gethostbyname
+
+* Check following headers:
+  GET / HTTP/1.1\n
+  GET    /    HTTP/1.1\n
+  GET / HTTP/1.1\r\n
+  GET /\n
+  GET /\r\n
+
+* See what to do with concurrent connections being setup to a server
+  at the same time: technically the standard states this is not possible.
+  Section 5.1.2
+
+* Add support for Sec-Websocket-Extensions.
+
+* Add support for all Cookie support as defined here:
+  http://tools.ietf.org/html/draft-ietf-httpstate-cookie-20
+

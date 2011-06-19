@@ -91,6 +91,17 @@ AM_CONDITIONAL(DEFAULT_POLL, test "x$default_platform" = "xpoll")
 AC_ARG_ENABLE(nopoll-log, [  --enable-nopoll-log     Enable building Nopoll with debug log support [default=yes]], enable_nopoll_log="$enableval", enable_nopoll_log=yes)
 AM_CONDITIONAL(ENABLE_NOPOLL_LOG, test "x$enable_nopoll_log" = "xyes")
 
+dnl detect openssl support
+AC_CHECK_HEADER(openssl/ssl.h,,enable_tls_support=no)
+if test x$enable_tls_support = xno ; then
+   AC_MSG_ERROR([Cannot find OpenSSL installation. Unable to build noPoll: this is a requirement. ]) 
+else
+   dnl configure additional TLS flags
+   TLS_LIBS="-lssl -lcrypto"
+   AC_SUBST(TLS_LIBS)
+fi
+
+
 # The following command also comes to produce the nopoll_config.h file
 # required by the tool. If you update this, remember to update the
 # af-arch main configure.ac
@@ -132,14 +143,14 @@ AC_CONFIG_COMMANDS([nopoll_config.h],
  *
  * @param integer The integer value to cast to pointer.
  *
- * @return A \ref nopollPointer reference.
+ * @return A \ref noPollPtr reference.
  */
 #ifndef INT_TO_PTR
-#define INT_TO_PTR(integer)   ((nopollPtr) ${pti_cast} ((int)integer))
+#define INT_TO_PTR(integer)   ((noPollPtr) ${pti_cast} ((int)integer))
 #endif
 
 /** 
- * @brief Allows to convert a pointer reference (\ref nopollPtr),
+ * @brief Allows to convert a pointer reference (\ref noPollPtr),
  * which stores an integer that was stored using \ref INT_TO_PTR.
  *
  * Use the oposite function to restore the pointer value stored in the

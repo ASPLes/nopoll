@@ -57,7 +57,7 @@ nopoll_bool nopoll_cmp (const char * string1, const char * string2)
 
 	/* next position */
 	iterator = 0;
-	while (string1[iterator]) {
+	while (string1[iterator] && string1[iterator]) {
 		if (string1[iterator] != string2[iterator])
 			return nopoll_false;
 		iterator++;
@@ -65,6 +65,39 @@ nopoll_bool nopoll_cmp (const char * string1, const char * string2)
 	
 	/* last check, ensure both ends with 0 */
 	return string1[iterator] == string2[iterator];
+}
+
+/** 
+ * @brief Allows to check if provided strings are equal for the first
+ * bytes.
+ *
+ * @param string1 The first string to check. The string must be ended by 0.
+ * @param string2 The second string to check. The string must be ended by 0.
+ * @param bytes Number of bytes to check. The value must be > 0.
+ *
+ * @return nopoll_true if both strings are equal, otherwise
+ * nopoll_false is returned. 
+ */
+nopoll_bool nopoll_ncmp (const char * string1, const char * string2, int bytes)
+{
+	int iterator;
+	if (bytes <= 0)
+		return nopoll_false;
+	if (string1 == NULL && string2 == NULL)
+		return nopoll_true;
+	if (string1 == NULL || string2 == NULL)
+		return nopoll_false;
+
+	/* next position */
+	iterator = 0;
+	while (string1[iterator] && string1[iterator] && iterator < bytes) {
+		if (string1[iterator] != string2[iterator])
+			return nopoll_false;
+		iterator++;
+	} /* end while */
+	
+	/* last check, ensure both ends with 0 */
+	return iterator == bytes;
 }
 
 
@@ -150,4 +183,130 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 #endif
 	/* return the result */
 	return result;
+}
+
+/** 
+ * @internal Function used by \ref nopoll_trim.
+ */
+nopoll_bool        nopoll_is_white_space  (char * chunk)
+{
+	/* do not complain about receive a null refernce chunk */
+	if (chunk == NULL)
+		return nopoll_false;
+	
+	if (chunk[0] == ' ')
+		return nopoll_true;
+	if (chunk[0] == '\n')
+		return nopoll_true;
+	if (chunk[0] == '\t')
+		return nopoll_true;
+	if (chunk[0] == '\r')
+		return nopoll_true;
+
+	/* no white space was found */
+	return nopoll_false;
+}
+
+/** 
+ * @brief Removes white spaces and new lines characters from the
+ * string providing the count of bytes trimmed from the string.
+ *
+ * @param chunk The chunk to trim.
+ *
+ * @param trimmed An optional reference that returns the count of bytes
+ * trimmed by the operation.
+ */
+void        nopoll_trim  (char * chunk, int * trimmed)
+{
+	int    iterator;
+	int    iterator2;
+	int    end;
+	int    total;
+
+	/* perform some environment check */
+	if (chunk == NULL)
+		return;
+
+	/* check empty string received */
+	if (strlen (chunk) == 0) {
+		if (trimmed)
+			*trimmed = 0;
+		return;
+	}
+
+	/* check the amount of white spaces to remove from the
+	 * begin */
+	iterator = 0;
+	while (chunk[iterator] != 0) {
+		
+		/* check that the iterator is not pointing to a white
+		 * space */
+		if (! nopoll_is_white_space (chunk + iterator))
+			break;
+		
+		/* update the iterator */
+		iterator++;
+	}
+
+	/* check for the really basic case where an empty string is found */
+	if (iterator == strlen (chunk)) {
+		/* an empty string, trim it all */
+		chunk [0] = 0;
+		if (trimmed)
+			*trimmed = iterator;
+		return;
+	} /* end if */
+
+	/* now get the position for the last valid character in the
+	 * chunk */
+	total   = strlen (chunk) -1;
+	end     = total;
+	while (chunk[end] != 0) {
+		
+		/* stop if a white space is found */
+		if (! nopoll_is_white_space (chunk + end)) {
+			break;
+		}
+
+		/* update the iterator to eat the next white space */
+		end--;
+	}
+
+	/* the number of items trimmed */
+	total -= end;
+	total += iterator;
+	
+	/* copy the exact amount of non white spaces items */
+	iterator2 = 0;
+	while (iterator2 < (end - iterator + 1)) {
+		/* copy the content */
+		chunk [iterator2] = chunk [iterator + iterator2];
+
+		/* update the iterator */
+		iterator2++;
+	}
+	chunk [ end - iterator + 1] = 0;
+
+	if (trimmed != NULL)
+		*trimmed = total;
+
+	/* return the result reference */
+	return;	
+}
+
+/** 
+ * @brief Portable subsecond sleep. Suspends the calling thread during
+ * the provided amount of time.
+ *
+ * @param microseconds The amount of time to wait.
+ */
+void        nopoll_sleep (long microseconds)
+{
+#if defined(NOPOLL_OS_UNIX)
+	usleep (microseconds);
+	return;
+#elif defined(NOPOLL_OS_WIN32)
+	Sleep (microseconds);
+	return;
+#endif
 }

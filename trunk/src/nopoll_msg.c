@@ -37,6 +37,7 @@
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
 #include <nopoll_msg.h>
+#include <nopoll_private.h>
 
 /** 
  * @brief Allows to get a reference to the payload content inside the
@@ -47,7 +48,7 @@
  * @return A reference to the payload or NULL if it fails. See \ref
  * nopoll_msg_get_payload_size to get payload size.
  */
-const void * nopoll_msg_get_payload (noPollMsg * msg)
+const noPollPtr nopoll_msg_get_payload (noPollMsg * msg)
 {
 	if (msg == NULL)
 		return NULL;
@@ -67,6 +68,54 @@ int          nopoll_msg_get_payload_size (noPollMsg * msg)
 	if (msg == NULL)
 		return -1;
 	return msg->payload_size;
+}
+
+/** 
+ * @brief Allows to acquire a reference to the provided websocket
+ * message.
+ *
+ * @param msg The websocket message to acquire a reference.
+ *
+ * @return nopoll_true if the reference was acquired, otherwise
+ * nopoll_false is returned.
+ */
+nopoll_bool  nopoll_msg_ref (noPollMsg * msg)
+{
+	/* check recieved reference */
+	if (msg == NULL)
+		return nopoll_false;
+
+	/* acquire mutex here */
+	msg->refs++;
+
+	/* release mutex here */
+	return nopoll_true;
+}
+
+/** 
+ * @brief Allows to release the reference acquired, finished the
+ * object if all references are terminated.
+ *
+ * @param msg The websocket message to be finished.
+ */
+void         nopoll_msg_unref (noPollMsg * msg)
+{
+	if (msg == NULL)
+		return;
+	
+	/* acquire mutex here */
+	msg->refs--;
+	if (msg->refs != 0) {
+		/* release mutex here */
+		return;
+	}
+
+	/* free websocket message */
+	nopoll_free (msg->payload);
+	nopoll_free (msg);
+
+	/* release mutex here */
+	return;
 }
 
 

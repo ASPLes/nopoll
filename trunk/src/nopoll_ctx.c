@@ -110,6 +110,7 @@ void           nopoll_ctx_unref (noPollCtx * ctx)
 		return;
 	}
 	/* release mutex here */
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Releasing no poll context %p (%d)", ctx, ctx->refs);
 
 	/* release connection */
 	nopoll_free (ctx->conn_list);
@@ -147,6 +148,14 @@ void           nopoll_ctx_register_conn (noPollCtx  * ctx,
 
 			/* update connection list number */
 			ctx->conn_num++;
+
+			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "registered connection id %d, role: %d", conn->id, conn->role);
+
+			/* acquire reference */
+			ctx->refs++;
+			
+			/* acquire a reference to the conection */
+			nopoll_conn_ref (conn);
 
 			/* release mutex here */
 
@@ -210,6 +219,9 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 			/* update connection list number */
 			ctx->conn_num--;
 
+			/* acquire a reference to the conection */
+			nopoll_conn_unref (conn);
+
 			break;
 		} /* end if */
 		
@@ -232,6 +244,67 @@ int            nopoll_ctx_conns (noPollCtx * ctx)
 {
 	nopoll_return_val_if_fail (ctx, ctx, -1);
 	return ctx->conn_num;
+}
+
+/** 
+ * @brief Allows to configure the on open handler, the handler that is
+ * called when it is received an incoming websocket connection and all
+ * websocket client handshake data was received.
+ *
+ * This handler differs from \ref nopoll_ctx_set_on_accept this
+ * handler is called after all client handshake data was received.
+ *
+ * @param ctx The context that will be configured.
+ *
+ * @param on_open The handler to be configured on this context.
+ *
+ * @param user_data User defined pointer to be passed to the on open
+ * handler
+ */
+void           nopoll_ctx_set_on_open (noPollCtx            * ctx,
+				       noPollActionHandler    on_open,
+				       noPollPtr              user_data)
+{
+	nopoll_return_if_fail (ctx, ctx && on_open);
+
+	/* set the handler */
+	ctx->on_open = on_open;
+	if (ctx->on_open == NULL)
+		ctx->on_open_data = NULL;
+	else
+		ctx->on_open_data = user_data;
+	return;
+
+	return;
+}
+
+/** 
+ * @brief Allows to configure the accept handler that will be called
+ * when a connection is received but before any handshake takes place.
+ *
+ * @param ctx The context that will be configured.
+ *
+ * @param on_accept The handler to be called when a connection is
+ * received. Here the handler must return nopoll_true to accept the
+ * connection, otherwise nopoll_false should be returned.
+ *
+ * @param user_data Optional user data pointer passed to the on accept
+ * handler.
+ *
+ */
+void              nopoll_ctx_set_on_accept (noPollCtx            * ctx,
+					    noPollActionHandler    on_accept,
+					    noPollPtr              user_data)
+{
+	nopoll_return_if_fail (ctx, ctx && on_accept);
+
+	/* set the handler */
+	ctx->on_accept = on_accept;
+	if (ctx->on_accept == NULL)
+		ctx->on_accept_data = NULL;
+	else
+		ctx->on_accept_data = user_data;
+	return;
 }
 
 /** 
@@ -265,6 +338,9 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
 	nopoll_return_val_if_fail (ctx, ctx && foreach, NULL);
 
 	/* acquire here the mutex to protect connection list */
+
+	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Doing foreach over conn_length array (%p): %d", ctx, ctx->conn_length); */
+	
 	/* find the connection and remove it from the array */
 	iterator = 0;
 	while (iterator < ctx->conn_length) {
