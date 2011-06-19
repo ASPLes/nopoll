@@ -20,7 +20,8 @@ libnopoll_la_SOURCES     = \
 	nopoll_log.c \
 	nopoll_listener.c \
 	nopoll_loop.c \
-	nopoll_io.c
+	nopoll_io.c \
+	nopoll_msg.c
 
 libnopollinclude_HEADERS = \
 	nopoll.h \
@@ -32,11 +33,12 @@ libnopollinclude_HEADERS = \
 	nopoll_log.h \
 	nopoll_listener.h \
 	nopoll_loop.h \
-	nopoll_io.h
+	nopoll_io.h \
+	nopoll_msg.h
 
 libnopoll_la_LDFLAGS = -no-undefined -export-symbols-regex '^(nopoll|__nopoll|_nopoll).*'
 
-# libnopoll_la_LIBADD = -lm
+libnopoll_la_LIBADD = $(TLS_LIBS)
 
 libnopoll.def: update-def
 

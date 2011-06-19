@@ -165,4 +165,27 @@ typedef int (*noPollRead) (noPollConn * conn,
 			   char       * buffer,
 			   int          buffer_size);
 
+/** 
+ * @brief Handler definition used to notify websocket messages
+ * received.
+ *
+ * This handler will be called when a websocket message is
+ * received. Keep in mind the reference received on this handler will
+ * be finished when the handler ends. If you need to have a reference
+ * to the message after handler execution, acquire a reference via
+ * \ref nopoll_msg_ref.
+ *
+ * @param ctx The context where the messagewas received.
+ *
+ * @param conn The connection where the message was received.
+ *
+ * @param msg The websocket message was received.
+ *
+ * @param user_data An optional user defined pointer.
+ */
+typedef void (*noPollOnMessageHandler) (noPollCtx  * ctx,
+					noPollConn * conn,
+					noPollMsg  * msg,
+					noPollPtr  * user_data);
+
 #endif

@@ -52,10 +52,6 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 noPollConn      * nopoll_listener_from_socket (noPollCtx      * ctx,
 					       NOPOLL_SOCKET    session);
 
-void              nopoll_listener_set_on_accept (noPollConn           * listener,
-						 noPollActionHandler    on_accept,
-						 noPollPtr              user_data);
-
 NOPOLL_SOCKET     nopoll_listener_accept (NOPOLL_SOCKET server_socket);
 
 #endif

@@ -1,162 +1,14 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
-<head profile="http://dublincore.org/documents/2008/08/04/dc-html/">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta name="robots" content="index,follow" />
-    <meta name="creator" content="rfcmarkup version 1.95" />
-    <link rel="schema.DC" href="http://purl.org/dc/elements/1.1/" />
-<meta name="DC.Relation.Replaces" content="draft-hixie-thewebsocketprotocol" />
-<meta name="DC.Identifier" content="urn:ietf:id:ietf-hybi-thewebsocketprotocol" />
-<meta name="DC.Date.Issued" content="2011-06-13" />
-<meta name="DC.Creator" content="Ian Fette &lt;ifette+ietf@google.com&gt;" />
-<meta name="DC.Description.Abstract" content="The WebSocket protocol enables two-way communication between a client\nrunning untrusted code running in a controlled environment to a remote\nhost that has opted-in to communications from that code. The security\nmodel used for this is the Origin-based security model commonly used\nby Web browsers. The protocol consists of an opening handshake\nfollowed by basic message framing, layered over TCP. (In theory, any\ntransport protocol could be used so long as it provides for reliable\ntransport, is byte clean, and supports relatively large message sizes.\nHowever, for this document, we consider only TCP.) The goal of this\ntechnology is to provide a mechanism for browser- based applications\nthat need two-way communication with servers that does not rely on\nopening multiple HTTP connections (e.g. using XMLHttpRequest or\n&lt;iframe&gt;s and long polling).  Please send feedback to the\nhybi@ietf.org mailing list." />
-<meta name="DC.Title" content="The WebSocket protocol" />
 
-    <link rel="icon" href="/images/id.png" type="image/png" />
-    <link rel="shortcut icon" href="/images/id.png" type="image/png" />
-    <title>draft-ietf-hybi-thewebsocketprotocol-09 - The WebSocket protocol</title>
-    
-    
-    <style type="text/css">
-	body {
-	    margin: 0px 8px;
-            font-size: 1em;
-	}
-        h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
-	    font-weight: bold;
-            line-height: 0pt;
-            display: inline;
-            white-space: pre;
-            font-family: monospace;
-            font-size: 1em;
-	    font-weight: bold;
-        }
-        pre {
-            font-size: 1em;
-            margin-top: 0px;
-            margin-bottom: 0px;
-        }
-	.pre {
-	    white-space: pre;
-	    font-family: monospace;
-	}
-	.header{
-	    font-weight: bold;
-	}
-        .newpage {
-            page-break-before: always;
-        }
-        .invisible {
-            text-decoration: none;
-            color: white;
-        }
-        @media print {
-            body {
-                font-size: 10.5pt;
-            }
-            h1, h2, h3, h4, h5, h6 {
-                font-size: 10.5pt;
-            }
-        
-            a:link, a:visited {
-                color: inherit;
-                text-decoration: none;
-            }
-            .noprint {
-                display: none;
-            }
-        }
-	@media screen {
-	    .grey, .grey a:link, .grey a:visited {
-		color: #777;
-	    }
-            .docinfo {
-                background-color: #EEE;
-            }
-            .top {
-                border-top: 7px solid #EEE;
-            }
-            .bgwhite  { background-color: white; }
-            .bgred    { background-color: #F44; }
-            .bggrey   { background-color: #666; }
-            .bgbrown  { background-color: #840; }            
-            .bgorange { background-color: #FA0; }
-            .bgyellow { background-color: #EE0; }
-            .bgmagenta{ background-color: #F4F; }
-            .bgblue   { background-color: #66F; }
-            .bgcyan   { background-color: #4DD; }
-            .bggreen  { background-color: #4F4; }
 
-            .legend   { font-size: 90%; }
-            .cplate   { font-size: 70%; border: solid grey 1px; }
-	}
-    </style>
-    <!--[if IE]>
-    <style>
-    body {
-       font-size: 13px;
-       margin: 10px 10px;
-    }
-    </style>
-    <![endif]-->
 
-    <script type="text/javascript"><!--
-    function addHeaderTags() {
-	var spans = document.getElementsByTagName("span");
-	for (var i=0; i < spans.length; i++) {
-	    var elem = spans[i];
-	    if (elem) {
-		var level = elem.getAttribute("class");
-                if (level == "h1" || level == "h2" || level == "h3" || level == "h4" || level == "h5" || level == "h6") {
-                    elem.innerHTML = "<"+level+">"+elem.innerHTML+"</"+level+">";		
-                }
-	    }
-	}
-    }
-    var legend_html = "Colour legend:<br />      <table>         <tr><td>Unknown:</td>          <td><span class='cplate bgwhite'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Draft:</td>            <td><span class='cplate bgred'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Informational:</td>    <td><span class='cplate bgorange'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Experimental:</td>     <td><span class='cplate bgyellow'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Best Common Practice:</td><td><span class='cplate bgmagenta'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Proposed Standard:</td><td><span class='cplate bgblue'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Draft Standard:</td>   <td><span class='cplate bgcyan'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Standard:</td>         <td><span class='cplate bggreen'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Historic:</td>         <td><span class='cplate bggrey'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>         <tr><td>Obsolete:</td>         <td><span class='cplate bgbrown'>&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>     </table>";
-    function showElem(id) {
-        var elem = document.getElementById(id);
-        elem.innerHTML = eval(id+"_html");
-        elem.style.visibility='visible';
-    }
-    function hideElem(id) {
-        var elem = document.getElementById(id);
-        elem.style.visibility='hidden';        
-        elem.innerHTML = "";
-    }
-    // -->
-    </script>
-</head>
-<body onload="addHeaderTags()">
-   <div style="height: 13px;">
-      <div onmouseover="this.style.cursor='pointer';"
-         onclick="showElem('legend');"
-         onmouseout="hideElem('legend')"
-	 style="height: 6px; position: absolute;"
-         class="pre noprint docinfo bgred"
-         title="Click for colour legend." >                                                                        </div>
-      <div id="legend"
-           class="docinfo noprint pre legend"
-           style="position:absolute; top: 4px; left: 4ex; visibility:hidden; background-color: white; padding: 4px 9px 5px 7px; border: solid #345 1px; "
-           onmouseover="showElem('legend');"
-           onmouseout="hideElem('legend');">
-      </div>
-   </div>
-<span class="pre noprint docinfo top">[<a href="../html/" title="Document search and retrieval page">Docs</a>] [<a href="http://tools.ietf.org/id/draft-ietf-hybi-thewebsocketprotocol-09.txt" title="Plaintext version of this document">txt</a>|<a href="/pdf/draft-ietf-hybi-thewebsocketprotocol-09.txt" title="PDF version of this document">pdf</a>] [<a href='https://datatracker.ietf.org/doc/draft-ietf-hybi-thewebsocketprotocol' title='IESG Datatracker information for this document'>Tracker</a>] [<a href="../wg/hybi" title="The working group handling this document">WG</a>] [<a href="mailto:draft-ietf-hybi-thewebsocketprotocol@tools.ietf.org?subject=draft-ietf-hybi-thewebsocketprotocol%20" title="Send email to the document authors">Email</a>] [<a href="/rfcdiff?difftype=--hwdiff&amp;url2=draft-ietf-hybi-thewebsocketprotocol-09.txt" title="Inline diff (wdiff)">Diff1</a>] [<a href="/rfcdiff?url2=draft-ietf-hybi-thewebsocketprotocol-09.txt" title="Side-by-side diff">Diff2</a>] [<a href="/idnits?url=http://tools.ietf.org/id/draft-ietf-hybi-thewebsocketprotocol-09.txt" title="Run an idnits check of this document">Nits</a>]          </span><br />
-<span class="pre noprint docinfo">                                                                        </span><br />
-<span class="pre noprint docinfo">Versions: (<a href="./draft-hixie-thewebsocketprotocol" title="Precursor">draft-hixie-thewebsocketprotocol</a>)                            
-          <a href="./draft-ietf-hybi-thewebsocketprotocol-00">00</a> <a href="./draft-ietf-hybi-thewebsocketprotocol-01">01</a> <a href="./draft-ietf-hybi-thewebsocketprotocol-02">02</a> <a href="./draft-ietf-hybi-thewebsocketprotocol-03">03</a> <a href="./draft-ietf-hybi-thewebsocketprotocol-04">04</a> <a href="./draft-ietf-hybi-thewebsocketprotocol-05">05</a> <a href="./draft-ietf-hybi-thewebsocketprotocol-06">06</a> <a href="./draft-ietf-hybi-thewebsocketprotocol-07">07</a> <a href="./draft-ietf-hybi-thewebsocketprotocol-08">08</a> <a href="./draft-ietf-hybi-thewebsocketprotocol-09">09</a>                                 </span><br />
-<span class="pre noprint docinfo">                                                                        </span><br />
-<pre>
 HyBi Working Group                                              I. Fette
 Internet-Draft                                              Google, Inc.
 Intended status: Standards Track                           June 13, 2011
 Expires: December 15, 2011
 
 
-                         <span class="h1">The WebSocket protocol</span>
-                <span class="h1">draft-ietf-hybi-thewebsocketprotocol-09</span>
+                         The WebSocket protocol
+                draft-ietf-hybi-thewebsocketprotocol-09
 
 Abstract
 
@@ -172,19 +24,19 @@ Abstract
    The goal of this technology is to provide a mechanism for browser-
    based applications that need two-way communication with servers that
    does not rely on opening multiple HTTP connections (e.g. using
-   XMLHttpRequest or &lt;iframe&gt;s and long polling).
+   XMLHttpRequest or <iframe>s and long polling).
 
    Please send feedback to the hybi@ietf.org mailing list.
 
 Status of this Memo
 
    This Internet-Draft is submitted in full conformance with the
-   provisions of <a href="./bcp78">BCP 78</a> and <a href="./bcp79">BCP 79</a>.
+   provisions of BCP 78 and BCP 79.
 
    Internet-Drafts are working documents of the Internet Engineering
    Task Force (IETF).  Note that other groups may also distribute
    working documents as Internet-Drafts.  The list of current Internet-
-   Drafts is at <a href="http://datatracker.ietf.org/drafts/current/">http://datatracker.ietf.org/drafts/current/</a>.
+   Drafts is at http://datatracker.ietf.org/drafts/current/.
 
    Internet-Drafts are draft documents valid for a maximum of six months
    and may be updated, replaced, or obsoleted by other documents at any
@@ -200,133 +52,133 @@ Copyright Notice
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011               [Page 1]</span>
-</pre><pre class='newpage'><a name="page-2" id="page-2" href="#page-2" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011               [Page 1]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-   This document is subject to <a href="./bcp78">BCP 78</a> and the IETF Trust's Legal
+   This document is subject to BCP 78 and the IETF Trust's Legal
    Provisions Relating to IETF Documents
-   (<a href="http://trustee.ietf.org/license-info">http://trustee.ietf.org/license-info</a>) in effect on the date of
+   (http://trustee.ietf.org/license-info) in effect on the date of
    publication of this document.  Please review these documents
    carefully, as they describe your rights and restrictions with respect
    to this document.  Code Components extracted from this document must
-   include Simplified BSD License text as described in <a href="#section-4">Section 4</a>.e of
+   include Simplified BSD License text as described in Section 4.e of
    the Trust Legal Provisions and are provided without warranty as
    described in the Simplified BSD License.
 
 
 Table of Contents
 
-   <a href="#section-1">1</a>.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  <a href="#page-4">4</a>
-     <a href="#section-1.1">1.1</a>.   Background  . . . . . . . . . . . . . . . . . . . . . . .  <a href="#page-4">4</a>
-     <a href="#section-1.2">1.2</a>.   Protocol Overview . . . . . . . . . . . . . . . . . . . .  <a href="#page-4">4</a>
-     <a href="#section-1.3">1.3</a>.   Opening Handshake . . . . . . . . . . . . . . . . . . . .  <a href="#page-6">6</a>
-     <a href="#section-1.4">1.4</a>.   Closing Handshake . . . . . . . . . . . . . . . . . . . .  <a href="#page-9">9</a>
-     <a href="#section-1.5">1.5</a>.   Design Philosophy . . . . . . . . . . . . . . . . . . . .  <a href="#page-9">9</a>
-     <a href="#section-1.6">1.6</a>.   Security Model  . . . . . . . . . . . . . . . . . . . . . <a href="#page-10">10</a>
-     <a href="#section-1.7">1.7</a>.   Relationship to TCP and HTTP  . . . . . . . . . . . . . . <a href="#page-11">11</a>
-     <a href="#section-1.8">1.8</a>.   Establishing a Connection . . . . . . . . . . . . . . . . <a href="#page-11">11</a>
-     <a href="#section-1.9">1.9</a>.   Subprotocols Using the WebSocket protocol . . . . . . . . <a href="#page-11">11</a>
-   <a href="#section-2">2</a>.  Conformance Requirements . . . . . . . . . . . . . . . . . . . <a href="#page-13">13</a>
-     <a href="#section-2.1">2.1</a>.   Terminology . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-13">13</a>
-   <a href="#section-3">3</a>.  WebSocket URIs . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-15">15</a>
-   <a href="#section-4">4</a>.  Data Framing . . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-16">16</a>
-     <a href="#section-4.1">4.1</a>.   Overview  . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-16">16</a>
-     <a href="#section-4.2">4.2</a>.   Base Framing Protocol . . . . . . . . . . . . . . . . . . <a href="#page-16">16</a>
-     <a href="#section-4.3">4.3</a>.   Client-to-Server Masking  . . . . . . . . . . . . . . . . <a href="#page-20">20</a>
-     <a href="#section-4.4">4.4</a>.   Fragmentation . . . . . . . . . . . . . . . . . . . . . . <a href="#page-21">21</a>
-     <a href="#section-4.5">4.5</a>.   Control Frames  . . . . . . . . . . . . . . . . . . . . . <a href="#page-22">22</a>
-       <a href="#section-4.5.1">4.5.1</a>.  Close  . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-23">23</a>
-       <a href="#section-4.5.2">4.5.2</a>.  Ping . . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-24">24</a>
-       <a href="#section-4.5.3">4.5.3</a>.  Pong . . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-24">24</a>
-     <a href="#section-4.6">4.6</a>.   Data Frames . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-24">24</a>
-     <a href="#section-4.7">4.7</a>.   Examples  . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-25">25</a>
-     <a href="#section-4.8">4.8</a>.   Extensibility . . . . . . . . . . . . . . . . . . . . . . <a href="#page-25">25</a>
-   <a href="#section-5">5</a>.  Opening Handshake  . . . . . . . . . . . . . . . . . . . . . . <a href="#page-27">27</a>
-     <a href="#section-5.1">5.1</a>.   Client Requirements . . . . . . . . . . . . . . . . . . . <a href="#page-27">27</a>
-     <a href="#section-5.2">5.2</a>.   Server-side Requirements  . . . . . . . . . . . . . . . . <a href="#page-32">32</a>
-       <a href="#section-5.2.1">5.2.1</a>.  Reading the Client's Opening Handshake . . . . . . . . <a href="#page-32">32</a>
-       <a href="#section-5.2.2">5.2.2</a>.  Sending the Server's Opening Handshake . . . . . . . . <a href="#page-33">33</a>
-   <a href="#section-6">6</a>.  Sending and Receiving Data . . . . . . . . . . . . . . . . . . <a href="#page-37">37</a>
-     <a href="#section-6.1">6.1</a>.   Sending Data  . . . . . . . . . . . . . . . . . . . . . . <a href="#page-37">37</a>
-     <a href="#section-6.2">6.2</a>.   Receiving Data  . . . . . . . . . . . . . . . . . . . . . <a href="#page-37">37</a>
-   <a href="#section-7">7</a>.  Closing the connection . . . . . . . . . . . . . . . . . . . . <a href="#page-39">39</a>
-     <a href="#section-7.1">7.1</a>.   Definitions . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-39">39</a>
+   1.  Introduction . . . . . . . . . . . . . . . . . . . . . . . . .  4
+     1.1.   Background  . . . . . . . . . . . . . . . . . . . . . . .  4
+     1.2.   Protocol Overview . . . . . . . . . . . . . . . . . . . .  4
+     1.3.   Opening Handshake . . . . . . . . . . . . . . . . . . . .  6
+     1.4.   Closing Handshake . . . . . . . . . . . . . . . . . . . .  9
+     1.5.   Design Philosophy . . . . . . . . . . . . . . . . . . . .  9
+     1.6.   Security Model  . . . . . . . . . . . . . . . . . . . . . 10
+     1.7.   Relationship to TCP and HTTP  . . . . . . . . . . . . . . 11
+     1.8.   Establishing a Connection . . . . . . . . . . . . . . . . 11
+     1.9.   Subprotocols Using the WebSocket protocol . . . . . . . . 11
+   2.  Conformance Requirements . . . . . . . . . . . . . . . . . . . 13
+     2.1.   Terminology . . . . . . . . . . . . . . . . . . . . . . . 13
+   3.  WebSocket URIs . . . . . . . . . . . . . . . . . . . . . . . . 15
+   4.  Data Framing . . . . . . . . . . . . . . . . . . . . . . . . . 16
+     4.1.   Overview  . . . . . . . . . . . . . . . . . . . . . . . . 16
+     4.2.   Base Framing Protocol . . . . . . . . . . . . . . . . . . 16
+     4.3.   Client-to-Server Masking  . . . . . . . . . . . . . . . . 20
+     4.4.   Fragmentation . . . . . . . . . . . . . . . . . . . . . . 21
+     4.5.   Control Frames  . . . . . . . . . . . . . . . . . . . . . 22
+       4.5.1.  Close  . . . . . . . . . . . . . . . . . . . . . . . . 23
+       4.5.2.  Ping . . . . . . . . . . . . . . . . . . . . . . . . . 24
+       4.5.3.  Pong . . . . . . . . . . . . . . . . . . . . . . . . . 24
+     4.6.   Data Frames . . . . . . . . . . . . . . . . . . . . . . . 24
+     4.7.   Examples  . . . . . . . . . . . . . . . . . . . . . . . . 25
+     4.8.   Extensibility . . . . . . . . . . . . . . . . . . . . . . 25
+   5.  Opening Handshake  . . . . . . . . . . . . . . . . . . . . . . 27
+     5.1.   Client Requirements . . . . . . . . . . . . . . . . . . . 27
+     5.2.   Server-side Requirements  . . . . . . . . . . . . . . . . 32
+       5.2.1.  Reading the Client's Opening Handshake . . . . . . . . 32
+       5.2.2.  Sending the Server's Opening Handshake . . . . . . . . 33
+   6.  Sending and Receiving Data . . . . . . . . . . . . . . . . . . 37
+     6.1.   Sending Data  . . . . . . . . . . . . . . . . . . . . . . 37
+     6.2.   Receiving Data  . . . . . . . . . . . . . . . . . . . . . 37
+   7.  Closing the connection . . . . . . . . . . . . . . . . . . . . 39
+     7.1.   Definitions . . . . . . . . . . . . . . . . . . . . . . . 39
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011               [Page 2]</span>
-</pre><pre class='newpage'><a name="page-3" id="page-3" href="#page-3" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011               [Page 2]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-       <a href="#section-7.1.1">7.1.1</a>.  Close the WebSocket Connection . . . . . . . . . . . . <a href="#page-39">39</a>
-       <a href="#section-7.1.2">7.1.2</a>.  Start the WebSocket Closing Handshake  . . . . . . . . <a href="#page-39">39</a>
-       <a href="#section-7.1.3">7.1.3</a>.  The WebSocket Closing Handshake is Started . . . . . . <a href="#page-39">39</a>
-       <a href="#section-7.1.4">7.1.4</a>.  The WebSocket Connection is Closed . . . . . . . . . . <a href="#page-40">40</a>
-       <a href="#section-7.1.5">7.1.5</a>.  The WebSocket Connection Close Code  . . . . . . . . . <a href="#page-40">40</a>
-       <a href="#section-7.1.6">7.1.6</a>.  The WebSocket Connection Close Reason  . . . . . . . . <a href="#page-40">40</a>
-       <a href="#section-7.1.7">7.1.7</a>.  Fail the WebSocket Connection  . . . . . . . . . . . . <a href="#page-41">41</a>
-     <a href="#section-7.2">7.2</a>.   Abnormal Closures . . . . . . . . . . . . . . . . . . . . <a href="#page-41">41</a>
-       <a href="#section-7.2.1">7.2.1</a>.  Client-Initiated Closure . . . . . . . . . . . . . . . <a href="#page-41">41</a>
-       <a href="#section-7.2.2">7.2.2</a>.  Server-initiated closure . . . . . . . . . . . . . . . <a href="#page-42">42</a>
-     <a href="#section-7.3">7.3</a>.   Normal Closure of Connections . . . . . . . . . . . . . . <a href="#page-42">42</a>
-     <a href="#section-7.4">7.4</a>.   Status Codes  . . . . . . . . . . . . . . . . . . . . . . <a href="#page-42">42</a>
-       <a href="#section-7.4.1">7.4.1</a>.  Defined Status Codes . . . . . . . . . . . . . . . . . <a href="#page-42">42</a>
-       <a href="#section-7.4.2">7.4.2</a>.  Reserved Status Code Ranges  . . . . . . . . . . . . . <a href="#page-43">43</a>
-   <a href="#section-8">8</a>.  Error Handling . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-45">45</a>
-     <a href="#section-8.1">8.1</a>.   Handling Errors in UTF-8 from the Server  . . . . . . . . <a href="#page-45">45</a>
-     <a href="#section-8.2">8.2</a>.   Handling Errors in UTF-8 from the Client  . . . . . . . . <a href="#page-45">45</a>
-   <a href="#section-9">9</a>.  Extensions . . . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-46">46</a>
-     <a href="#section-9.1">9.1</a>.   Negotiating Extensions  . . . . . . . . . . . . . . . . . <a href="#page-46">46</a>
-     <a href="#section-9.2">9.2</a>.   Known Extensions  . . . . . . . . . . . . . . . . . . . . <a href="#page-47">47</a>
-       <a href="#section-9.2.1">9.2.1</a>.  Compression  . . . . . . . . . . . . . . . . . . . . . <a href="#page-47">47</a>
-   <a href="#section-10">10</a>. Security Considerations  . . . . . . . . . . . . . . . . . . . <a href="#page-49">49</a>
-   <a href="#section-11">11</a>. IANA Considerations  . . . . . . . . . . . . . . . . . . . . . <a href="#page-51">51</a>
-     <a href="#section-11.1">11.1</a>.  Registration of "ws:" Scheme  . . . . . . . . . . . . . . <a href="#page-51">51</a>
-     <a href="#section-11.2">11.2</a>.  Registration of "wss:" Scheme . . . . . . . . . . . . . . <a href="#page-52">52</a>
-     <a href="#section-11.3">11.3</a>.  Registration of the "WebSocket" HTTP Upgrade Keyword  . . <a href="#page-53">53</a>
-     <a href="#section-11.4">11.4</a>.  Sec-WebSocket-Key . . . . . . . . . . . . . . . . . . . . <a href="#page-53">53</a>
-     <a href="#section-11.5">11.5</a>.  Sec-WebSocket-Extensions  . . . . . . . . . . . . . . . . <a href="#page-54">54</a>
-     <a href="#section-11.6">11.6</a>.  WebSocket Extension Name Registry . . . . . . . . . . . . <a href="#page-55">55</a>
-     <a href="#section-11.7">11.7</a>.  Sec-WebSocket-Accept  . . . . . . . . . . . . . . . . . . <a href="#page-56">56</a>
-     <a href="#section-11.8">11.8</a>.  Sec-WebSocket-Origin  . . . . . . . . . . . . . . . . . . <a href="#page-56">56</a>
-     <a href="#section-11.9">11.9</a>.  Sec-WebSocket-Protocol  . . . . . . . . . . . . . . . . . <a href="#page-57">57</a>
-     <a href="#section-11.10">11.10</a>. WebSocket Subprotocol Name Registry . . . . . . . . . . . <a href="#page-57">57</a>
-     <a href="#section-11.11">11.11</a>. Sec-WebSocket-Version . . . . . . . . . . . . . . . . . . <a href="#page-58">58</a>
-     <a href="#section-11.12">11.12</a>. WebSocket Version Number Registry . . . . . . . . . . . . <a href="#page-59">59</a>
-     <a href="#section-11.13">11.13</a>. WebSocket Close Code Number Registry  . . . . . . . . . . <a href="#page-60">60</a>
-     <a href="#section-11.14">11.14</a>. WebSocket Opcode Registry . . . . . . . . . . . . . . . . <a href="#page-61">61</a>
-     <a href="#section-11.15">11.15</a>. WebSocket Framing Header Bits Registry  . . . . . . . . . <a href="#page-62">62</a>
-   <a href="#section-12">12</a>. Using the WebSocket protocol from Other Specifications . . . . <a href="#page-63">63</a>
-   <a href="#section-13">13</a>. Acknowledgements . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-64">64</a>
-   <a href="#section-14">14</a>. References . . . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-65">65</a>
-     <a href="#section-14.1">14.1</a>.  Normative References  . . . . . . . . . . . . . . . . . . <a href="#page-65">65</a>
-     <a href="#section-14.2">14.2</a>.  Informative References  . . . . . . . . . . . . . . . . . <a href="#page-66">66</a>
-   Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . <a href="#page-68">68</a>
-
-
-
+       7.1.1.  Close the WebSocket Connection . . . . . . . . . . . . 39
+       7.1.2.  Start the WebSocket Closing Handshake  . . . . . . . . 39
+       7.1.3.  The WebSocket Closing Handshake is Started . . . . . . 39
+       7.1.4.  The WebSocket Connection is Closed . . . . . . . . . . 40
+       7.1.5.  The WebSocket Connection Close Code  . . . . . . . . . 40
+       7.1.6.  The WebSocket Connection Close Reason  . . . . . . . . 40
+       7.1.7.  Fail the WebSocket Connection  . . . . . . . . . . . . 41
+     7.2.   Abnormal Closures . . . . . . . . . . . . . . . . . . . . 41
+       7.2.1.  Client-Initiated Closure . . . . . . . . . . . . . . . 41
+       7.2.2.  Server-initiated closure . . . . . . . . . . . . . . . 42
+     7.3.   Normal Closure of Connections . . . . . . . . . . . . . . 42
+     7.4.   Status Codes  . . . . . . . . . . . . . . . . . . . . . . 42
+       7.4.1.  Defined Status Codes . . . . . . . . . . . . . . . . . 42
+       7.4.2.  Reserved Status Code Ranges  . . . . . . . . . . . . . 43
+   8.  Error Handling . . . . . . . . . . . . . . . . . . . . . . . . 45
+     8.1.   Handling Errors in UTF-8 from the Server  . . . . . . . . 45
+     8.2.   Handling Errors in UTF-8 from the Client  . . . . . . . . 45
+   9.  Extensions . . . . . . . . . . . . . . . . . . . . . . . . . . 46
+     9.1.   Negotiating Extensions  . . . . . . . . . . . . . . . . . 46
+     9.2.   Known Extensions  . . . . . . . . . . . . . . . . . . . . 47
+       9.2.1.  Compression  . . . . . . . . . . . . . . . . . . . . . 47
+   10. Security Considerations  . . . . . . . . . . . . . . . . . . . 49
+   11. IANA Considerations  . . . . . . . . . . . . . . . . . . . . . 51
+     11.1.  Registration of "ws:" Scheme  . . . . . . . . . . . . . . 51
+     11.2.  Registration of "wss:" Scheme . . . . . . . . . . . . . . 52
+     11.3.  Registration of the "WebSocket" HTTP Upgrade Keyword  . . 53
+     11.4.  Sec-WebSocket-Key . . . . . . . . . . . . . . . . . . . . 53
+     11.5.  Sec-WebSocket-Extensions  . . . . . . . . . . . . . . . . 54
+     11.6.  WebSocket Extension Name Registry . . . . . . . . . . . . 55
+     11.7.  Sec-WebSocket-Accept  . . . . . . . . . . . . . . . . . . 56
+     11.8.  Sec-WebSocket-Origin  . . . . . . . . . . . . . . . . . . 56
+     11.9.  Sec-WebSocket-Protocol  . . . . . . . . . . . . . . . . . 57
+     11.10. WebSocket Subprotocol Name Registry . . . . . . . . . . . 57
+     11.11. Sec-WebSocket-Version . . . . . . . . . . . . . . . . . . 58
+     11.12. WebSocket Version Number Registry . . . . . . . . . . . . 59
+     11.13. WebSocket Close Code Number Registry  . . . . . . . . . . 60
+     11.14. WebSocket Opcode Registry . . . . . . . . . . . . . . . . 61
+     11.15. WebSocket Framing Header Bits Registry  . . . . . . . . . 62
+   12. Using the WebSocket protocol from Other Specifications . . . . 63
+   13. Acknowledgements . . . . . . . . . . . . . . . . . . . . . . . 64
+   14. References . . . . . . . . . . . . . . . . . . . . . . . . . . 65
+     14.1.  Normative References  . . . . . . . . . . . . . . . . . . 65
+     14.2.  Informative References  . . . . . . . . . . . . . . . . . 66
+   Author's Address . . . . . . . . . . . . . . . . . . . . . . . . . 68
 
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011               [Page 3]</span>
-</pre><pre class='newpage'><a name="page-4" id="page-4" href="#page-4" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
 
 
-<span class="h2"><a name="section-1">1</a>.  Introduction</span>
 
-<span class="h3"><a name="section-1.1">1.1</a>.  Background</span>
+Fette                   Expires December 15, 2011               [Page 3]
+
+Internet-Draft           The WebSocket protocol                June 2011
+
+
+1.  Introduction
+
+1.1.  Background
 
    _This section is non-normative._
 
    Historically, creating an instant messenger chat client as a Web
    application has required an abuse of HTTP to poll the server for
    updates while sending upstream notifications as distinct HTTP
-   calls.[<a href="./rfc6202" title='"Known Issues and Best Practices for the Use of Long Polling and Streaming in Bidirectional HTTP"'>RFC6202</a>]
+   calls.[RFC6202]
 
    This results in a variety of problems:
 
@@ -344,14 +196,14 @@ Table of Contents
    traffic in both directions.  This is what the WebSocket protocol
    provides.  Combined with the WebSocket API, it provides an
    alternative to HTTP polling for two-way communication from a Web page
-   to a remote server.  [<a href="#ref-WSAPI" title='"The Web Sockets API"'>WSAPI</a>]
+   to a remote server.  [WSAPI]
 
    The same technique can be used for a variety of Web applications:
    games, stock tickers, multiuser applications with simultaneous
    editing, user interfaces exposing server-side services in real time,
    etc.
 
-<span class="h3"><a name="section-1.2">1.2</a>.  Protocol Overview</span>
+1.2.  Protocol Overview
 
    _This section is non-normative._
 
@@ -368,9 +220,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011               [Page 4]</span>
-</pre><pre class='newpage'><a name="page-5" id="page-5" href="#page-5" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011               [Page 4]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
         GET /chat HTTP/1.1
@@ -392,13 +244,13 @@ Table of Contents
 
    The leading line from the client follows the Request-Line format.
    The leading line from the server follows the Status-Line format.  The
-   Request-Line and Status-Line productions are defined in [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>].
+   Request-Line and Status-Line productions are defined in [RFC2616].
 
    After the leading line in both cases come an unordered set of header
-   fields.  The meaning of these header fields is specified in <a href="#section-5">Section 5</a>
+   fields.  The meaning of these header fields is specified in Section 5
    of this document.  Additional header fields may also be present, such
-   as cookies [<a href="#ref-I-D.ietf-httpstate-cookie">I-D.ietf-httpstate-cookie</a>] required to identify the user.
-   The format and parsing of headers is as defined in [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>].
+   as cookies [I-D.ietf-httpstate-cookie] required to identify the user.
+   The format and parsing of headers is as defined in [RFC2616].
 
 
    Once the client and server have both sent their handshakes, and if
@@ -419,14 +271,14 @@ Table of Contents
    Data is sent on the wire in the form of frames that have an
    associated type.  A message is composed of one or more frames, all of
    which contain the same type of data.  Broadly speaking, there are
-   types for textual data, which is interpreted as UTF-8 [<a href="./rfc3629" title='"UTF-8, a transformation format of ISO 10646"'>RFC3629</a>] text,
+   types for textual data, which is interpreted as UTF-8 [RFC3629] text,
    binary data (whose interpretation is left up to the application), and
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011               [Page 5]</span>
-</pre><pre class='newpage'><a name="page-6" id="page-6" href="#page-6" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011               [Page 5]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    control frames, which are not intended to carry data for the
@@ -441,7 +293,7 @@ Table of Contents
    specifications to implement buffering and piecing together of
    messages manually.
 
-<span class="h3"><a name="section-1.3">1.3</a>.  Opening Handshake</span>
+1.3.  Opening Handshake
 
    _This section is non-normative._
 
@@ -463,14 +315,14 @@ Table of Contents
    Headers in the handshake are sent by the client in a random order;
    the order is not meaningful.
 
-   The "Request-URI" of the GET method [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>] is used to identify the
+   The "Request-URI" of the GET method [RFC2616] is used to identify the
    endpoint of the WebSocket connection, both to allow multiple domains
    to be served from one IP address and to allow multiple WebSocket
    endpoints to be served by a single server.
 
 
    The client includes the hostname in the Host header of its handshake
-   as per [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>], so that both the client and the server can verify
+   as per [RFC2616], so that both the client and the server can verify
    that they agree on which host is in use.
 
    Additional headers are used to select options in the WebSocket
@@ -480,9 +332,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011               [Page 6]</span>
-</pre><pre class='newpage'><a name="page-7" id="page-7" href="#page-7" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011               [Page 6]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    The |Sec-WebSocket-Protocol| request-header field can be used to
@@ -527,7 +379,7 @@ Table of Contents
         Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
 
    For this header, the server has to take the value (as present in the
-   header, e.g. the base64-encoded [<a href="./rfc4648" title='"The Base16, Base32, and Base64 Data Encodings"'>RFC4648</a>] version minus leading and
+   header, e.g. the base64-encoded [RFC4648] version minus leading and
    trailing whitespace), and concatenate this with the GUID "258EAFA5-
    E914-47DA-95CA-C5AB0DC85B11" in string form, which is unlikely to be
    used by network endpoints that do not understand the WebSocket
@@ -536,12 +388,12 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011               [Page 7]</span>
-</pre><pre class='newpage'><a name="page-8" id="page-8" href="#page-8" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011               [Page 7]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-   [<a href="#ref-FIPS.180-2.2002">FIPS.180-2.2002</a>].
+   [FIPS.180-2.2002].
 
    Concretely, if as in the example above, header |Sec-WebSocket-Key|
    had the value "dGhlIHNhbXBsZSBub25jZQ==", the server would
@@ -592,9 +444,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011               [Page 8]</span>
-</pre><pre class='newpage'><a name="page-9" id="page-9" href="#page-9" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011               [Page 8]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    subprotocols has to make sure it selects one based on the client's
@@ -605,7 +457,7 @@ Table of Contents
    The server can also set cookie-related option fields to _set_
    cookies, as in HTTP.
 
-<span class="h3"><a name="section-1.4">1.4</a>.  Closing Handshake</span>
+1.4.  Closing Handshake
 
    _This section is non-normative._
 
@@ -613,7 +465,7 @@ Table of Contents
 
    Either peer can send a control frame with data containing a specified
    control sequence to begin the closing handshake (detailed in
-   <a href="#section-4.5.1">Section 4.5.1</a>).  Upon receiving such a frame, the other peer sends a
+   Section 4.5.1).  Upon receiving such a frame, the other peer sends a
    close frame in response, if it hasn't already sent one.  Upon
    receiving _that_ control frame, the first peer then closes the
    connection, safe in the knowledge that no further data is
@@ -638,7 +490,7 @@ Table of Contents
    fail for the party that received the RST, even if there was data
    waiting to be read.
 
-<span class="h3"><a name="section-1.5">1.5</a>.  Design Philosophy</span>
+1.5.  Design Philosophy
 
    _This section is non-normative._
 
@@ -648,9 +500,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011               [Page 9]</span>
-</pre><pre class='newpage'><a name="page-10" id="page-10" href="#page-10" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011               [Page 9]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    distinction between Unicode text and binary frames).  It is expected
@@ -675,7 +527,7 @@ Table of Contents
    The protocol is intended to be extensible; future versions will
    likely introduce additional concepts such as multiplexing.
 
-<span class="h3"><a name="section-1.6">1.6</a>.  Security Model</span>
+1.6.  Security Model
 
    _This section is non-normative._
 
@@ -687,7 +539,7 @@ Table of Contents
    useful, as the client can provide any arbitrary origin string.
 
    This protocol is intended to fail to establish a connection with
-   servers of pre-existing protocols like SMTP [<a href="./rfc5321" title='"Simple Mail Transfer Protocol"'>RFC5321</a>] and HTTP, while
+   servers of pre-existing protocols like SMTP [RFC5321] and HTTP, while
    allowing HTTP servers to opt-in to supporting this protocol if
    desired.  This is achieved by having a strict and elaborate
    handshake, and by limiting the data that can be inserted into the
@@ -704,16 +556,16 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 10]</span>
-</pre><pre class='newpage'><a name="page-11" id="page-11" href="#page-11" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 10]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    of this specification, fields starting with |Sec-| cannot be set by
    an attacker from a Web browser using only HTML and JavaScript APIs
    such as |XMLHttpRequest|.
 
-<span class="h3"><a name="section-1.7">1.7</a>.  Relationship to TCP and HTTP</span>
+1.7.  Relationship to TCP and HTTP
 
    _This section is non-normative._
 
@@ -723,9 +575,9 @@ Table of Contents
 
    By default the WebSocket protocol uses port 80 for regular WebSocket
    connections and port 443 for WebSocket connections tunneled over TLS
-   [<a href="./rfc2818" title='"HTTP Over TLS"'>RFC2818</a>].
+   [RFC2818].
 
-<span class="h3"><a name="section-1.8">1.8</a>.  Establishing a Connection</span>
+1.8.  Establishing a Connection
 
    _This section is non-normative._
 
@@ -744,7 +596,7 @@ Table of Contents
    443 being significantly more likely to succeed, though this may
    change with time.
 
-<span class="h3"><a name="section-1.9">1.9</a>.  Subprotocols Using the WebSocket protocol</span>
+1.9.  Subprotocols Using the WebSocket protocol
 
    _This section is non-normative._
 
@@ -754,15 +606,15 @@ Table of Contents
    the selected subprotocol values in its response for the connection to
    be established.
 
-   These subprotocol names should be registered as per <a href="#section-11.10">Section 11.10</a>.
+   These subprotocol names should be registered as per Section 11.10.
    To avoid potential collisions, it is recommended to use names that
    contain the domain name of the subprotocol's originator.  For
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 11]</span>
-</pre><pre class='newpage'><a name="page-12" id="page-12" href="#page-12" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 11]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    example, if Example Corporation were to create a Chat subprotocol to
@@ -816,12 +668,12 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 12]</span>
-</pre><pre class='newpage'><a name="page-13" id="page-13" href="#page-13" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 12]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-2">2</a>.  Conformance Requirements</span>
+2.  Conformance Requirements
 
    All diagrams, examples, and notes in this specification are non-
    normative, as are all sections explicitly marked non-normative.
@@ -829,7 +681,7 @@ Table of Contents
 
    The key words "MUST", "MUST NOT", "REQUIRED", "SHOULD", "SHOULD NOT",
    "RECOMMENDED", "MAY", and "OPTIONAL" in the normative parts of this
-   document are to be interpreted as described in <a href="./rfc2119">RFC2119</a>.  [<a href="./rfc2119" title='"Key words for use in RFCs to Indicate Requirement Levels"'>RFC2119</a>]
+   document are to be interpreted as described in RFC2119.  [RFC2119]
 
    Requirements phrased in the imperative as part of algorithms (such as
    "strip any leading space characters" or "return false and abort these
@@ -850,13 +702,13 @@ Table of Contents
    The conformance classes defined by this specification are clients and
    servers.
 
-<span class="h3"><a name="section-2.1">2.1</a>.  Terminology</span>
+2.1.  Terminology
 
    _ASCII_ shall mean the character-encoding scheme defined in
-   [<a href="#ref-ANSI.X3-4.1986">ANSI.X3-4.1986</a>].
+   [ANSI.X3-4.1986].
 
    This document makes reference to UTF-8 values and uses UTF-8
-   notational formats as defined in STD 63 [<a href="./rfc3629" title='"UTF-8, a transformation format of ISO 10646"'>RFC3629</a>].
+   notational formats as defined in STD 63 [RFC3629].
 
    Key Terms such as named algorithms or definitions are indicated like
    _this_.
@@ -872,9 +724,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 13]</span>
-</pre><pre class='newpage'><a name="page-14" id="page-14" href="#page-14" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 13]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    LETTER Z).
@@ -886,7 +738,7 @@ Table of Contents
    range U+0061 to U+007A (i.e.  LATIN SMALL LETTER A to LATIN SMALL
    LETTER Z) are considered to also match.
 
-   The term "URI" is used in this document as defined in [<a href="./rfc3986" title='"Uniform Resource Identifier (URI): Generic Syntax"'>RFC3986</a>].
+   The term "URI" is used in this document as defined in [RFC3986].
 
    When an implementation is required to _send_ data as part of the
    WebSocket protocol, the implementation MAY delay the actual
@@ -928,25 +780,25 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 14]</span>
-</pre><pre class='newpage'><a name="page-15" id="page-15" href="#page-15" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 14]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-3">3</a>.  WebSocket URIs</span>
+3.  WebSocket URIs
 
    This specification defines two URI schemes, using the ABNF syntax
-   defined in <a href="./rfc5234">RFC 5234</a> [<a href="./rfc5234" title='"Augmented BNF for Syntax Specifications: ABNF"'>RFC5234</a>], and terminology and ABNF productions
-   defined by the URI specification <a href="./rfc3986">RFC 3986</a> [<a href="./rfc3986" title='"Uniform Resource Identifier (URI): Generic Syntax"'>RFC3986</a>].
+   defined in RFC 5234 [RFC5234], and terminology and ABNF productions
+   defined by the URI specification RFC 3986 [RFC3986].
 
 
           ws-URI = "ws:" "//" host [ ":" port ] path [ "?" query ]
           wss-URI = "wss:" "//" host [ ":" port ] path [ "?" query ]
 
-          host = &lt;host, defined in <a href="./rfc3986#section-3.2.2">[RFC3986], Section&nbsp;3.2.2</a>&gt;
-          port = &lt;port, defined in <a href="./rfc3986#section-3.2.3">[RFC3986], Section&nbsp;3.2.3</a>&gt;
-          path = &lt;path-abempty, defined in <a href="./rfc3986#section-3.3">[RFC3986], Section&nbsp;3.3</a>&gt;
-          query = &lt;query, defined in <a href="./rfc3986#section-3.4">[RFC3986], Section&nbsp;3.4</a>&gt;
+          host = <host, defined in [RFC3986], Section 3.2.2>
+          port = <port, defined in [RFC3986], Section 3.2.3>
+          path = <path-abempty, defined in [RFC3986], Section 3.3>
+          query = <query, defined in [RFC3986], Section 3.4>
 
    The port component is OPTIONAL; the default for "ws" is port 80,
    while the default for "wss" is port 443.
@@ -984,14 +836,14 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 15]</span>
-</pre><pre class='newpage'><a name="page-16" id="page-16" href="#page-16" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 15]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-4">4</a>.  Data Framing</span>
+4.  Data Framing
 
-<span class="h3"><a name="section-4.1">4.1</a>.  Overview</span>
+4.1.  Overview
 
    In the WebSocket protocol, data is transmitted using a sequence of
    frames.  Frames sent from the client to the server are masked to
@@ -1005,12 +857,12 @@ Table of Contents
 
    A data frame MAY be transmitted by either the client or the server at
    any time after opening handshake completion and before that endpoint
-   has sent a close frame (<a href="#section-4.5.1">Section 4.5.1</a>).
+   has sent a close frame (Section 4.5.1).
 
-<span class="h3"><a name="section-4.2">4.2</a>.  Base Framing Protocol</span>
+4.2.  Base Framing Protocol
 
    This wire format for the data transfer part is described by the ABNF
-   [<a href="./rfc5234" title='"Augmented BNF for Syntax Specifications: ABNF"'>RFC5234</a>] given in detail in this section.  A high level overview of
+   [RFC5234] given in detail in this section.  A high level overview of
    the framing is given in the following figure.
 
 
@@ -1040,9 +892,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 16]</span>
-</pre><pre class='newpage'><a name="page-17" id="page-17" href="#page-17" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 16]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    FIN:  1 bit
@@ -1084,7 +936,7 @@ Table of Contents
 
       Defines whether the payload data is masked.  If set to 1, a
       masking key is present in masking-key, and this is used to unmask
-      the payload data as per <a href="#section-4.3">Section 4.3</a>.  All frames sent from client
+      the payload data as per Section 4.3.  All frames sent from client
       to server have this bit set to 1.
 
    Payload length:  7 bits, 7+16 bits, or 7+64 bits
@@ -1096,9 +948,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 17]</span>
-</pre><pre class='newpage'><a name="page-18" id="page-18" href="#page-18" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 17]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
       most significant bit MUST be 0) are the payload length.  Multibyte
@@ -1113,7 +965,7 @@ Table of Contents
       All frames sent from the client to the server are masked by a 32-
       bit value that is contained within the frame.  This field is
       present if the mask bit is set to 1, and is absent if the mask bit
-      is set to 0.  See <a href="#section-4.3">Section 4.3</a> for further information on client-
+      is set to 0.  See Section 4.3 for further information on client-
       to-server masking.
 
    Payload data:  (x+y) bytes
@@ -1138,7 +990,7 @@ Table of Contents
       data.
 
    The base framing protocol is formally defined by the following ABNF
-   [<a href="./rfc5234" title='"Augmented BNF for Syntax Specifications: ABNF"'>RFC5234</a>]:
+   [RFC5234]:
 
    ws-frame                = frame-fin
                              frame-rsv1
@@ -1152,9 +1004,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 18]</span>
-</pre><pre class='newpage'><a name="page-19" id="page-19" href="#page-19" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 18]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    frame-fin               = %x0 ; more frames of this message follow
@@ -1208,31 +1060,31 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 19]</span>
-</pre><pre class='newpage'><a name="page-20" id="page-20" href="#page-20" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 19]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h3"><a name="section-4.3">4.3</a>.  Client-to-Server Masking</span>
+4.3.  Client-to-Server Masking
 
    The client MUST mask all frames sent to the server.  A server MUST
    close the connection upon receiving a frame with the MASK bit set to
    0.  In this case, a server MAY send a close frame with a status code
-   of 1002 (protocol error) as defined in <a href="#section-7.4.1">Section 7.4.1</a>.
+   of 1002 (protocol error) as defined in Section 7.4.1.
 
    A masked frame MUST have the field frame-masked set to 1, as defined
-   in <a href="#section-4.2">Section 4.2</a>.
+   in Section 4.2.
 
    The masking key is contained completely within the frame, as defined
-   in <a href="#section-4.2">Section 4.2</a> as frame-masking-key.  It is used to mask the payload
+   in Section 4.2 as frame-masking-key.  It is used to mask the payload
    data defined in the same section as frame-payload-data, which
    includes extension and application data.
 
    The masking key is a 32-bit value chosen at random by the client.
    The masking key MUST be derived from a strong source of entropy, and
    the masking key for a given frame MUST NOT make it simple for a
-   server to predict the masking key for a subsequent frame.  <a href="./rfc4086">RFC 4086</a>
-   [<a href="./rfc4086" title='"Randomness Requirements for Security"'>RFC4086</a>] discusses what entails a suitable source of entropy for
+   server to predict the masking key for a subsequent frame.  RFC 4086
+   [RFC4086] discusses what entails a suitable source of entropy for
    security-sensitive applications.
 
    The masking does not affect the length of the payload data.  To
@@ -1264,12 +1116,12 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 20]</span>
-</pre><pre class='newpage'><a name="page-21" id="page-21" href="#page-21" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 20]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h3"><a name="section-4.4">4.4</a>.  Fragmentation</span>
+4.4.  Fragmentation
 
    The primary purpose of fragmentation is to allow sending a message
    that is of unknown size when the message is started without having to
@@ -1320,9 +1172,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 21]</span>
-</pre><pre class='newpage'><a name="page-22" id="page-22" href="#page-22" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 21]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    o  The fragments of one message MUST NOT be interleaved between the
@@ -1361,7 +1213,7 @@ Table of Contents
    Hence, the requirement of handling control frames in the middle of a
    fragmented message._
 
-<span class="h3"><a name="section-4.5">4.5</a>.  Control Frames</span>
+4.5.  Control Frames
 
    Control frames are identified by opcodes where the most significant
    bit of the opcode is 1.  Currently defined opcodes for control frames
@@ -1376,14 +1228,14 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 22]</span>
-</pre><pre class='newpage'><a name="page-23" id="page-23" href="#page-23" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 22]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    and MUST NOT be fragmented.
 
-<span class="h4"><a name="section-4.5.1">4.5.1</a>.  Close</span>
+4.5.1.  Close
 
    The Close frame contains an opcode of 0x8.
 
@@ -1394,14 +1246,14 @@ Table of Contents
    expected by the other endpoint.  If there is a body, the first two
    bytes of the body MUST be a 2-byte unsigned integer (in network byte
    order) representing a status code with value /code/ defined in
-   <a href="#section-7.4">Section 7.4</a>.  Following the 2-byte integer the body MAY contain UTF-8
+   Section 7.4.  Following the 2-byte integer the body MAY contain UTF-8
    encoded data with value /reason/, the interpretation of which is not
    defined by this specification.  This data is not necessarily human
    readable, but may be useful for debugging or passing information
    relevant to the script that opened the connection.
 
    Close frames sent from client to server must be masked as per
-   <a href="#section-4.3">Section 4.3</a>.
+   Section 4.3.
 
    The application MUST NOT send any more data frames after sending a
    close frame.
@@ -1432,29 +1284,29 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 23]</span>
-</pre><pre class='newpage'><a name="page-24" id="page-24" href="#page-24" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 23]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h4"><a name="section-4.5.2">4.5.2</a>.  Ping</span>
+4.5.2.  Ping
 
    The Ping frame contains an opcode of 0x9.
 
    Upon receipt of a Ping frame, an endpoint MUST send a Pong frame in
    response.  It SHOULD do so as soon as is practical.  Pong frames are
-   discussed in <a href="#section-4.5.3">Section 4.5.3</a>.
+   discussed in Section 4.5.3.
 
    An endpoint MAY send a Ping frame any time after the connection is
    established and before the connection is closed.  NOTE: A ping frame
    may serve either as a keepalive, or to verify that the remote
    endpoint is still responsive.
 
-<span class="h4"><a name="section-4.5.3">4.5.3</a>.  Pong</span>
+4.5.3.  Pong
 
    The Pong frame contains an opcode of 0xA.
 
-   <a href="#section-4.5.2">Section 4.5.2</a> details requirements that apply to both Ping and Pong
+   Section 4.5.2 details requirements that apply to both Ping and Pong
    frames.
 
    A Pong frame sent in response to a Ping frame must have identical
@@ -1470,7 +1322,7 @@ Table of Contents
    unidirectional heartbeat.  A response to an unsolicited pong is not
    expected.
 
-<span class="h3"><a name="section-4.6">4.6</a>.  Data Frames</span>
+4.6.  Data Frames
 
    Data frames (e.g. non-control frames) are identified by opcodes where
    the most significant bit of the opcode is 0.  Currently defined
@@ -1488,9 +1340,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 24]</span>
-</pre><pre class='newpage'><a name="page-25" id="page-25" href="#page-25" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 24]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    Binary
@@ -1498,7 +1350,7 @@ Table of Contents
       The payload data is arbitrary binary data whose interpretation is
       solely up to the application layer.
 
-<span class="h3"><a name="section-4.7">4.7</a>.  Examples</span>
+4.7.  Examples
 
    _This section is non-normative._
 
@@ -1533,7 +1385,7 @@ Table of Contents
 
       *  0x82 0x7F 0x0000000000010000 [65536 bytes of binary data]
 
-<span class="h3"><a name="section-4.8">4.8</a>.  Extensibility</span>
+4.8.  Extensibility
 
    The protocol is designed to allow for extensions, which will add
    capabilities to the base protocols.  The endpoints of a connection
@@ -1544,13 +1396,13 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 25]</span>
-</pre><pre class='newpage'><a name="page-26" id="page-26" href="#page-26" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 25]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    The negotiation of extensions is discussed in further detail in
-   <a href="#section-9.1">Section 9.1</a>.  Below are some anticipated uses of extensions.  This
+   Section 9.1.  Below are some anticipated uses of extensions.  This
    list is neither complete nor proscriptive.
 
    o  Extension data may be placed in the payload data before the
@@ -1600,20 +1452,20 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 26]</span>
-</pre><pre class='newpage'><a name="page-27" id="page-27" href="#page-27" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 26]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-5">5</a>.  Opening Handshake</span>
+5.  Opening Handshake
 
-<span class="h3"><a name="section-5.1">5.1</a>.  Client Requirements</span>
+5.1.  Client Requirements
 
    To _Establish a WebSocket Connection_, a client opens a connection
    and sends a handshake as defined in this section.  A connection is
    defined to initially be in a CONNECTING state.  A client will need to
    supply a /host/, /port/, /resource name/, and a /secure/ flag, which
-   are the components of a WebSocket URI as discussed in <a href="#section-3">Section 3</a>,
+   are the components of a WebSocket URI as discussed in Section 3,
    along with a list of /protocols/ and /extensions/ to be used.
    Additionally, if the client is a web browser, an /origin/ MUST be
    supplied.
@@ -1632,13 +1484,13 @@ Table of Contents
    requirements of how the connection should be opened, what should be
    sent in the opening handshake, and how the server's response should
    be interpreted, are as follows in this section.  In the following
-   text, we will use terms from <a href="#section-3">Section 3</a> such as "/host/" and "/secure/
+   text, we will use terms from Section 3 such as "/host/" and "/secure/
    flag" as defined in that section.
 
    1.  The components of the WebSocket URI passed into this algorithm
        (/host/, /port/, /resource name/ and /secure/ flag) MUST be valid
        according to the specification of WebSocket URIs specified in
-       <a href="#section-3">Section 3</a>.  If any of the components are invalid, the client MUST
+       Section 3.  If any of the components are invalid, the client MUST
        _Fail the WebSocket Connection_ and abort these steps.
 
    2.  If the client already has a WebSocket connection to the remote
@@ -1656,9 +1508,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 27]</span>
-</pre><pre class='newpage'><a name="page-28" id="page-28" href="#page-28" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 27]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
        proxy server that performs DNS queries itself), then the client
@@ -1712,9 +1564,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 28]</span>
-</pre><pre class='newpage'><a name="page-29" id="page-29" href="#page-29" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 28]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
        NOTE: Implementations that do not expose explicit UI for
@@ -1727,7 +1579,7 @@ Table of Contents
        For the purpose of proxy autoconfiguration scripts, the URI to
        pass the function MUST be constructed from /host/, /port/,
        /resource name/, and the /secure/ flag using the definition of a
-       WebSocket URI as given in <a href="#section-3">Section 3</a>.
+       WebSocket URI as given in Section 3.
 
        NOTE: The WebSocket protocol can be identified in proxy
        autoconfiguration scripts from the scheme ("ws:" for unencrypted
@@ -1740,14 +1592,14 @@ Table of Contents
 
    5.  If /secure/ is true, the client MUST perform a TLS handshake over
        the connection after opening the connection and before sending
-       the handshake data [<a href="./rfc2818" title='"HTTP Over TLS"'>RFC2818</a>].  If this fails (e.g. the server's
+       the handshake data [RFC2818].  If this fails (e.g. the server's
        certificate could not be verified), then the client MUST _Fail
        the WebSocket Connection_ and abort the connection.  Otherwise,
        all further communication on this channel MUST run through the
-       encrypted tunnel.  [<a href="./rfc5246" title='"The Transport Layer Security (TLS) Protocol Version 1.2"'>RFC5246</a>]
+       encrypted tunnel.  [RFC5246]
 
        Clients MUST use the Server Name Indication extension in the TLS
-       handshake.  [<a href="./rfc6066" title='"Transport Layer Security (TLS) Extensions: Extension Definitions"'>RFC6066</a>]
+       handshake.  [RFC6066]
 
    Once a connection to the server has been established (including a
    connection via a proxy or over a TLS-encrypted tunnel), the client
@@ -1757,7 +1609,7 @@ Table of Contents
    follows.
 
    1.   The handshake MUST be a valid HTTP request as specified by
-        [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>].
+        [RFC2616].
 
    2.   The Method of the request MUST be GET and the HTTP version MUST
         be at least 1.1.
@@ -1768,13 +1620,13 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 29]</span>
-</pre><pre class='newpage'><a name="page-30" id="page-30" href="#page-30" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 29]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    3.   The request MUST contain a "Request-URI" as part of the GET
-        method.  This MUST match the /resource name/ <a href="#section-3">Section 3</a> (a
+        method.  This MUST match the /resource name/ Section 3 (a
         relative URI), or be an absolute URI that, when parsed, has a
         matching /resource name/ as well as matching /host/, /port/, and
         appropriate scheme (ws or wss).
@@ -1791,7 +1643,7 @@ Table of Contents
    7.   The request MUST include a header with the name "Sec-WebSocket-
         Key".  The value of this header MUST be a nonce consisting of a
         randomly selected 16-byte value that has been base64-encoded
-        [<a href="./rfc3548" title='"The Base16, Base32, and Base64 Data Encodings"'>RFC3548</a>].  The nonce MUST be selected randomly for each
+        [RFC3548].  The nonce MUST be selected randomly for each
         connection.
 
         NOTE: As an example, if the randomly selected value was the
@@ -1808,8 +1660,8 @@ Table of Contents
         which the code establishing the connection is running, and MUST
         be lower-case.  The value MUST NOT contain letters in the range
         U+0041 to U+005A (i.e.  LATIN CAPITAL LETTER A to LATIN CAPITAL
-        LETTER Z) [<a href="#ref-I-D.ietf-websec-origin">I-D.ietf-websec-origin</a>].  The ABNF is as defined in
-        Section 6.1 of [<a href="#ref-I-D.ietf-websec-origin">I-D.ietf-websec-origin</a>].
+        LETTER Z) [I-D.ietf-websec-origin].  The ABNF is as defined in
+        Section 6.1 of [I-D.ietf-websec-origin].
 
         As an example, if code is running on www.example.com attempting
         to establish a connection to ww2.example.com, the value of the
@@ -1824,9 +1676,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 30]</span>
-</pre><pre class='newpage'><a name="page-31" id="page-31" href="#page-31" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 30]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
         If subsequent changes to the wire protocol are necessary, 9 will
@@ -1837,20 +1689,20 @@ Table of Contents
         the client wishes to speak, ordered by preference.  The elements
         that comprise this value MUST be non-empty strings with
         characters in the range U+0021 to U+007E not including separator
-        characters as defined in [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>], and MUST all be unique
+        characters as defined in [RFC2616], and MUST all be unique
         strings.  The ABNF for the value of this header is 1#token,
         where the definitions of constructs and rules are as given in
-        [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>].
+        [RFC2616].
 
    11.  The request MAY include a header with the name "Sec-WebSocket-
         Extensions".  If present, this value indicates the protocol-
         level extension(s) the client wishes to speak.  The
         interpretation and format of this header is described in
-        <a href="#section-9.1">Section 9.1</a>.
+        Section 9.1.
 
    12.  The request MAY include headers associated with sending cookies,
         as defined by the appropriate specifications
-        [<a href="#ref-I-D.ietf-httpstate-cookie">I-D.ietf-httpstate-cookie</a>].  These headers are referred to as
+        [I-D.ietf-httpstate-cookie].  These headers are referred to as
         _Headers to Send Appropriate Cookies_.
 
    Once the client's opening handshake has been sent, the client MUST
@@ -1880,9 +1732,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 31]</span>
-</pre><pre class='newpage'><a name="page-32" id="page-32" href="#page-32" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 31]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    5.  If the response includes a "Sec-WebSocket-Extensions" header, and
@@ -1890,7 +1742,7 @@ Table of Contents
        present in the client' handshake (the server has indicated an
        extension not requested by the client), the client MUST _Fail the
        WebSocket Connection_.  (The parsing of this header to determine
-       which extensions are requested is discussed in <a href="#section-9.1">Section 9.1</a>.)
+       which extensions are requested is discussed in Section 9.1.)
 
    If the server's response is validated as provided for above, it is
    said that _The WebSocket Connection is Established_ and that the
@@ -1903,10 +1755,10 @@ Table of Contents
    server's handshake, or the null value if that header was not present
    in the server's handshake.  Additionally, if any headers in the
    server's handshake indicate that cookies should be set (as defined by
-   [<a href="#ref-I-D.ietf-httpstate-cookie">I-D.ietf-httpstate-cookie</a>]), these cookies are referred to as
+   [I-D.ietf-httpstate-cookie]), these cookies are referred to as
    _Cookies Set During the Server's Opening Handshake_.
 
-<span class="h3"><a name="section-5.2">5.2</a>.  Server-side Requirements</span>
+5.2.  Server-side Requirements
 
    _This section only applies to servers._
 
@@ -1923,7 +1775,7 @@ Table of Contents
    For the purposes of this specification, the "server" is the
    combination of both computers.
 
-<span class="h4"><a name="section-5.2.1">5.2.1</a>.  Reading the Client's Opening Handshake</span>
+5.2.1.  Reading the Client's Opening Handshake
 
    When a client starts a WebSocket connection, it sends its part of the
    opening handshake.  The server must parse at least part of this
@@ -1936,17 +1788,17 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 32]</span>
-</pre><pre class='newpage'><a name="page-33" id="page-33" href="#page-33" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 32]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    MUST stop processing the client's handshake, and return an HTTP
    response with an appropriate error code (such as 400 Bad Request).
 
    1.  An HTTP/1.1 or higher GET request, including a "Request-URI"
-       [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>] that should be interpreted as a /resource name/
-       <a href="#section-3">Section 3</a>.
+       [RFC2616] that should be interpreted as a /resource name/
+       Section 3.
 
    2.  A "Host" header containing the server's authority.
 
@@ -1966,12 +1818,12 @@ Table of Contents
    7.  Optionally, a "Sec-WebSocket-Extensions" header, with a list of
        values indicating which extensions the client would like to
        speak.  The interpretation of this header is discussed in
-       <a href="#section-9.1">Section 9.1</a>.
+       Section 9.1.
 
    8.  Optionally, other headers, such as those used to send cookies to
        a server.  Unknown headers MUST be ignored.
 
-<span class="h4"><a name="section-5.2.2">5.2.2</a>.  Sending the Server's Opening Handshake</span>
+5.2.2.  Sending the Server's Opening Handshake
 
    When a client establishes a WebSocket connection to a server, the
    server MUST complete the following steps to accept the connection and
@@ -1983,7 +1835,7 @@ Table of Contents
        the server does not host), then close the connection; otherwise,
        all further communication for the connection (including the
        server's handshake) MUST run through the encrypted tunnel.
-       [<a href="./rfc5246" title='"The Transport Layer Security (TLS) Protocol Version 1.2"'>RFC5246</a>]
+       [RFC5246]
 
    2.  Establish the following information:
 
@@ -1992,9 +1844,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 33]</span>
-</pre><pre class='newpage'><a name="page-34" id="page-34" href="#page-34" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 33]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
        /origin/
@@ -2008,7 +1860,7 @@ Table of Contents
           accept this connection, it MUST return an appropriate HTTP
           error code (e.g. 403 Forbidden) and abort the WebSocket
           handshake described in this section.  For more detail, refer
-          to <a href="#section-10">Section 10</a>.
+          to Section 10.
 
        /key/
           The |Sec-WebSocket-Key| header in the client's handshake
@@ -2033,7 +1885,7 @@ Table of Contents
           An identifier for the service provided by the server.  If the
           server provides multiple services, then the value should be
           derived from the resource name given in the client's handshake
-          from the Request-URI [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>] of the GET method.  If the
+          from the Request-URI [RFC2616] of the GET method.  If the
           requested service is not available, the server MUST send an
           appropriate HTTP error code (such as 404 Not Found) and abort
           the WebSocket handshake.
@@ -2048,15 +1900,15 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 34]</span>
-</pre><pre class='newpage'><a name="page-35" id="page-35" href="#page-35" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 34]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
           not the same as the null value for these purposes, and is not
           a legal value for this field.  The ABNF for the value of this
           header is (token), where the definitions of constructs and
-          rules are as given in [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>].
+          rules are as given in [RFC2616].
 
        /extensions/
           A (possibly empty) list representing the protocol-level
@@ -2068,23 +1920,23 @@ Table of Contents
           empty string is not the same as the null value for these
           purposes.  Extensions not listed by the client MUST NOT be
           listed.  The method by which these values should be selected
-          and interpreted is discussed in <a href="#section-9.1">Section 9.1</a>.
+          and interpreted is discussed in Section 9.1.
 
    3.  If the server chooses to accept the incoming connection, it MUST
        reply with a valid HTTP response indicating the following.
 
-       1.  A Status-Line with a 101 response code as per <a href="./rfc2616">RFC 2616</a>
-           [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>].  Such a response could look like "HTTP/1.1 101
+       1.  A Status-Line with a 101 response code as per RFC 2616
+           [RFC2616].  Such a response could look like "HTTP/1.1 101
            Switching Protocols"
 
-       2.  An "Upgrade" header with value "websocket" as per <a href="./rfc2616">RFC 2616</a>
-           [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>].
+       2.  An "Upgrade" header with value "websocket" as per RFC 2616
+           [RFC2616].
 
        3.  A "Connection" header with value "Upgrade"
 
        4.  A "Sec-WebSocket-Accept" header.  The value of this header is
            constructed by concatenating /key/, defined above in
-           Paragraph 2 of <a href="#section-5.2.2">Section 5.2.2</a>, with the string "258EAFA5-E914-
+           Paragraph 2 of Section 5.2.2, with the string "258EAFA5-E914-
            47DA-95CA-C5AB0DC85B11", taking the SHA-1 hash of this
            concatenated value to obtain a 20-byte value, and base64-
            encoding this 20-byte hash.
@@ -2104,9 +1956,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 35]</span>
-</pre><pre class='newpage'><a name="page-36" id="page-36" href="#page-36" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 35]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
            string "258EAFA5-E914-47DA-95CA-C5AB0DC85B11" to form the
@@ -2119,10 +1971,10 @@ Table of Contents
            in the "Sec-WebSocket-Accept" header.
 
        5.  Optionally, a "Sec-WebSocket-Protocol" header, with a value
-           /subprotocol/ as defined in Paragraph 2 of <a href="#section-5.2.2">Section 5.2.2</a>.
+           /subprotocol/ as defined in Paragraph 2 of Section 5.2.2.
 
        6.  Optionally, a "Sec-WebSocket-Extensions" header, with a value
-           /extensions/ as defined in Paragraph 2 of <a href="#section-5.2.2">Section 5.2.2</a>.  If
+           /extensions/ as defined in Paragraph 2 of Section 5.2.2.  If
            multiple extensions are to be used, they must all be listed
            in a single Sec-WebSocket-Extensions header.  This header
            MUST NOT be repeated.
@@ -2160,65 +2012,65 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 36]</span>
-</pre><pre class='newpage'><a name="page-37" id="page-37" href="#page-37" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 36]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-6">6</a>.  Sending and Receiving Data</span>
+6.  Sending and Receiving Data
 
-<span class="h3"><a name="section-6.1">6.1</a>.  Sending Data</span>
+6.1.  Sending Data
 
    To _Send a WebSocket Message_ comprising of /data/ over a WebSocket
    connection, an endpoint MUST perform the following steps.
 
    1.  The endpoint MUST ensure the WebSocket connection is in the OPEN
-       state (cf. <a href="#section-5.1">Section 5.1</a> and <a href="#section-5.2.2">Section 5.2.2</a>.)  If at any point the
+       state (cf. Section 5.1 and Section 5.2.2.)  If at any point the
        state of the WebSocket connection changes, the endpoint MUST
        abort the following steps.
 
    2.  An endpoint MUST encapsulate the /data/ in a WebSocket frame as
-       defined in <a href="#section-4.2">Section 4.2</a>.  If the data to be sent is large, or if
+       defined in Section 4.2.  If the data to be sent is large, or if
        the data is not available in its entirety at the point the
        endpoint wishes to begin sending the data, the endpoint MAY
        alternately encapsulate the data in a series of frames as defined
-       in <a href="#section-4.4">Section 4.4</a>.
+       in Section 4.4.
 
    3.  The opcode (frame-opcode) of the first frame containing the data
-       MUST be set to the appropriate value from <a href="#section-4.2">Section 4.2</a> for data
+       MUST be set to the appropriate value from Section 4.2 for data
        that is to be interpreted by the recipient as text or binary
        data.
 
    4.  The FIN bit (frame-fin) of the last frame containing the data
-       MUST be set to 1 as defined in <a href="#section-4.2">Section 4.2</a>.
+       MUST be set to 1 as defined in Section 4.2.
 
    5.  If the data is being sent by the client, the frame(s) MUST be
-       masked as defined in <a href="#section-4.3">Section 4.3</a>.
+       masked as defined in Section 4.3.
 
-   6.  If any extensions (<a href="#section-9">Section 9</a>) have been negotiated for the
+   6.  If any extensions (Section 9) have been negotiated for the
        WebSocket connection, additional considerations may apply as per
        the definition of those extensions.
 
    7.  The frame(s) that have been formed MUST be transmitted over the
        underlying network connection.
 
-<span class="h3"><a name="section-6.2">6.2</a>.  Receiving Data</span>
+6.2.  Receiving Data
 
    To receive WebSocket data, an endpoint listens on the underlying
    network connection.  Incoming data MUST be parsed as WebSocket frames
-   as defined in <a href="#section-4.2">Section 4.2</a>.  If a control frame (<a href="#section-4.5">Section 4.5</a>) is
-   received, the frame MUST be handled as defined by <a href="#section-4.5">Section 4.5</a>.  Upon
-   receiving a data frame (<a href="#section-4.6">Section 4.6</a>), the endpoint MUST note the
+   as defined in Section 4.2.  If a control frame (Section 4.5) is
+   received, the frame MUST be handled as defined by Section 4.5.  Upon
+   receiving a data frame (Section 4.6), the endpoint MUST note the
    /type/ of the data as defined by the Opcode (frame-opcode) from
-   <a href="#section-4.2">Section 4.2</a>.  The _Application Data_ from this frame is defined as
+   Section 4.2.  The _Application Data_ from this frame is defined as
    the /data/ of the message.  If the frame comprises an unfragmented
-   message (<a href="#section-4.4">Section 4.4</a>), it is said that _A WebSocket Message Has Been
+   message (Section 4.4), it is said that _A WebSocket Message Has Been
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 37]</span>
-</pre><pre class='newpage'><a name="page-38" id="page-38" href="#page-38" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 37]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    Received_ with type /type/ and data /data/.  If the frame is part of
@@ -2231,14 +2083,14 @@ Table of Contents
    Subsequent data frames MUST be interpreted as belonging to a new
    WebSocket Message.
 
-   Extensions (<a href="#section-9">Section 9</a>) MAY change the semantics of how data is read,
+   Extensions (Section 9) MAY change the semantics of how data is read,
    specifically including what comprises a message boundary.
    Extensions, in addition to adding "Extension data" before the
    "Application data" in a payload, MAY also modify the "Application
    data" (such as by compressing it).
 
    Data frames received by a server from a client MUST be unmasked as
-   described in <a href="#section-4.3">Section 4.3</a>.
+   described in Section 4.3.
 
 
 
@@ -2272,16 +2124,16 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 38]</span>
-</pre><pre class='newpage'><a name="page-39" id="page-39" href="#page-39" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 38]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-7">7</a>.  Closing the connection</span>
+7.  Closing the connection
 
-<span class="h3"><a name="section-7.1">7.1</a>.  Definitions</span>
+7.1.  Definitions
 
-<span class="h4"><a name="section-7.1.1">7.1.1</a>.  Close the WebSocket Connection</span>
+7.1.1.  Close the WebSocket Connection
 
    To _Close the WebSocket Connection_, an endpoint closes the
    underlying TCP connection.  An endpoint SHOULD use a method that
@@ -2308,17 +2160,17 @@ Table of Contents
    has also performed an orderly shutdown, and finally calling close()
    on the socket.
 
-<span class="h4"><a name="section-7.1.2">7.1.2</a>.  Start the WebSocket Closing Handshake</span>
+7.1.2.  Start the WebSocket Closing Handshake
 
    To _Start the WebSocket Closing Handshake_ with a status code
-   (<a href="#section-7.4">Section 7.4</a>) /code/ and an optional close reason (<a href="#section-7.1.6">Section 7.1.6</a>)
+   (Section 7.4) /code/ and an optional close reason (Section 7.1.6)
    /reason/, an endpoint MUST send a Close control frame, as described
-   in <a href="#section-4.5.1">Section 4.5.1</a> whose status code is set to /code/ and whose close
+   in Section 4.5.1 whose status code is set to /code/ and whose close
    reason is set to /reason/.  Once an endpoint has both sent and
    received a Close control frame, that endpoint SHOULD _Close the
-   WebSocket Connection_ as defined in <a href="#section-7.1.1">Section 7.1.1</a>.
+   WebSocket Connection_ as defined in Section 7.1.1.
 
-<span class="h4"><a name="section-7.1.3">7.1.3</a>.  The WebSocket Closing Handshake is Started</span>
+7.1.3.  The WebSocket Closing Handshake is Started
 
    Upon either sending or receiving a Close control frame, it is said
    that _The WebSocket Closing Handshake is Started_ and that the
@@ -2328,12 +2180,12 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 39]</span>
-</pre><pre class='newpage'><a name="page-40" id="page-40" href="#page-40" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 39]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h4"><a name="section-7.1.4">7.1.4</a>.  The WebSocket Connection is Closed</span>
+7.1.4.  The WebSocket Connection is Closed
 
    When the underlying TCP connection is closed, it is said that _The
    WebSocket Connection is Closed_ and that the WebSocket connection is
@@ -2344,13 +2196,13 @@ Table of Contents
    If the WebSocket connection could not be established, it is also said
    that _The WebSocket Connection is Closed_, but not cleanly.
 
-<span class="h4"><a name="section-7.1.5">7.1.5</a>.  The WebSocket Connection Close Code</span>
+7.1.5.  The WebSocket Connection Close Code
 
-   As defined in <a href="#section-4.5.1">Section 4.5.1</a> and <a href="#section-7.4">Section 7.4</a>, a Close control frame
+   As defined in Section 4.5.1 and Section 7.4, a Close control frame
    may contain a status code indicating a reason for closure.  A closing
    of the WebSocket connection may be initiated by either endpoint,
    potentially simultaneously. _The WebSocket Connection Close Code_ is
-   defined as the status code (<a href="#section-7.4">Section 7.4</a>) contained in the first Close
+   defined as the status code (Section 7.4) contained in the first Close
    control frame received by the application implementing this protocol.
    If this Close control frame contains no status code, _The WebSocket
    Connection Close Code_ is considered to be 1005.  If _The WebSocket
@@ -2372,21 +2224,21 @@ Table of Contents
    Close Code_ in the case that both endpoints _Start the WebSocket
    Closing Handshake_ independently and at roughly the same time.
 
-<span class="h4"><a name="section-7.1.6">7.1.6</a>.  The WebSocket Connection Close Reason</span>
+7.1.6.  The WebSocket Connection Close Reason
 
-   As defined in <a href="#section-4.5.1">Section 4.5.1</a> and <a href="#section-7.4">Section 7.4</a>, a Close control frame
+   As defined in Section 4.5.1 and Section 7.4, a Close control frame
    may contain a status code indicating a reason for closure, followed
    by UTF-8 encoded data, the interpretation of said data being left to
    the endpoints and not defined by this protocol.  A closing of the
    WebSocket connection may be initiated by either endpoint, potentially
    simultaneously. _The WebSocket Connection Close Reason_ is defined as
-   the UTF-8 encoded data following the status code (<a href="#section-7.4">Section 7.4</a>)
+   the UTF-8 encoded data following the status code (Section 7.4)
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 40]</span>
-</pre><pre class='newpage'><a name="page-41" id="page-41" href="#page-41" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 40]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    contained in the first Close control frame received by the
@@ -2394,10 +2246,10 @@ Table of Contents
    the Close control frame, _The WebSocket Connection Close Reason_ is
    the empty string.
 
-   NOTE: Following the same logic as noted in <a href="#section-7.1.5">Section 7.1.5</a>, two
+   NOTE: Following the same logic as noted in Section 7.1.5, two
    endpoints may not agree on _The WebSocket Connection Close Reason_.
 
-<span class="h4"><a name="section-7.1.7">7.1.7</a>.  Fail the WebSocket Connection</span>
+7.1.7.  Fail the WebSocket Connection
 
    Certain algorithms and specifications require an endpoint to _Fail
    the WebSocket Connection_.  To do so, the client MUST _Close the
@@ -2407,7 +2259,7 @@ Table of Contents
    If _The WebSocket Connection is Established_ prior to the point where
    the endpoint is required to _Fail the WebSocket Connection_, the
    endpoint SHOULD send a Close frame with an appropriate status code
-   <a href="#section-7.4">Section 7.4</a> before proceeding to _Close the WebSocket Connection_.
+   Section 7.4 before proceeding to _Close the WebSocket Connection_.
    An endpoint MAY omit sending a Close frame if it believes the other
    side is unlikely to be able to receive and process the close frame,
    due to the nature of the error that led to the WebSocket connection
@@ -2420,13 +2272,13 @@ Table of Contents
    (e.g. a script using the WebSocket API), clients SHOULD NOT close the
    connection.
 
-<span class="h3"><a name="section-7.2">7.2</a>.  Abnormal Closures</span>
+7.2.  Abnormal Closures
 
-<span class="h4"><a name="section-7.2.1">7.2.1</a>.  Client-Initiated Closure</span>
+7.2.1.  Client-Initiated Closure
 
    Certain algorithms, namely during the opening handshake, require the
    client to _Fail the WebSocket Connection_.  To do so, the client MUST
-   _Fail the WebSocket Connection_ as defined in <a href="#section-7.1.7">Section 7.1.7</a>.
+   _Fail the WebSocket Connection_ as defined in Section 7.1.7.
 
    If at any point the underlying transport layer connection is
    unexpectedly lost, the client MUST _Fail the WebSocket Connection_.
@@ -2440,25 +2292,25 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 41]</span>
-</pre><pre class='newpage'><a name="page-42" id="page-42" href="#page-42" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 41]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h4"><a name="section-7.2.2">7.2.2</a>.  Server-initiated closure</span>
+7.2.2.  Server-initiated closure
 
    Certain algorithms require or recommend that the server _Abort the
    WebSocket Connection_ during the opening handshake.  To do so, the
-   server MUST simply _Close the WebSocket Connection_ (<a href="#section-7.1.1">Section 7.1.1</a>).
+   server MUST simply _Close the WebSocket Connection_ (Section 7.1.1).
 
-<span class="h3"><a name="section-7.3">7.3</a>.  Normal Closure of Connections</span>
+7.3.  Normal Closure of Connections
 
    Servers MAY close the WebSocket connection whenever desired.  Clients
    SHOULD NOT close the WebSocket connection arbitrarily.  In either
    case, an endpoint initiates a closure by following the procedures to
-   _Start the WebSocket Closing Handshake_ (<a href="#section-7.1.2">Section 7.1.2</a>).
+   _Start the WebSocket Closing Handshake_ (Section 7.1.2).
 
-<span class="h3"><a name="section-7.4">7.4</a>.  Status Codes</span>
+7.4.  Status Codes
 
    When closing an established connection (e.g. when sending a Close
    frame, after the opening handshake has completed), an endpoint MAY
@@ -2470,7 +2322,7 @@ Table of Contents
    status code and any associated textual message are optional
    components of a Close frame.
 
-<span class="h4"><a name="section-7.4.1">7.4.1</a>.  Defined Status Codes</span>
+7.4.1.  Defined Status Codes
 
    Endpoints MAY use the following pre-defined status codes when sending
    a Close frame.
@@ -2496,9 +2348,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 42]</span>
-</pre><pre class='newpage'><a name="page-43" id="page-43" href="#page-43" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 42]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    1003
@@ -2528,7 +2380,7 @@ Table of Contents
       connection was closed abnormally, e.g. without sending or
       receiving a Close control frame.
 
-<span class="h4"><a name="section-7.4.2">7.4.2</a>.  Reserved Status Code Ranges</span>
+7.4.2.  Reserved Status Code Ranges
 
    0-999
 
@@ -2552,9 +2404,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 43]</span>
-</pre><pre class='newpage'><a name="page-44" id="page-44" href="#page-44" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 43]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
       range.
@@ -2608,21 +2460,21 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 44]</span>
-</pre><pre class='newpage'><a name="page-45" id="page-45" href="#page-45" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 44]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-8">8</a>.  Error Handling</span>
+8.  Error Handling
 
-<span class="h3"><a name="section-8.1">8.1</a>.  Handling Errors in UTF-8 from the Server</span>
+8.1.  Handling Errors in UTF-8 from the Server
 
    When a client is to interpret a byte stream as UTF-8 but finds that
    the byte stream is not in fact a valid UTF-8 stream, then any bytes
    or sequences of bytes that are not valid UTF-8 sequences MUST be
    interpreted as a U+FFFD REPLACEMENT CHARACTER.
 
-<span class="h3"><a name="section-8.2">8.2</a>.  Handling Errors in UTF-8 from the Client</span>
+8.2.  Handling Errors in UTF-8 from the Client
 
    When a server is to interpret a byte stream as UTF-8 but finds that
    the byte stream is not in fact a valid UTF-8 stream, behavior is
@@ -2664,12 +2516,12 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 45]</span>
-</pre><pre class='newpage'><a name="page-46" id="page-46" href="#page-46" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 45]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-9">9</a>.  Extensions</span>
+9.  Extensions
 
    WebSocket clients MAY request extensions to this specification, and
    WebSocket servers MAY accept some or all extensions requested by the
@@ -2679,13 +2531,13 @@ Table of Contents
    accordance with the specification of the extension to which the
    parameters apply.
 
-<span class="h3"><a name="section-9.1">9.1</a>.  Negotiating Extensions</span>
+9.1.  Negotiating Extensions
 
    A client requests extensions by including a "Sec-WebSocket-
    Extensions" header, which follows the normal rules for HTTP headers
-   (see <a href="./rfc2616#section-4.2">[RFC2616] section&nbsp;4.2</a>) and the value of the header is defined by
+   (see [RFC2616] section 4.2) and the value of the header is defined by
    the following ABNF.  Note that unlike other section of the document
-   this section is using ABNF syntax/rules from [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>].  If a value
+   this section is using ABNF syntax/rules from [RFC2616].  If a value
    is received by either the client or the server during negotiation
    that does not conform to the ABNF below, the recipient of such
    malformed data MUST immediately _Fail the WebSocket Connection_.
@@ -2720,9 +2572,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 46]</span>
-</pre><pre class='newpage'><a name="page-47" id="page-47" href="#page-47" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 46]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    interpretation is that the headers listed by the client in its
@@ -2753,14 +2605,14 @@ Table of Contents
    requested set of parameters by a client, will be defined by each such
    extension.
 
-<span class="h3"><a name="section-9.2">9.2</a>.  Known Extensions</span>
+9.2.  Known Extensions
 
    Extensions provide a mechanism for implementations to opt-in to
    additional protocol features.  This section defines the meaning of
    well-known extensions but implementations MAY use extensions defined
    separately as well.
 
-<span class="h4"><a name="section-9.2.1">9.2.1</a>.  Compression</span>
+9.2.1.  Compression
 
    The registered extension token for this compression extension is
    "deflate-stream".
@@ -2768,17 +2620,17 @@ Table of Contents
    The extension does not have any per frame extension data and it does
    not define the use of any WebSocket reserved bits or opcodes.
 
-   Senders using this extension MUST apply [<a href="./rfc1951" title='"DEFLATE Compressed Data Format Specification version 1.3"'>RFC1951</a>] encodings to all
+   Senders using this extension MUST apply [RFC1951] encodings to all
    bytes of the data stream following the opening handshake including
    both data and control frames.  The data stream MAY include multiple
    blocks of both compressed and uncompressed types as defined by
-   [<a href="./rfc1951" title='"DEFLATE Compressed Data Format Specification version 1.3"'>RFC1951</a>].
+   [RFC1951].
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 47]</span>
-</pre><pre class='newpage'><a name="page-48" id="page-48" href="#page-48" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 47]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    Senders MUST NOT delay the transmission of any portion of a WebSocket
@@ -2788,13 +2640,13 @@ Table of Contents
 
    Historically there have been some confusion and interoperability
    problems around the specification of compression algorithms.  In this
-   specification "deflate-stream" requires a [<a href="./rfc1951" title='"DEFLATE Compressed Data Format Specification version 1.3"'>RFC1951</a>] deflate encoding.
+   specification "deflate-stream" requires a [RFC1951] deflate encoding.
    It MUST NOT be wrapped in any of the header formats often associated
-   with <a href="./rfc1951">RFC 1951</a> such as "zlib" [<a href="./rfc1950" title='"ZLIB Compressed Data Format Specification version 3.3"'>RFC1950</a>].  This requirement is given
+   with RFC 1951 such as "zlib" [RFC1950].  This requirement is given
    special attention with this note because of confusion in this area,
    the presence of some popular open source libraries that create both
    formats under a single API call with confusing naming conventions,
-   and the fact that the popular HTTP [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>] specification defines
+   and the fact that the popular HTTP [RFC2616] specification defines
    "deflate" compression differently than this specification.
 
 
@@ -2832,12 +2684,12 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 48]</span>
-</pre><pre class='newpage'><a name="page-49" id="page-49" href="#page-49" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 48]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-10">10</a>.  Security Considerations</span>
+10.  Security Considerations
 
    While this protocol is intended to be used by scripts in Web pages,
    it can also be used directly by hosts.  Such hosts are acting on
@@ -2888,9 +2740,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 49]</span>
-</pre><pre class='newpage'><a name="page-50" id="page-50" href="#page-50" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 49]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    server as a response to that request.  For instance, an attacker
@@ -2906,7 +2758,7 @@ Table of Contents
    WebSocket request.
 
 
-   As mentioned in <a href="#section-8.2">Section 8.2</a>, servers must be extremely cautious
+   As mentioned in Section 8.2, servers must be extremely cautious
    interpreting invalid UTF-8 data from the client.  A naive UTF-8
    parsing implementation can result in buffer overflows in the case of
    invalid input data.
@@ -2917,7 +2769,7 @@ Table of Contents
    during the TLS handshake.  To achieve reasonable levels of
    protections, clients should use only Strong TLS algorithms.  "Web
    Security Context: User Interface Guidelines"
-   [<a href="#ref-W3C.REC-wsc-ui-20100812">W3C.REC-wsc-ui-20100812</a>] discusses what constitutes Strong TLS
+   [W3C.REC-wsc-ui-20100812] discusses what constitutes Strong TLS
    algorithms.
 
 
@@ -2944,14 +2796,14 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 50]</span>
-</pre><pre class='newpage'><a name="page-51" id="page-51" href="#page-51" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 50]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-11">11</a>.  IANA Considerations</span>
+11.  IANA Considerations
 
-<span class="h3"><a name="section-11.1">11.1</a>.  Registration of "ws:" Scheme</span>
+11.1.  Registration of "ws:" Scheme
 
    A |ws:| URI identifies a WebSocket server and resource name.
 
@@ -2963,13 +2815,13 @@ Table of Contents
 
    URI scheme syntax.
       In ABNF terms using the terminals from the URI specifications:
-      [<a href="./rfc5234" title='"Augmented BNF for Syntax Specifications: ABNF"'>RFC5234</a>] [<a href="./rfc3986" title='"Uniform Resource Identifier (URI): Generic Syntax"'>RFC3986</a>]
+      [RFC5234] [RFC3986]
 
            "ws" ":" hier-part [ "?" query ]
 
-      The &lt;path&gt; [<a href="./rfc3986" title='"Uniform Resource Identifier (URI): Generic Syntax"'>RFC3986</a>] and &lt;query&gt; components form the resource name
+      The <path> [RFC3986] and <query> components form the resource name
       sent to the server to identify the kind of service desired.  Other
-      components have the meanings described in <a href="./rfc3986">RFC3986</a>.
+      components have the meanings described in RFC3986.
 
    URI scheme semantics.
       The only operation for this scheme is to open a connection using
@@ -2980,13 +2832,13 @@ Table of Contents
       defined above MUST be converted from Unicode to ASCII by applying
       the IDNA ToASCII algorithm to the Unicode host name, with both the
       AllowUnassigned and UseSTD3ASCIIRules flags set, and using the
-      result of this algorithm as the host in the URI.  [<a href="./rfc3490" title='"Internationalizing Domain Names in Applications (IDNA)"'>RFC3490</a>]
+      result of this algorithm as the host in the URI.  [RFC3490]
 
       Characters in other components that are excluded by the syntax
       defined above MUST be converted from Unicode to ASCII by first
       encoding the characters as UTF-8 and then replacing the
       corresponding bytes using their percent-encoded form as defined in
-      the URI and IRI specifications.  [<a href="./rfc3986" title='"Uniform Resource Identifier (URI): Generic Syntax"'>RFC3986</a>] [<a href="./rfc3987" title='M. and M. Suignard'>RFC3987</a>]
+      the URI and IRI specifications.  [RFC3986] [RFC3987]
 
    Applications/protocols that use this URI scheme name.
       WebSocket protocol.
@@ -3000,24 +2852,24 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 51]</span>
-</pre><pre class='newpage'><a name="page-52" id="page-52" href="#page-52" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 51]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    Security considerations.
       See "Security considerations" section above.
 
    Contact.
-      HYBI WG &lt;hybi@ietf.org&gt;
+      HYBI WG <hybi@ietf.org>
 
    Author/Change controller.
-      IETF &lt;iesg@ietf.org&gt;
+      IETF <iesg@ietf.org>
 
    References.
       RFC XXXX
 
-<span class="h3"><a name="section-11.2">11.2</a>.  Registration of "wss:" Scheme</span>
+11.2.  Registration of "wss:" Scheme
 
    A |wss:| URI identifies a WebSocket server and resource name, and
    indicates that traffic over that connection is to be protected via
@@ -3032,13 +2884,13 @@ Table of Contents
 
    URI scheme syntax.
       In ABNF terms using the terminals from the URI specifications:
-      [<a href="./rfc5234" title='"Augmented BNF for Syntax Specifications: ABNF"'>RFC5234</a>] [<a href="./rfc3986" title='"Uniform Resource Identifier (URI): Generic Syntax"'>RFC3986</a>]
+      [RFC5234] [RFC3986]
 
            "wss" ":" hier-part [ "?" query ]
 
-      The &lt;path&gt; and &lt;query&gt; components form the resource name sent to
+      The <path> and <query> components form the resource name sent to
       the server to identify the kind of service desired.  Other
-      components have the meanings described in <a href="./rfc3986">RFC3986</a>.
+      components have the meanings described in RFC3986.
 
    URI scheme semantics.
       The only operation for this scheme is to open a connection using
@@ -3049,21 +2901,21 @@ Table of Contents
       defined above MUST be converted from Unicode to ASCII by applying
       the IDNA ToASCII algorithm to the Unicode host name, with both the
       AllowUnassigned and UseSTD3ASCIIRules flags set, and using the
-      result of this algorithm as the host in the URI.  [<a href="./rfc3490" title='"Internationalizing Domain Names in Applications (IDNA)"'>RFC3490</a>]
+      result of this algorithm as the host in the URI.  [RFC3490]
 
       Characters in other components that are excluded by the syntax
       defined above MUST be converted from Unicode to ASCII by first
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 52]</span>
-</pre><pre class='newpage'><a name="page-53" id="page-53" href="#page-53" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 52]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
       encoding the characters as UTF-8 and then replacing the
       corresponding bytes using their percent-encoded form as defined in
-      the URI and IRI specification.  [<a href="./rfc3986" title='"Uniform Resource Identifier (URI): Generic Syntax"'>RFC3986</a>] [<a href="./rfc3987" title='M. and M. Suignard'>RFC3987</a>]
+      the URI and IRI specification.  [RFC3986] [RFC3987]
 
    Applications/protocols that use this URI scheme name.
       WebSocket protocol over TLS.
@@ -3075,35 +2927,35 @@ Table of Contents
       See "Security considerations" section above.
 
    Contact.
-      HYBI WG &lt;hybi@ietf.org&gt;
+      HYBI WG <hybi@ietf.org>
 
    Author/Change controller.
-      IETF &lt;iesg@ietf.org&gt;
+      IETF <iesg@ietf.org>
 
    References.
       RFC XXXX
 
-<span class="h3"><a name="section-11.3">11.3</a>.  Registration of the "WebSocket" HTTP Upgrade Keyword</span>
+11.3.  Registration of the "WebSocket" HTTP Upgrade Keyword
 
    This section defines a keyword for registration in the "HTTP Upgrade
-   Tokens" registry as per <a href="./rfc2817">RFC 2817</a> [<a href="./rfc2817" title='"Upgrading to TLS Within HTTP/1.1"'>RFC2817</a>].
+   Tokens" registry as per RFC 2817 [RFC2817].
 
    Name of token.
       WebSocket
 
    Author/Change controller.
-      IETF &lt;iesg@ietf.org&gt;
+      IETF <iesg@ietf.org>
 
    Contact.
-      HYBI &lt;hybi@ietf.org&gt;
+      HYBI <hybi@ietf.org>
 
    References.
       RFC XXXX
 
-<span class="h3"><a name="section-11.4">11.4</a>.  Sec-WebSocket-Key</span>
+11.4.  Sec-WebSocket-Key
 
    This section describes a header field for registration in the
-   Permanent Message Header Field Registry.  [<a href="./rfc3864" title='"Registration Procedures for Message Header Fields"'>RFC3864</a>]
+   Permanent Message Header Field Registry.  [RFC3864]
 
 
 
@@ -3112,9 +2964,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 53]</span>
-</pre><pre class='newpage'><a name="page-54" id="page-54" href="#page-54" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 53]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    Header field name
@@ -3143,10 +2995,10 @@ Table of Contents
    clients) that are being abused to send data to unsuspecting WebSocket
    servers.
 
-<span class="h3"><a name="section-11.5">11.5</a>.  Sec-WebSocket-Extensions</span>
+11.5.  Sec-WebSocket-Extensions
 
    This section describes a header field for registration in the
-   Permanent Message Header Field Registry.  [<a href="./rfc3864" title='"Registration Procedures for Message Header Fields"'>RFC3864</a>]
+   Permanent Message Header Field Registry.  [RFC3864]
 
    Header field name
       Sec-WebSocket-Extensions
@@ -3168,9 +3020,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 54]</span>
-</pre><pre class='newpage'><a name="page-55" id="page-55" href="#page-55" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 54]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    Related information
@@ -3182,20 +3034,20 @@ Table of Contents
    agree on a set of protocol-level extensions to use for the duration
    of the connection.
 
-<span class="h3"><a name="section-11.6">11.6</a>.  WebSocket Extension Name Registry</span>
+11.6.  WebSocket Extension Name Registry
 
    This specification requests the creation of a new IANA registry for
    WebSocket Extension names to be used with the WebSocket protocol in
-   accordance with the principles set out in <a href="./rfc5226">RFC 5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].
+   accordance with the principles set out in RFC 5226 [RFC5226].
 
    As part of this registry IANA will maintain the following
    information:
 
    Extension Identifier
       The identifier of the extension, as will be used in the Sec-
-      WebSocket-Extension header registered in <a href="#section-11.5">Section 11.5</a> of this
+      WebSocket-Extension header registered in Section 11.5 of this
       specification.  The value must conform to the requirements for an
-      extension-token as defined in <a href="#section-9.1">Section 9.1</a> of this specification.
+      extension-token as defined in Section 9.1 of this specification.
 
    Extension Common Name
       The name of the extension, as the extension is generally referred
@@ -3210,11 +3062,11 @@ Table of Contents
       to be incompatible.
 
    WebSocket Extension names are to be subject to First Come First Serve
-   as per <a href="./rfc5226">RFC5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>], with the exception of WebSocket Extension
+   as per RFC5226 [RFC5226], with the exception of WebSocket Extension
    names whose Extension Identifier matches a private-use-token as
-   defined in <a href="#section-9.1">Section 9.1</a> (values beginning with "x-").  These Extension
+   defined in Section 9.1 (values beginning with "x-").  These Extension
    Identifiers matching private-use-token are reserved for Experimental
-   Use as per <a href="./rfc5226">RFC5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].
+   Use as per RFC5226 [RFC5226].
 
    IANA is asked to add an initial value to the registry (there are no
    known incompatible extensions for this initial entry):
@@ -3224,21 +3076,21 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 55]</span>
-</pre><pre class='newpage'><a name="page-56" id="page-56" href="#page-56" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 55]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    Extension Identifier |  Extension Common Name |  Extension Definition
  -+---------------------+------------------------+-----------------------
-  | deflate-stream      | Deflate Stream         | <a href="#section-9.2.1">Section 9.2.1</a> of this
+  | deflate-stream      | Deflate Stream         | Section 9.2.1 of this
   |                     | Compression            | document.
  -+---------------------+------------------------+-----------------------
 
-<span class="h3"><a name="section-11.7">11.7</a>.  Sec-WebSocket-Accept</span>
+11.7.  Sec-WebSocket-Accept
 
    This section describes a header field for registration in the
-   Permanent Message Header Field Registry.  [<a href="./rfc3864" title='"Registration Procedures for Message Header Fields"'>RFC3864</a>]
+   Permanent Message Header Field Registry.  [RFC3864]
 
    Header field name
       Sec-WebSocket-Accept
@@ -3262,10 +3114,10 @@ Table of Contents
    handshake.  It is sent from the server to the client to confirm that
    the server is willing to initiate the connection.
 
-<span class="h3"><a name="section-11.8">11.8</a>.  Sec-WebSocket-Origin</span>
+11.8.  Sec-WebSocket-Origin
 
    This section describes a header field for registration in the
-   Permanent Message Header Field Registry.  [<a href="./rfc3864" title='"Registration Procedures for Message Header Fields"'>RFC3864</a>]
+   Permanent Message Header Field Registry.  [RFC3864]
 
    Header field name
       Sec-WebSocket-Origin
@@ -3280,9 +3132,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 56]</span>
-</pre><pre class='newpage'><a name="page-57" id="page-57" href="#page-57" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 56]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    Author/Change controller
@@ -3300,10 +3152,10 @@ Table of Contents
    clients to verify that the server is willing to serve the script that
    opened the connection.
 
-<span class="h3"><a name="section-11.9">11.9</a>.  Sec-WebSocket-Protocol</span>
+11.9.  Sec-WebSocket-Protocol
 
    This section describes a header field for registration in the
-   Permanent Message Header Field Registry.  [<a href="./rfc3864" title='"Registration Procedures for Message Header Fields"'>RFC3864</a>]
+   Permanent Message Header Field Registry.  [RFC3864]
 
    Header field name
       Sec-WebSocket-Protocol
@@ -3329,30 +3181,30 @@ Table of Contents
    connection.  This enables scripts to both select a subprotocol and be
    sure that the server agreed to serve that subprotocol.
 
-<span class="h3"><a name="section-11.10">11.10</a>.  WebSocket Subprotocol Name Registry</span>
+11.10.  WebSocket Subprotocol Name Registry
 
    This specification requests the creation of a new IANA registry for
    WebSocket Subprotocol names to be used with the WebSocket protocol in
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 57]</span>
-</pre><pre class='newpage'><a name="page-58" id="page-58" href="#page-58" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 57]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-   accordance with the principles set out in <a href="./rfc5226">RFC 5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].
+   accordance with the principles set out in RFC 5226 [RFC5226].
 
    As part of this registry IANA will maintain the following
    information:
 
    Subprotocol Identifier
       The identifier of the subprotocol, as will be used in the Sec-
-      WebSocket-Protocol header registered in <a href="#section-11.9">Section 11.9</a> of this
+      WebSocket-Protocol header registered in Section 11.9 of this
       specification.  The value must conform to the requirements given
-      in Paragraph 10 of Paragraph 4 of <a href="#section-5.1">Section 5.1</a> of this
-      specification, namely the value must be a token as defined by <a href="./rfc2616">RFC</a>
-      <a href="./rfc2616">2616</a> [<a href="./rfc2616" title='"Hypertext Transfer Protocol -- HTTP/1.1"'>RFC2616</a>].
+      in Paragraph 10 of Paragraph 4 of Section 5.1 of this
+      specification, namely the value must be a token as defined by RFC
+      2616 [RFC2616].
 
    Subprotocol Common Name
       The name of the subprotocol, as the subprotocol is generally
@@ -3363,12 +3215,12 @@ Table of Contents
       with the WebSocket protocol is defined.
 
    WebSocket Subprotocol names are to be subject to First Come First
-   Serve as per <a href="./rfc5226">RFC5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].
+   Serve as per RFC5226 [RFC5226].
 
-<span class="h3"><a name="section-11.11">11.11</a>.  Sec-WebSocket-Version</span>
+11.11.  Sec-WebSocket-Version
 
    This section describes a header field for registration in the
-   Permanent Message Header Field Registry.  [<a href="./rfc3864" title='"Registration Procedures for Message Header Fields"'>RFC3864</a>]
+   Permanent Message Header Field Registry.  [RFC3864]
 
    Header field name
       Sec-WebSocket-Version
@@ -3392,9 +3244,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 58]</span>
-</pre><pre class='newpage'><a name="page-59" id="page-59" href="#page-59" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 58]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    handshake.  It is sent from the client to the server to indicate the
@@ -3403,25 +3255,25 @@ Table of Contents
    sent from the data, and close the connection if the server cannot
    interpret that data in a safe manner.
 
-<span class="h3"><a name="section-11.12">11.12</a>.  WebSocket Version Number Registry</span>
+11.12.  WebSocket Version Number Registry
 
    This specification requests the creation of a new IANA registry for
    WebSocket Version Numbers to be used with the WebSocket protocol in
-   accordance with the principles set out in <a href="./rfc5226">RFC 5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].
+   accordance with the principles set out in RFC 5226 [RFC5226].
 
    As part of this registry IANA will maintain the following
    information:
 
    Version Number
       The version number to be used in the Sec-WebSocket-Version as
-      specified in <a href="#section-5.1">Section 5.1</a> of this specification.  The value must be
+      specified in Section 5.1 of this specification.  The value must be
       a whole number (zero or higher).
 
    Reference
       The RFC requesting a new version number.
 
    WebSocket Version Numbers are to be subject to RFC Required as per
-   <a href="./rfc5226">RFC5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].
+   RFC5226 [RFC5226].
 
    IANA is asked to add initial values to the registry, with suggested
    numerical values as these have been used in past versions of this
@@ -3448,46 +3300,46 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 59]</span>
-</pre><pre class='newpage'><a name="page-60" id="page-60" href="#page-60" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 59]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
       Version Number  | Reference
     -+----------------+-----------------------------------------+-
-     | 0              + <a href="./draft-ietf-hybi-thewebsocketprotocol-00">draft-ietf-hybi-thewebsocketprotocol-00</a> |
+     | 0              + draft-ietf-hybi-thewebsocketprotocol-00 |
     -+----------------+-----------------------------------------+-
-     | 1              + <a href="./draft-ietf-hybi-thewebsocketprotocol-01">draft-ietf-hybi-thewebsocketprotocol-01</a> |
+     | 1              + draft-ietf-hybi-thewebsocketprotocol-01 |
     -+----------------+-----------------------------------------+-
-     | 2              + <a href="./draft-ietf-hybi-thewebsocketprotocol-02">draft-ietf-hybi-thewebsocketprotocol-02</a> |
+     | 2              + draft-ietf-hybi-thewebsocketprotocol-02 |
     -+----------------+-----------------------------------------+-
-     | 3              + <a href="./draft-ietf-hybi-thewebsocketprotocol-03">draft-ietf-hybi-thewebsocketprotocol-03</a> |
+     | 3              + draft-ietf-hybi-thewebsocketprotocol-03 |
     -+----------------+-----------------------------------------+-
-     | 4              + <a href="./draft-ietf-hybi-thewebsocketprotocol-04">draft-ietf-hybi-thewebsocketprotocol-04</a> |
+     | 4              + draft-ietf-hybi-thewebsocketprotocol-04 |
     -+----------------+-----------------------------------------+-
-     | 5              + <a href="./draft-ietf-hybi-thewebsocketprotocol-05">draft-ietf-hybi-thewebsocketprotocol-05</a> |
+     | 5              + draft-ietf-hybi-thewebsocketprotocol-05 |
     -+----------------+-----------------------------------------+-
-     | 6              + <a href="./draft-ietf-hybi-thewebsocketprotocol-06">draft-ietf-hybi-thewebsocketprotocol-06</a> |
+     | 6              + draft-ietf-hybi-thewebsocketprotocol-06 |
     -+----------------+-----------------------------------------+-
-     | 7              + <a href="./draft-ietf-hybi-thewebsocketprotocol-07">draft-ietf-hybi-thewebsocketprotocol-07</a> |
+     | 7              + draft-ietf-hybi-thewebsocketprotocol-07 |
     -+----------------+-----------------------------------------+-
-     | 8              + <a href="./draft-ietf-hybi-thewebsocketprotocol-08">draft-ietf-hybi-thewebsocketprotocol-08</a> |
+     | 8              + draft-ietf-hybi-thewebsocketprotocol-08 |
     -+----------------+-----------------------------------------+-
-     | 9              + <a href="./draft-ietf-hybi-thewebsocketprotocol-09">draft-ietf-hybi-thewebsocketprotocol-09</a> |
+     | 9              + draft-ietf-hybi-thewebsocketprotocol-09 |
     -+----------------+-----------------------------------------+-
 
-<span class="h3"><a name="section-11.13">11.13</a>.  WebSocket Close Code Number Registry</span>
+11.13.  WebSocket Close Code Number Registry
 
    This specification requests the creation of a new IANA registry for
    WebSocket Connection Close Code Numbers in accordance with the
-   principles set out in <a href="./rfc5226">RFC 5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].
+   principles set out in RFC 5226 [RFC5226].
 
    As part of this registry IANA will maintain the following
    information:
 
    Status Code
       The Status Code which denotes a reson for a WebSocket connection
-      closure as per <a href="#section-7.4">Section 7.4</a> of this document.  The status code is
+      closure as per Section 7.4 of this document.  The status code is
       an integer number.
 
    Meaning
@@ -3504,14 +3356,14 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 60]</span>
-</pre><pre class='newpage'><a name="page-61" id="page-61" href="#page-61" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 60]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    registration requirements depending on their range.  Unless otherwise
-   specified, requests are subject to Standards Action as per <a href="./rfc5226">RFC5226</a>
-   [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].  Requests for status codes for use by this protocol or
+   specified, requests are subject to Standards Action as per RFC5226
+   [RFC5226].  Requests for status codes for use by this protocol or
    subsequent versions are subject to Standards Action and should be
    granted status codes in the range 1000-1999.  Requests for status
    codes for use by extensions are subject to Specification Required and
@@ -3545,11 +3397,11 @@ Table of Contents
      | 1006       | Abnormal Closure| hybi@ietf.org | RFC XXXX  |
     -+------------+-----------------+---------------+-----------|
 
-<span class="h3"><a name="section-11.14">11.14</a>.  WebSocket Opcode Registry</span>
+11.14.  WebSocket Opcode Registry
 
    This specification requests the creation of a new IANA registry for
-   WebSocket Opcodes in accordance with the principles set out in <a href="./rfc5226">RFC</a>
-   <a href="./rfc5226">5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].
+   WebSocket Opcodes in accordance with the principles set out in RFC
+   5226 [RFC5226].
 
    As part of this registry IANA will maintain the following
    information:
@@ -3560,14 +3412,14 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 61]</span>
-</pre><pre class='newpage'><a name="page-62" id="page-62" href="#page-62" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 61]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
    Opcode
       The opcode denotes the frame type of the WebSocket frame, as
-      defined in <a href="#section-4.2">Section 4.2</a>.  The status code is an integer number
+      defined in Section 4.2.  The status code is an integer number
       between 0 and 15, inclusive.
 
    Meaning
@@ -3577,7 +3429,7 @@ Table of Contents
       The specification requesting the opcode.
 
    WebSocket Opcode numbers are subject to Standards Action as per
-   <a href="./rfc5226">RFC5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].
+   RFC5226 [RFC5226].
 
    IANA is asked to add initial values to the registry, with suggested
    numerical values as these have been used in past versions of this
@@ -3598,30 +3450,30 @@ Table of Contents
      | 10     | Pong Frame                          | RFC XXXX  |
     -+--------+-------------------------------------+-----------|
 
-<span class="h3"><a name="section-11.15">11.15</a>.  WebSocket Framing Header Bits Registry</span>
+11.15.  WebSocket Framing Header Bits Registry
 
    This specification requests the creation of a new IANA registry for
    WebSocket Framing Header Bits in accordance with the principles set
-   out in <a href="./rfc5226">RFC 5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].  This registry controls assignment of the
-   bits marked RSV1, RSV2, and RSV3 in <a href="#section-4.2">Section 4.2</a>.
+   out in RFC 5226 [RFC5226].  This registry controls assignment of the
+   bits marked RSV1, RSV2, and RSV3 in Section 4.2.
 
    These bits are reserved for future versions or extensions of this
    specification.
 
    WebSocket Framing Header Bits assignments are subject to Standards
-   Action per <a href="./rfc5226">RFC 5226</a> [<a href="./rfc5226" title='"Guidelines for Writing an IANA Considerations Section in RFCs"'>RFC5226</a>].
+   Action per RFC 5226 [RFC5226].
 
 
 
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 62]</span>
-</pre><pre class='newpage'><a name="page-63" id="page-63" href="#page-63" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 62]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-12">12</a>.  Using the WebSocket protocol from Other Specifications</span>
+12.  Using the WebSocket protocol from Other Specifications
 
    The WebSocket protocol is intended to be used by another
    specification to provide a generic mechanism for dynamic author-
@@ -3639,7 +3491,7 @@ Table of Contents
       encrypted, and false otherwise.
 
    o  An ASCII serialization of an origin that is being made responsible
-      for the connection.  [<a href="#ref-I-D.ietf-websec-origin">I-D.ietf-websec-origin</a>]
+      for the connection.  [I-D.ietf-websec-origin]
 
    o  Optionally a string identifying a protocol that is to be layered
       over the WebSocket connection.
@@ -3651,15 +3503,15 @@ Table of Contents
 
    If at any time the connection is to be closed, then the specification
    needs to use the _Close the WebSocket Connection_ algorithm
-   (<a href="#section-7.1.1">Section 7.1.1</a>).
+   (Section 7.1.1).
 
-   <a href="#section-7.1.4">Section 7.1.4</a> defines when _The WebSocket Connection is Closed_.
+   Section 7.1.4 defines when _The WebSocket Connection is Closed_.
 
    While a connection is open, the specification will need to handle the
-   cases when _A WebSocket Message Has Been Received_ (<a href="#section-6.2">Section 6.2</a>).
+   cases when _A WebSocket Message Has Been Received_ (Section 6.2).
 
    To send some data /data/ to an open connection, the specification
-   needs to _Send a WebSocket Message_ (<a href="#section-6.1">Section 6.1</a>).
+   needs to _Send a WebSocket Message_ (Section 6.1).
 
 
 
@@ -3672,12 +3524,12 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 63]</span>
-</pre><pre class='newpage'><a name="page-64" id="page-64" href="#page-64" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 63]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-13">13</a>.  Acknowledgements</span>
+13.  Acknowledgements
 
    Special thanks are due to Ian Hickson, who was the original author
    and editor of this protocol.  The initial design of this
@@ -3685,7 +3537,7 @@ Table of Contents
    WHATWG and WHATWG mailing list.  Contributions to that specification
    are not tracked by section, but a list of all who contributed to that
    specification is given in the WHATWG HTML specification at
-   <a href="http://whatwg.org/html5">http://whatwg.org/html5</a>.
+   http://whatwg.org/html5.
 
    Special thanks also to John Tamplin for providing a significant
    amount of text for the Data Framing section of this specification.
@@ -3728,127 +3580,127 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 64]</span>
-</pre><pre class='newpage'><a name="page-65" id="page-65" href="#page-65" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 64]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
-<span class="h2"><a name="section-14">14</a>.  References</span>
+14.  References
 
-<span class="h3"><a name="section-14.1">14.1</a>.  Normative References</span>
+14.1.  Normative References
 
-   [<a name="ref-ANSI.X3-4.1986" id="ref-ANSI.X3-4.1986">ANSI.X3-4.1986</a>]
+   [ANSI.X3-4.1986]
               American National Standards Institute, "Coded Character
               Set - 7-bit American Standard Code for Information
               Interchange", ANSI X3.4, 1986.
 
-   [<a name="ref-FIPS.180-2.2002" id="ref-FIPS.180-2.2002">FIPS.180-2.2002</a>]
+   [FIPS.180-2.2002]
               National Institute of Standards and Technology, "Secure
-              Hash Standard", FIPS PUB 180-2, August 2002, &lt;<a href="http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf">http://</a>
-              <a href="http://csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf">csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf</a>&gt;.
+              Hash Standard", FIPS PUB 180-2, August 2002, <http://
+              csrc.nist.gov/publications/fips/fips180-2/fips180-2.pdf>.
 
-   [<a name="ref-RFC1951" id="ref-RFC1951">RFC1951</a>]  Deutsch, P., "DEFLATE Compressed Data Format Specification
-              version 1.3", <a href="./rfc1951">RFC 1951</a>, May 1996.
+   [RFC1951]  Deutsch, P., "DEFLATE Compressed Data Format Specification
+              version 1.3", RFC 1951, May 1996.
 
-   [<a name="ref-RFC2119" id="ref-RFC2119">RFC2119</a>]  Bradner, S., "Key words for use in RFCs to Indicate
-              Requirement Levels", <a href="./bcp14">BCP 14</a>, <a href="./rfc2119">RFC 2119</a>, March 1997.
+   [RFC2119]  Bradner, S., "Key words for use in RFCs to Indicate
+              Requirement Levels", BCP 14, RFC 2119, March 1997.
 
-   [<a name="ref-RFC2616" id="ref-RFC2616">RFC2616</a>]  Fielding, R., Gettys, J., Mogul, J., Frystyk, H.,
+   [RFC2616]  Fielding, R., Gettys, J., Mogul, J., Frystyk, H.,
               Masinter, L., Leach, P., and T. Berners-Lee, "Hypertext
-              Transfer Protocol -- HTTP/1.1", <a href="./rfc2616">RFC 2616</a>, June 1999.
+              Transfer Protocol -- HTTP/1.1", RFC 2616, June 1999.
 
-   [<a name="ref-RFC2817" id="ref-RFC2817">RFC2817</a>]  Khare, R. and S. Lawrence, "Upgrading to TLS Within
-              HTTP/1.1", <a href="./rfc2817">RFC 2817</a>, May 2000.
+   [RFC2817]  Khare, R. and S. Lawrence, "Upgrading to TLS Within
+              HTTP/1.1", RFC 2817, May 2000.
 
-   [<a name="ref-RFC2818" id="ref-RFC2818">RFC2818</a>]  Rescorla, E., "HTTP Over TLS", <a href="./rfc2818">RFC 2818</a>, May 2000.
+   [RFC2818]  Rescorla, E., "HTTP Over TLS", RFC 2818, May 2000.
 
-   [<a name="ref-RFC3490" id="ref-RFC3490">RFC3490</a>]  Faltstrom, P., Hoffman, P., and A. Costello,
+   [RFC3490]  Faltstrom, P., Hoffman, P., and A. Costello,
               "Internationalizing Domain Names in Applications (IDNA)",
-              <a href="./rfc3490">RFC 3490</a>, March 2003.
+              RFC 3490, March 2003.
 
-   [<a name="ref-RFC3548" id="ref-RFC3548">RFC3548</a>]  Josefsson, S., "The Base16, Base32, and Base64 Data
-              Encodings", <a href="./rfc3548">RFC 3548</a>, July 2003.
+   [RFC3548]  Josefsson, S., "The Base16, Base32, and Base64 Data
+              Encodings", RFC 3548, July 2003.
 
-   [<a name="ref-RFC3629" id="ref-RFC3629">RFC3629</a>]  Yergeau, F., "UTF-8, a transformation format of ISO
-              10646", STD 63, <a href="./rfc3629">RFC 3629</a>, November 2003.
+   [RFC3629]  Yergeau, F., "UTF-8, a transformation format of ISO
+              10646", STD 63, RFC 3629, November 2003.
 
-   [<a name="ref-RFC3864" id="ref-RFC3864">RFC3864</a>]  Klyne, G., Nottingham, M., and J. Mogul, "Registration
-              Procedures for Message Header Fields", <a href="./bcp90">BCP 90</a>, <a href="./rfc3864">RFC 3864</a>,
+   [RFC3864]  Klyne, G., Nottingham, M., and J. Mogul, "Registration
+              Procedures for Message Header Fields", BCP 90, RFC 3864,
               September 2004.
 
-   [<a name="ref-RFC3986" id="ref-RFC3986">RFC3986</a>]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
+   [RFC3986]  Berners-Lee, T., Fielding, R., and L. Masinter, "Uniform
               Resource Identifier (URI): Generic Syntax", STD 66,
-              <a href="./rfc3986">RFC 3986</a>, January 2005.
+              RFC 3986, January 2005.
 
-   [<a name="ref-RFC3987" id="ref-RFC3987">RFC3987</a>]  Duerst, M. and M. Suignard, "Internationalized Resource
-
-
-
-<span class="grey">Fette                   Expires December 15, 2011              [Page 65]</span>
-</pre><pre class='newpage'><a name="page-66" id="page-66" href="#page-66" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+   [RFC3987]  Duerst, M. and M. Suignard, "Internationalized Resource
 
 
-              Identifiers (IRIs)", <a href="./rfc3987">RFC 3987</a>, January 2005.
 
-   [<a name="ref-RFC4086" id="ref-RFC4086">RFC4086</a>]  Eastlake, D., Schiller, J., and S. Crocker, "Randomness
-              Requirements for Security", <a href="./bcp106">BCP 106</a>, <a href="./rfc4086">RFC 4086</a>, June 2005.
+Fette                   Expires December 15, 2011              [Page 65]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
-   [<a name="ref-RFC5246" id="ref-RFC5246">RFC5246</a>]  Dierks, T. and E. Rescorla, "The Transport Layer Security
-              (TLS) Protocol Version 1.2", <a href="./rfc5246">RFC 5246</a>, August 2008.
 
-   [<a name="ref-RFC6066" id="ref-RFC6066">RFC6066</a>]  Eastlake, D., "Transport Layer Security (TLS) Extensions:
-              Extension Definitions", <a href="./rfc6066">RFC 6066</a>, January 2011.
+              Identifiers (IRIs)", RFC 3987, January 2005.
 
-   [<a name="ref-RFC4648" id="ref-RFC4648">RFC4648</a>]  Josefsson, S., "The Base16, Base32, and Base64 Data
-              Encodings", <a href="./rfc4648">RFC 4648</a>, October 2006.
+   [RFC4086]  Eastlake, D., Schiller, J., and S. Crocker, "Randomness
+              Requirements for Security", BCP 106, RFC 4086, June 2005.
 
-   [<a name="ref-RFC5226" id="ref-RFC5226">RFC5226</a>]  Narten, T. and H. Alvestrand, "Guidelines for Writing an
-              IANA Considerations Section in RFCs", <a href="./bcp26">BCP 26</a>, <a href="./rfc5226">RFC 5226</a>,
+   [RFC5246]  Dierks, T. and E. Rescorla, "The Transport Layer Security
+              (TLS) Protocol Version 1.2", RFC 5246, August 2008.
+
+   [RFC6066]  Eastlake, D., "Transport Layer Security (TLS) Extensions:
+              Extension Definitions", RFC 6066, January 2011.
+
+   [RFC4648]  Josefsson, S., "The Base16, Base32, and Base64 Data
+              Encodings", RFC 4648, October 2006.
+
+   [RFC5226]  Narten, T. and H. Alvestrand, "Guidelines for Writing an
+              IANA Considerations Section in RFCs", BCP 26, RFC 5226,
               May 2008.
 
-   [<a name="ref-RFC5234" id="ref-RFC5234">RFC5234</a>]  Crocker, D. and P. Overell, "Augmented BNF for Syntax
-              Specifications: ABNF", STD 68, <a href="./rfc5234">RFC 5234</a>, January 2008.
+   [RFC5234]  Crocker, D. and P. Overell, "Augmented BNF for Syntax
+              Specifications: ABNF", STD 68, RFC 5234, January 2008.
 
-<span class="h3"><a name="section-14.2">14.2</a>.  Informative References</span>
+14.2.  Informative References
 
-   [<a name="ref-WSAPI" id="ref-WSAPI">WSAPI</a>]    Hickson, I., "The Web Sockets API", August 2010,
-              &lt;<a href="http://dev.w3.org/html5/websockets/">http://dev.w3.org/html5/websockets/</a>&gt;.
+   [WSAPI]    Hickson, I., "The Web Sockets API", August 2010,
+              <http://dev.w3.org/html5/websockets/>.
 
-   [<a name="ref-I-D.ietf-httpstate-cookie" id="ref-I-D.ietf-httpstate-cookie">I-D.ietf-httpstate-cookie</a>]
+   [I-D.ietf-httpstate-cookie]
               Barth, A., "HTTP State Management Mechanism",
-              <a href="./draft-ietf-httpstate-cookie-20">draft-ietf-httpstate-cookie-20</a> (work in progress),
+              draft-ietf-httpstate-cookie-20 (work in progress),
               December 2010.
 
-   [<a name="ref-I-D.ietf-websec-origin" id="ref-I-D.ietf-websec-origin">I-D.ietf-websec-origin</a>]
+   [I-D.ietf-websec-origin]
               Barth, A., "The Web Origin Concept",
-              <a href="./draft-ietf-websec-origin-00">draft-ietf-websec-origin-00</a> (work in progress),
+              draft-ietf-websec-origin-00 (work in progress),
               December 2010.
 
-   [<a name="ref-RFC1950" id="ref-RFC1950">RFC1950</a>]  Deutsch, L. and J-L. Gailly, "ZLIB Compressed Data Format
-              Specification version 3.3", <a href="./rfc1950">RFC 1950</a>, May 1996.
+   [RFC1950]  Deutsch, L. and J-L. Gailly, "ZLIB Compressed Data Format
+              Specification version 3.3", RFC 1950, May 1996.
 
-   [<a name="ref-RFC5321" id="ref-RFC5321">RFC5321</a>]  Klensin, J., "Simple Mail Transfer Protocol", <a href="./rfc5321">RFC 5321</a>,
+   [RFC5321]  Klensin, J., "Simple Mail Transfer Protocol", RFC 5321,
               October 2008.
 
-   [<a name="ref-RFC6202" id="ref-RFC6202">RFC6202</a>]  Loreto, S., Saint-Andre, P., Salsano, S., and G. Wilkins,
+   [RFC6202]  Loreto, S., Saint-Andre, P., Salsano, S., and G. Wilkins,
               "Known Issues and Best Practices for the Use of Long
-              Polling and Streaming in Bidirectional HTTP", <a href="./rfc6202">RFC 6202</a>,
+              Polling and Streaming in Bidirectional HTTP", RFC 6202,
               April 2011.
 
-   [<a name="ref-W3C.REC-wsc-ui-20100812" id="ref-W3C.REC-wsc-ui-20100812">W3C.REC-wsc-ui-20100812</a>]
+   [W3C.REC-wsc-ui-20100812]
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 66]</span>
-</pre><pre class='newpage'><a name="page-67" id="page-67" href="#page-67" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 66]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
               Saldhana, A. and T. Roessler, "Web Security Context: User
               Interface Guidelines", World Wide Web Consortium
               Recommendation REC-wsc-ui-20100812, August 2010,
-              &lt;<a href="http://www.w3.org/TR/2010/REC-wsc-ui-20100812">http://www.w3.org/TR/2010/REC-wsc-ui-20100812</a>&gt;.
+              <http://www.w3.org/TR/2010/REC-wsc-ui-20100812>.
 
 
 
@@ -3896,9 +3748,9 @@ Table of Contents
 
 
 
-<span class="grey">Fette                   Expires December 15, 2011              [Page 67]</span>
-</pre><pre class='newpage'><a name="page-68" id="page-68" href="#page-68" class="invisible"> </a>
-<span class="grey">Internet-Draft           The WebSocket protocol                June 2011</span>
+Fette                   Expires December 15, 2011              [Page 67]
+
+Internet-Draft           The WebSocket protocol                June 2011
 
 
 Author's Address
@@ -3907,7 +3759,7 @@ Author's Address
    Google, Inc.
 
    Email: ifette+ietf@google.com
-   URI:   <a href="http://www.ianfette.com/">http://www.ianfette.com/</a>
+   URI:   http://www.ianfette.com/
 
 
 
@@ -3953,10 +3805,4 @@ Author's Address
 
 
 Fette                   Expires December 15, 2011              [Page 68]
-</pre><pre class='newpage'>
-
-</pre><br />
-<span class="noprint"><small><small>Html markup produced by rfcmarkup 1.95, available from
-<a href="http://tools.ietf.org/tools/rfcmarkup/">http://tools.ietf.org/tools/rfcmarkup/</a>
-</small></small></span>
-</body></html>
+

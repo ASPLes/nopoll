@@ -39,6 +39,10 @@
 #ifndef __NOPOLL_PRIVATE_H__
 #define __NOPOLL_PRIVATE_H__
 
+#include <openssl/x509v3.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 #include <nopoll_handlers.h>
 
 struct _noPollCtx {
@@ -83,10 +87,16 @@ struct _noPollCtx {
 	int               conn_num;
 
 	/** 
-	 * @internal Action handler reference that will be called when som
+	 * @internal Reference to defined on accept handling.
 	 */
-	noPollActionHandler  action_handler;
-	noPollPtr            action_handler_data;
+	noPollActionHandler on_accept;
+	noPollPtr           on_accept_data;
+
+	/** 
+	 * @internal Reference to defined on accept handling.
+	 */
+	noPollActionHandler on_open;
+	noPollPtr           on_open_data;
 };
 
 struct _noPollConn {
@@ -118,6 +128,11 @@ struct _noPollConn {
 	noPollRead       receive;
 
 	/** 
+	 * @internal Current connection receive function.
+	 */
+	noPollRead       send;
+
+	/** 
 	 * @internal The connection role.
 	 */
 	noPollRole       role;
@@ -134,16 +149,41 @@ struct _noPollConn {
 	char           * port;
 
 	/** 
-	 * @internal Reference to defined on accept handling.
+	 * @internal Host name requested on the connection.
 	 */
-	noPollActionHandler on_accept;
-	noPollPtr           on_accept_data;
+	char           * host_name;
+	/** 
+	 * @internal Origin requested on the connection.
+	 */
+	char           * origin;
+
+	/** 
+	 * @internal reference to the get url.
+	 */
+	char           * get_url;
+	
+	/** 
+	 * @internal Reference to protocols requested to be opened on
+	 * this connection.
+	 */
+	char           * protocols;
+	
+	/** 
+	 * @internal Reference to the defined on message handling.
+	 */
+	noPollOnMessageHandler on_msg;
+	noPollPtr              on_msg_data;
 
 	/* reference to the handshake */
 	noPollHandShake  * handshake;
 
 	/* reference to a buffer with pending content */
 	char * pending_line;
+
+	/** 
+	 * @internal connection reference counting.
+	 */
+	int    refs;
 };
 
 struct _noPollIoEngine {
@@ -160,16 +200,19 @@ struct _noPollIoEngine {
 struct _noPollMsg {
 	noPollPtr  payload;
 	int        payload_size;
+	int        refs;
 };
 
 struct _noPollHandshake {
-	char          * get_url;
-	char          * host;
+	/** 
+	 * @internal Reference to the to the GET url HTTP/1.1 header
+	 * part.
+	 */
 	nopoll_bool     upgrade_websocket;
 	nopoll_bool     connection_upgrade;
+	nopoll_bool     received_101; 
 	char          * websocket_key;
-	char          * websocket_origin;
-	char          * websocket_protocol;
+	char          * websocket_accept;
 	char          * websocket_version;
 };
 

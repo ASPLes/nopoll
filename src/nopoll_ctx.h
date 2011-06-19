@@ -56,6 +56,14 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 
 int            nopoll_ctx_conns (noPollCtx * ctx);
 
+void           nopoll_ctx_set_on_open (noPollCtx            * ctx,
+				       noPollActionHandler    on_open,
+				       noPollPtr              user_data);
+
+void           nopoll_ctx_set_on_accept (noPollCtx           * ctx,
+					 noPollActionHandler   on_accept,
+					 noPollPtr             user_data);
+
 noPollConn   * nopoll_ctx_foreach_conn (noPollCtx * ctx, noPollForeachConn foreach, noPollPtr user_data);
 
 void           nopoll_ctx_free (noPollCtx * ctx);
