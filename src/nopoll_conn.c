@@ -255,6 +255,52 @@ NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
 }
 
 
+
+
+/** 
+ * @internal Function that builds the client init greetings that will
+ * be send to the server according to registered implementation.
+ */ 
+char * __nopoll_conn_get_client_init (noPollConn * conn)
+{
+	/* build sec-websocket-key */
+	char key[50];
+	int  key_size = 50;
+	char nonce[17];
+
+	/* get the nonce */
+	if (! nopoll_nonce (nonce, 16)) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to get nonce, unable to produce Sec-WebSocket-Key.");
+		return nopoll_false;
+	} /* end if */
+
+	/* now base 64 */
+	if (! nopoll_base64_encode (nonce, 16, key, &key_size)) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to base 64 encode characters for Sec-WebSocket-Key");
+		return NULL;
+	}
+	
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Created Sec-WebSocket-Key nonce: %s", key);
+
+	/* create accept and store */
+	conn->handshake = nopoll_new (noPollHandShake, 1);
+	conn->handshake->websocket_key = strdup (key);
+
+	/* send initial handshake */
+	return nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nSec-WebSocket-Origin: %s\r\n%s%s%s%sSec-WebSocket-Version: 8\r\n\r\n", 
+				     conn->get_url, conn->host_name, 
+				     /* sec-websocket-key */
+				     key,
+				     /* origin */
+				     conn->origin, 
+				     /* protocol part */
+				     conn->protocols ? "Sec-WebSocket-Protocol" : "",
+				     conn->protocols ? ": " : "",
+				     conn->protocols ? conn->protocols : "",
+				     conn->protocols ? "\r\n" : "");
+}
+
+
 /** 
  * @brief Creates a new Websocket connection to the provided
  * destination, physically located at host_ip and host_port.
@@ -350,16 +396,11 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 	/* protocols */
 	if (protocols != NULL)
 		conn->protocols = strdup (protocols);
+
+
+	/* get client init payload */
+	content = __nopoll_conn_get_client_init (conn);
 	
-	/* send initial handshake */
-	content = nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Origin: %s\r\n%s%s%s%sSec-WebSocket-Version: 8\r\n\r\n", 
-					conn->get_url, conn->host_name, conn->origin, 
-					/* protocol part */
-					protocols ? "Sec-WebSocket-Protocol" : "",
-					protocols ? ": " : "",
-					protocols ? protocols : "",
-					protocols ? "\r\n" : "");
-					
 	if (content == NULL) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to build client init message, unable to connect");
 		nopoll_conn_shutdown (conn);
@@ -873,10 +914,50 @@ nopoll_bool nopoll_conn_check_mime_header_repeated (noPollConn   * conn,
 	return nopoll_false;
 }
 
+char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_key)
+{
+	char      * static_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";	
+	char      * accept_key;	
+	int         accept_key_size;
+	int         key_length  = strlen (websocket_key);
+
+	unsigned char   buffer[EVP_MAX_MD_SIZE];
+	EVP_MD_CTX      mdctx;
+	const EVP_MD  * md = NULL;
+	unsigned int    md_len = EVP_MAX_MD_SIZE;
+
+	accept_key_size = key_length + 36 + 1;
+	accept_key      = nopoll_new (char, accept_key_size);
+
+	memcpy (accept_key, websocket_key, key_length);
+	memcpy (accept_key + key_length, static_guid, 36);
+	
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "base key value: %s", accept_key);
+
+	/* now sha-1 */
+	md = EVP_sha1 ();
+	EVP_DigestInit (&mdctx, md);
+	EVP_DigestUpdate (&mdctx, accept_key, strlen (accept_key));
+	EVP_DigestFinal (&mdctx, buffer, &md_len);
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sha-1 length is: %u", md_len);
+	/* now convert into base64 */
+	if (! nopoll_base64_encode ((const char *) buffer, md_len, (char *) accept_key, &accept_key_size)) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to base64 sec-websocket-key value..");
+		return NULL;
+	}
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Returning Sec-Websocket-Accept: %s", accept_key);
+	
+	return accept_key;
+	
+}
+
 nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPollConn * conn)
 {
 	char      * reply;
 	int         reply_size;
+	char      * accept_key;
 
 	/* call to check listener handshake */
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking client handshake data..");
@@ -910,11 +991,15 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Client from %s:%s was accepted, replying accept",
 		    conn->host, conn->port);
+
+	/* produce accept key */
+	accept_key = nopoll_conn_produce_accept_key (ctx, conn->handshake->websocket_key);
 	
 	/* ok, send handshake reply */
 	reply = nopoll_strdup_printf ("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\nSec-WebSocket-Protocol: %s\r\n\r\n", 
-				      "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=",
+				      accept_key,
 				      "chat");
+	nopoll_free (accept_key);
 	if (reply == NULL) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to build reply, closing session");
 		return nopoll_false;
@@ -935,6 +1020,9 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 
 nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPollConn * conn)
 {
+	char         * accept;
+	nopoll_bool    result;
+
 	/* check all data received */
 	if (! conn->handshake->websocket_accept ||
 	    ! conn->handshake->upgrade_websocket ||
@@ -946,9 +1034,19 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 
 	/* check accept value here */
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking accept key from listener..");
-		
+	accept = nopoll_conn_produce_accept_key (ctx, conn->handshake->websocket_key);
+	
+	result = nopoll_cmp (accept, conn->handshake->websocket_accept);
+	if (! result) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept connection Sec-Websocket-Accept %s is not expected %s, closing session",
+			    accept, conn->handshake->websocket_accept);
+		nopoll_conn_shutdown (conn);
+	}
+	nopoll_free (accept);
 
-	return nopoll_true;
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sec-Websocket-Accept matches expected value..");
+
+	return result;
 }
 
 

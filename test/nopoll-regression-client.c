@@ -64,6 +64,52 @@ nopoll_bool test_01_strings (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_01_base64 (void) {
+	char buffer[1024];
+	int  size = 1024;
+	int  iterator = 0;
+
+	/* call to produce base 64 (we do a loop to ensure we don't
+	 * leak through openssl (220) bytes */
+	while (iterator < 10) {
+		size = 1024;
+		if (! nopoll_base64_encode ("This is a test", 14, buffer, &size)) {
+			printf ("ERROR: failed to encode this is a test..\n");
+			return nopoll_false;
+		} /* end if */
+		
+		/* check result */
+		if (! nopoll_cmp (buffer, "VGhpcyBpcyBhIHRlc3Q=")) {
+			printf ("ERROR: expected to find encoded base64 string %s but found %s..\n", 
+				"VGhpcyBpcyBhIHRlc3Q=", buffer);
+			return nopoll_false;
+		}
+
+		iterator++;
+	}
+
+	/* now decode content */
+	iterator = 0;
+	while (iterator < 10) {
+		size = 1024;
+		if (! nopoll_base64_decode ("VGhpcyBpcyBhIHRlc3Q=", 20, buffer, &size)) {
+			printf ("ERROR: failed to decode base64 content..\n");
+		}
+		
+		/* check result */
+		if (! nopoll_cmp (buffer, "This is a test")) {
+			printf ("ERROR: expected to find encoded base64 string %s but found %s..\n", 
+				"This is a test", buffer);
+			return nopoll_false;
+		} /* end if */
+
+		iterator++;
+	}
+
+	
+	return nopoll_true;
+}
+
 nopoll_bool test_01 (void) {
 	noPollCtx  * ctx;
 	noPollConn * conn;
@@ -161,12 +207,20 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+	if (test_01_base64 ()) {
+		printf ("Test 01-bas64: Library bas64 support [   OK   ]\n");
+	}else {
+		printf ("Test 01-bas64: Library bas64 support [ FAILED ]\n");
+		return -1;
+	}
+
 	if (test_01 ()) {	
 		printf ("Test 01: Simple connect and disconnect [   OK   ]\n");
 	}else {
 		printf ("Test 01: Simple connect and disconnect [ FAILED ]\n");
 		return -1;
 	}
+
 
 	return 0;
 }

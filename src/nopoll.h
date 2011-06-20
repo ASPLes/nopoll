@@ -69,6 +69,18 @@ void        nopoll_trim  (char * chunk, int * trimmed);
 
 void        nopoll_sleep (long microseconds);
 
+nopoll_bool nopoll_base64_encode (const char * content, 
+				  int          length, 
+				  char       * output, 
+				  int        * output_size);
+
+nopoll_bool nopoll_base64_decode (const char * content, 
+				  int          length, 
+				  char       * output, 
+				  int        * output_size);
+
+nopoll_bool nopoll_nonce (char * buffer, int nonce_size);
+
 /* @} */
 
 END_C_DECLS

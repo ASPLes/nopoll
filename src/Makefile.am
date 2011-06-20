@@ -4,8 +4,8 @@ if ENABLE_NOPOLL_LOG
 LOG = -DSHOW_DEBUG_LOG
 endif
 
-INCLUDES = -Wall   -Wstrict-prototypes -g -I$(top_srcdir) $(LIBRARIES_CFLAGS) -DVERSION=\""$(NOPOLL_VERSION)"\" \
-	-DPACKAGE_DTD_DIR=\""$(datadir)"\" -DPACKAGE_TOP_DIR=\""$(top_srcdir)"\" -Wall -ansi \
+INCLUDES = $(compiler_options) -I$(top_srcdir) $(LIBRARIES_CFLAGS) -DVERSION=\""$(NOPOLL_VERSION)"\" \
+	-DPACKAGE_DTD_DIR=\""$(datadir)"\" -DPACKAGE_TOP_DIR=\""$(top_srcdir)"\" \
 	-DVERSION=\"$(NOPOLL_VERSION)\" $(LOG)
 
 libnopollincludedir = $(includedir)/nopoll
