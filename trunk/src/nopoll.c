@@ -37,6 +37,7 @@
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
 #include <nopoll.h>
+#include <nopoll_private.h>
 
 /** 
  * @brief Allows to check if provided strings are equal.
@@ -310,3 +311,151 @@ void        nopoll_sleep (long microseconds)
 	return;
 #endif
 }
+
+/** 
+ * @brief Allows to encode the provided content, leaving the output on
+ * the buffer allocated by the caller.
+ *
+ * @param content The content to be encoded.
+ *
+ * @param length Content byte-length to encode.
+ *
+ * @param output Reference to the already allocated buffer where to
+ * place the output.
+ *
+ * @param output_size The buffer size.
+ *
+ * @return nopoll_true if the conversion was properly done, otherwise
+ * nopoll_false is returned. The function also returns nopoll_false in
+ * the case some parameter is not defined.
+ */
+nopoll_bool nopoll_base64_encode (const char  * content, 
+				  int           length, 
+				  char        * output, 
+				  int         * output_size)
+{
+	BIO     * b64;
+	BIO     * bmem;
+	BUF_MEM * bptr;
+
+	if (content == NULL || output == NULL || length <= 0 || output_size == NULL)
+		return nopoll_false;
+	
+	/* create bio */
+	b64  = BIO_new (BIO_f_base64());
+	bmem = BIO_new (BIO_s_mem());
+	
+	/* push */
+	b64  = BIO_push(b64, bmem);
+	
+	if (BIO_write (b64, content, length) != length) {
+		printf ("Write values difers..%d\n", length);
+		return nopoll_false;
+	}
+	BIO_flush (b64);
+
+	/* now get content */
+	BIO_get_mem_ptr (b64, &bptr);
+	
+	/* check output size */
+	if ((*output_size) < bptr->length) {
+		*output_size = bptr->length;
+		return nopoll_false;
+	}
+
+	memcpy(output, bptr->data, bptr->length - 1);
+	output[bptr->length-1] = 0;
+
+	BIO_free_all (b64);
+
+	return nopoll_true;
+}
+
+/** 
+ * @brief Decodes the provided base64 content into the user provided
+ * buffer.
+ *
+ * @param content The content to be decoded.
+ *
+ * @param length Content byte-length to encode.
+ *
+ * @param output Reference to the already allocated buffer where to
+ * place the output.
+ *
+ * @param output_size The buffer size.
+ *
+ * @return nopoll_true if the conversion was properly done, otherwise
+ * nopoll_false is returned. The function also returns nopoll_false in
+ * the case some parameter is not defined.
+ */ 
+nopoll_bool nopoll_base64_decode (const char * content, 
+				  int          length, 
+				  char       * output, 
+				  int        * output_size)
+{
+	BIO     * b64;
+	BIO     * bmem;
+
+	if (content == NULL || output == NULL || length <= 0 || output_size == NULL)
+		return nopoll_false;
+
+	/* create bio */
+	bmem = BIO_new_mem_buf ((void *) content, length);
+	b64  = BIO_new (BIO_f_base64());
+	BIO_set_flags (b64, BIO_FLAGS_BASE64_NO_NL);
+	
+	/* push */
+	bmem  = BIO_push(b64, bmem);
+	
+	*output_size = BIO_read (bmem, output, *output_size);
+	output[*output_size] = 0;
+
+	BIO_free_all (bmem);
+
+	return nopoll_true;
+}
+
+
+/* internal reference to track if we have to randomly init seed */
+nopoll_bool __nopoll_nonce_init = nopoll_false;
+
+/** 
+ * @brief Fills the buffer provided with a random nonce of the
+ * requested size. The function try to read random bytes from the
+ * local PRNG to complete the bytes requested on the buffer..
+ *
+ * @param buffer The buffer where the output is left
+ *
+ * @param nonce_size The size of the requested nonce to written into the caller buffer.
+ *
+ * @return nopoll_true if the nonce was created otherwise nopoll_false
+ * is returned.
+ */
+nopoll_bool nopoll_nonce (char * buffer, int nonce_size)
+{
+	long int       random_value;
+	int            iterator;
+	struct timeval tv;
+
+	if (buffer == NULL || nonce_size <= 0)
+		return nopoll_false;
+	if (! __nopoll_nonce_init) {
+		gettimeofday (&tv, NULL);
+		srand (time(0) * tv.tv_usec);
+		__nopoll_nonce_init = nopoll_true;
+	} /* end if */
+
+	/* now get the value from random */
+	iterator = 0;
+	while (iterator < nonce_size) {
+		/* gen random value */
+		random_value = random ();
+
+		/* copy into the buffer */
+		memcpy (buffer + iterator, &random_value, sizeof (random_value));
+		iterator += sizeof (random_value);
+	} /* end while */
+
+	return nopoll_true;
+}
+

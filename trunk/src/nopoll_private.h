@@ -39,6 +39,9 @@
 #ifndef __NOPOLL_PRIVATE_H__
 #define __NOPOLL_PRIVATE_H__
 
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/objects.h>
 #include <openssl/x509v3.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>

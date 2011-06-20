@@ -3,7 +3,7 @@ if ENABLE_NOPOLL_LOG
 LOG = -DSHOW_DEBUG_LOG
 endif
 
-INCLUDES = -DTEST_DIR=$(top_srcdir)/test -I$(top_srcdir)/src/ -Wall $(LOG) -DVERSION=\""$(NOPOLL_VERSION)"\"
+INCLUDES = -DTEST_DIR=$(top_srcdir)/test -I$(top_srcdir)/src/ $(compiler_options) $(LOG) -DVERSION=\""$(NOPOLL_VERSION)"\"
 
 # replace with bin_PROGRAMS to check performance
 noinst_PROGRAMS = nopoll-regression-client nopoll-regression-listener

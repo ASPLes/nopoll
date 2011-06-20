@@ -51,6 +51,14 @@ AC_ISC_POSIX
 AC_HEADER_STDC
 AM_PROG_LIBTOOL
 
+compiler_options=""
+STRICT_PROTOTYPES=""
+if test "$compiler" = "gcc" ; then
+   compiler_options="-Wstrict-prototypes -Wall -Werror -g -ansi"
+   echo "Detected gcc compiler: $compiler, adding options: $compiler_options"
+fi
+AC_SUBST(compiler_options)
+
 # check type sizes
 AC_CHECK_SIZEOF(long)
 AC_CHECK_SIZEOF(int)
