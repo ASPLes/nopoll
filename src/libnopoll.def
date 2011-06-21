@@ -1,4 +1,8 @@
 EXPORTS
+__nopoll_conn_get_client_init
+__nopoll_nonce_init
+nopoll_base64_decode
+nopoll_base64_encode
 nopoll_calloc
 nopoll_cmp
 nopoll_conn_check_mime_header_repeated
@@ -21,6 +25,7 @@ nopoll_conn_is_ok
 nopoll_conn_is_ready
 nopoll_conn_new
 nopoll_conn_port
+nopoll_conn_produce_accept_key
 nopoll_conn_readline
 nopoll_conn_receive
 nopoll_conn_ref
@@ -70,6 +75,7 @@ nopoll_msg_get_payload_size
 nopoll_msg_ref
 nopoll_msg_unref
 nopoll_ncmp
+nopoll_nonce
 nopoll_realloc
 nopoll_sleep
 nopoll_strdup_printf

@@ -201,9 +201,13 @@ struct _noPollIoEngine {
 };
 
 struct _noPollMsg {
-	noPollPtr  payload;
-	int        payload_size;
-	int        refs;
+	nopoll_bool has_fin;
+	short       op_code;
+	nopoll_bool is_masked;
+
+	noPollPtr          payload;
+	long int           payload_size;
+	int                refs;
 };
 
 struct _noPollHandshake {
