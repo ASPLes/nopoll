@@ -74,6 +74,7 @@ nopoll_bool   nopoll_conn_set_sock_block         (NOPOLL_SOCKET socket,
 
 noPollMsg   * nopoll_conn_get_msg (noPollConn * conn);
 
+int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length);
 
 /** internal api **/
 void nopoll_conn_complete_handshake (noPollConn * conn);
