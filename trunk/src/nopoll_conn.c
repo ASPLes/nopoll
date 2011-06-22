@@ -1433,3 +1433,56 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	return NULL;
 }
 
+/** 
+ * @brief Allows to send an UTF-8 text (op code 1) message over the
+ * provided connection with the provided length.
+ *
+ * @param conn The connection where the message will be sent.
+ *
+ * @param content The content to be sent (it should be utf-8 content
+ * or the function will fail).
+ *
+ * @param length Amount of bytes to take from the content to be sent.
+ *
+ * @return The number of bytes written otherwise -1 is returned in
+ * case of failure. The function will fail if some parameter is NULL
+ * or undefined, or the content provided is not UTF-8.
+ */
+int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length)
+{
+	char buffer[14];
+	if (conn == NULL || content == NULL || length < 0)
+		return -1;
+	
+	memset (buffer, 0, 14);
+	buffer[0] |= 0x80; /* set fin bit */
+	buffer[0] |= 0x01; /* set is masked */
+	buffer[0] |= 0x02; /* set opcode 0x1 text message */
+
+	/* according to message length */
+	if (length < 126) {
+		/* payload length (7 bits) */
+		buffer[0] = length;
+	} else if (length < 65535) {
+		/* payload length (16 bits) */
+		buffer[1] = 126;
+
+		buffer[3] = length & 0x00FF;
+		buffer[2] = length & 0x000000000000FF00;
+		buffer[3] = length & 0x00FF;
+	} else if (length < 9223372036854775807) {
+		/* payload length (63 bits) */
+		buffer[1] = 127;
+		buffer[2] = (length & 0xFF000000) << 8;
+		buffer[3] = (length & 0xFF00) << 8;
+		buffer[4] = (length & 0xFF00) << 8;
+		buffer[5] = (length & 0xFF00) << 8;
+		buffer[6] = (length & 0xFF00) << 8;
+		buffer[7] = (length & 0xFF00) << 8;
+		buffer[8] = (length & 0xFF00) << 8;
+	}
+
+	
+		
+}
+

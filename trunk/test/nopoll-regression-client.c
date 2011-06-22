@@ -169,6 +169,53 @@ nopoll_bool test_01 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_02 (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	noPollMsg  * msg;
+
+	/* create context */
+	ctx = create_ctx ();
+
+	/* check connections registered */
+	if (nopoll_ctx_conns (ctx) != 0) {
+		printf ("ERROR: expected to find 0 registered connections but found: %d\n", nopoll_ctx_conns (ctx));
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a listener */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* send content text(utf-8) */
+	if (nopoll_conn_send_text (conn, "This is a test", 14) != 14) {
+		printf ("ERROR: Expected to find proper send operation..\n");
+		return nopoll_false;
+	}
+
+	/* wait for the reply */
+	while ((msg = nopoll_conn_get_msg (conn)) == NULL) {
+		printf ("Message still not received..\n");
+		nopoll_sleep (10000);
+	} /* end if */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -218,6 +265,13 @@ int main (int argc, char ** argv)
 		printf ("Test 01: Simple connect and disconnect [   OK   ]\n");
 	}else {
 		printf ("Test 01: Simple connect and disconnect [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_02 ()) {	
+		printf ("Test 01: Simple request/reply [   OK   ]\n");
+	}else {
+		printf ("Test 01: Simple request/reply [ FAILED ]\n");
 		return -1;
 	}
 
