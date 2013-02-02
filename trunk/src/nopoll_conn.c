@@ -1401,7 +1401,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		   unsigned integer */
 		msg->payload_size = 0;
 		msg->payload_size = (buffer[2] << 8);
-		msg->payload_size != buffer[3];
+		msg->payload_size |= buffer[3];
 		
 	} else if (msg->payload_size == 127) {
 		/* get extended 2 bytes length as unsigned 16 bit
@@ -1468,8 +1468,6 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 		buffer[1] = 126;
 
 		buffer[3] = length & 0x00FF;
-		buffer[2] = length & 0x000000000000FF00;
-		buffer[3] = length & 0x00FF;
 	} else if (length < 9223372036854775807) {
 		/* payload length (63 bits) */
 		buffer[1] = 127;
@@ -1483,6 +1481,6 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 	}
 
 	
-		
+	return -1;
 }
 

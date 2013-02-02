@@ -30,6 +30,7 @@ nopoll_conn_readline
 nopoll_conn_receive
 nopoll_conn_ref
 nopoll_conn_role
+nopoll_conn_send_text
 nopoll_conn_set_sock_block
 nopoll_conn_set_sock_tcp_nodelay
 nopoll_conn_shutdown
