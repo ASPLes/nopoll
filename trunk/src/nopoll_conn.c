@@ -287,7 +287,7 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 	conn->handshake->websocket_key = strdup (key);
 
 	/* send initial handshake */
-	return nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nSec-WebSocket-Origin: %s\r\n%s%s%s%sSec-WebSocket-Version: 8\r\n\r\n", 
+	return nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nOrigin: %s\r\n%s%s%s%sSec-WebSocket-Version: 8\r\n\r\n", 
 				     conn->get_url, conn->host_name, 
 				     /* sec-websocket-key */
 				     key,
@@ -638,7 +638,6 @@ void nopoll_conn_unref (noPollConn * conn)
 	/* release handshake internal data */
 	if (conn->handshake) {
 		nopoll_free (conn->handshake->websocket_key);
-		nopoll_free (conn->handshake->websocket_accept);
 		nopoll_free (conn->handshake->websocket_version);
 		nopoll_free (conn->handshake);
 	} /* end if */
@@ -968,7 +967,7 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	    ! conn->handshake->websocket_key ||
 	    ! conn->origin ||
 	    ! conn->handshake->websocket_version) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s didn't provide all websocket handshake values required, closing session (%d, %d, %p, %p, %p)",
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s didn't provide all websocket handshake values required, closing session (Upgraded: websocket %d, Connection: upgrade%d, Sec-WebSocket-Key: %p, Origin: %p, Sec-WebSocket-Version: %p)",
 			    conn->host, conn->port,
 			    conn->handshake->upgrade_websocket,
 			    conn->handshake->connection_upgrade,
@@ -1024,11 +1023,11 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 	nopoll_bool    result;
 
 	/* check all data received */
-	if (! conn->handshake->websocket_accept ||
+	if (! conn->handshake->websocket_key ||
 	    ! conn->handshake->upgrade_websocket ||
 	    ! conn->handshake->connection_upgrade) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received uncomplete listener handshake reply (%p %d %d)",
-			    conn->handshake->websocket_accept, conn->handshake->upgrade_websocket, conn->handshake->connection_upgrade);
+			    conn->handshake->websocket_key, conn->handshake->upgrade_websocket, conn->handshake->connection_upgrade);
 		return nopoll_false;
 	} /* end if */
 
@@ -1036,10 +1035,10 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking accept key from listener..");
 	accept = nopoll_conn_produce_accept_key (ctx, conn->handshake->websocket_key);
 	
-	result = nopoll_cmp (accept, conn->handshake->websocket_accept);
+	result = nopoll_cmp (accept, conn->handshake->websocket_key);
 	if (! result) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept connection Sec-Websocket-Accept %s is not expected %s, closing session",
-			    accept, conn->handshake->websocket_accept);
+			    accept, conn->handshake->websocket_key);
 		nopoll_conn_shutdown (conn);
 	}
 	nopoll_free (accept);
@@ -1114,7 +1113,7 @@ int nopoll_conn_complete_handshake_listener (noPollCtx * ctx, noPollConn * conn,
 		return 0;
 	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Key", conn->handshake->websocket_key)) 
 		return 0;
-	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Origin", conn->origin)) 
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Origin", conn->origin)) 
 		return 0;
 	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Protocol", conn->protocols)) 
 		return 0;
@@ -1126,7 +1125,7 @@ int nopoll_conn_complete_handshake_listener (noPollCtx * ctx, noPollConn * conn,
 		conn->host_name = value;
 	else if (strcasecmp (header, "Sec-Websocket-Key") == 0)
 		conn->handshake->websocket_key = value;
-	else if (strcasecmp (header, "Sec-Websocket-Origin") == 0)
+	else if (strcasecmp (header, "Origin") == 0)
 		conn->origin = value;
 	else if (strcasecmp (header, "Sec-Websocket-Protocol") == 0)
 		conn->protocols = value;
@@ -1191,14 +1190,14 @@ int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, c
 		return 0;
 	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Connection", INT_TO_PTR (conn->handshake->connection_upgrade))) 
 		return 0;
-	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Accept", conn->handshake->websocket_accept)) 
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Key", conn->handshake->websocket_key)) 
 		return 0;
 	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Protocol", conn->protocols)) 
 		return 0;
 	
 	/* set the value if required */
-	if (strcasecmp (header, "Sec-Websocket-Accept") == 0)
-		conn->handshake->websocket_accept = value;
+	if (strcasecmp (header, "Sec-Websocket-Key") == 0)
+		conn->handshake->websocket_key = value;
 	else if (strcasecmp (header, "Sec-Websocket-Protocol") == 0)
 		conn->protocols = value;
 	else if (strcasecmp (header, "Upgrade") == 0) {
@@ -1258,7 +1257,7 @@ void nopoll_conn_complete_handshake (noPollConn * conn)
 		}
 
 		/* drop a debug line */
-		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Bytes read %d from connection id %d: %s", buffer_size, conn->id, buffer); 
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Bytes read %d from connection id %d: %s", buffer_size, conn->id, buffer);  
 			
 		/* check if we have received the end of the
 		   websocket client handshake */

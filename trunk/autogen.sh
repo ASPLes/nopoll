@@ -1,5 +1,5 @@
 #!/bin/sh
-#  Copyright (C) 2006 Advanced Software Production Line, S.L.
+#  Copyright (C) 2013 Advanced Software Production Line, S.L.
 #
 #  This program is free software; you can redistribute it and/or
 #  modify it under the terms of the GNU Lesser General Public License
@@ -24,7 +24,7 @@
 #  patches, etc. 
 #
 
-PACKAGE="LibAXL:  Another XML library implementation"
+PACKAGE="Lib noPoll: a websocket toolkit"
 
 (automake --version) < /dev/null > /dev/null 2>&1 || {
 	echo;
