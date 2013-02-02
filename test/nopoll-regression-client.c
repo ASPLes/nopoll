@@ -275,6 +275,10 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+	/* test checking origing in on open and denying it */
+
+	/* test checking protocols and denying it */
+
 
 	return 0;
 }

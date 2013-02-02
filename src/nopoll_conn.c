@@ -995,9 +995,16 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	accept_key = nopoll_conn_produce_accept_key (ctx, conn->handshake->websocket_key);
 	
 	/* ok, send handshake reply */
-	reply = nopoll_strdup_printf ("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\nSec-WebSocket-Protocol: %s\r\n\r\n", 
-				      accept_key,
-				      "chat");
+	if (conn->protocols) {
+		/* send accept header accepting protocol requested by the user */
+		reply = nopoll_strdup_printf ("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\nSec-WebSocket-Protocol: %s\r\n\r\n", 
+					      accept_key, conn->protocols);
+	} else {
+		/* send accept header without telling anything about protocols */
+		reply = nopoll_strdup_printf ("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n", 
+					      accept_key);
+	}
+		
 	nopoll_free (accept_key);
 	if (reply == NULL) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to build reply, closing session");
@@ -1303,6 +1310,8 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	char        buffer[20];
 	int         bytes;
 	noPollMsg * msg;
+	int         iter;
+	int         mask_index;
 
 	if (conn == NULL)
 		return NULL;
@@ -1340,9 +1349,10 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	  |                     Payload Data continued ...                |
 	  +---------------------------------------------------------------+
 	*/
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Found data in connection id %d..", conn->id);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Found data in opened connection id %d..", conn->id);
+
 	/* get the first 4 bytes from the websocket header */
-	bytes = nopoll_conn_receive (conn, buffer, 4);
+	bytes = nopoll_conn_receive (conn, buffer, 2);
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received %d bytes for websocket header", bytes);
 	if (bytes == 0) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received connection close, finishing connection session");
@@ -1350,7 +1360,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		return NULL;
 	} /* end if */
 
-	if (bytes != 4) {
+	if (bytes != 2) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Expected to receive complete websocket frame header but found only %d bytes, closing session: %d",
 			    bytes, conn->id);
 		nopoll_conn_shutdown (conn);
@@ -1370,9 +1380,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	msg->refs = 1;
 
 	/* get fin bytes */
-	msg->has_fin      = buffer[0] & 0x80;
+	msg->has_fin      = nopoll_get_bit (buffer[0], 7);
 	msg->op_code      = buffer[0] & 0x0F;
-	msg->is_masked    = buffer[1] & 0x80;
+	msg->is_masked    = nopoll_get_bit (buffer[1], 7);
 	msg->payload_size = buffer[1] & 0x7F;
 
 	/* ensure FIN = 1 in case we are listener */
@@ -1380,6 +1390,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received websocket frame with mask bit set to zero, closing session id: %d", 
 			    conn->id);
 		nopoll_msg_unref (msg);
+		nopoll_conn_shutdown (conn);
 		return NULL;
 	} /* end if */
 
@@ -1388,12 +1399,20 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received wrong payload size at first 7 bits, closing session id: %d", 
 			    conn->id);
 		nopoll_msg_unref (msg);
+		nopoll_conn_shutdown (conn);
 		return NULL;
 	} /* end if */
 
 	/* read the rest */
 	if (msg->payload_size < 126) {
-		/* get masking key */
+
+		/* get more bytes */
+		bytes = nopoll_conn_receive (conn, (noPollPtr) msg->mask, 4);
+		if (bytes != 4) {
+			nopoll_msg_unref (msg);
+			nopoll_conn_shutdown (conn);
+			return NULL; 
+		} /* end if */
 		
 	} else if (msg->payload_size == 126) {
 		/* get extended 2 bytes length as unsigned 16 bit
@@ -1426,10 +1445,50 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		msg->payload_size |= buffer[5];
 	} /* end if */
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Detected incoming websocket frame: fin(%d), op_code(%d), is_masked(%d), payload size(%ld)", 
-		    msg->has_fin, msg->op_code, msg->is_masked, msg->payload_size);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Detected incoming websocket frame: fin(%d), op_code(%d), is_masked(%d), payload size(%ld), mask=%d", 
+		    msg->has_fin, msg->op_code, msg->is_masked, msg->payload_size, msg->mask);
 
-	return NULL;
+	/* check here for the limit of message we are willing to accept */
+	/* FIX SECURITY ISSUE */
+
+	/* copy payload received */
+	msg->payload = nopoll_new (char, msg->payload_size + 1);
+	if (msg->payload == NULL) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to read the incoming frame, dropping connection id=%d", conn->id);
+		nopoll_msg_unref (msg);
+		nopoll_conn_shutdown (conn);
+		return NULL;		
+	} /* end if */
+	bytes = nopoll_conn_receive (conn, msg->payload, msg->payload_size);
+	if (bytes <= 0) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Connection lost during message reception, dropping connection id=%d", conn->id);
+		nopoll_msg_unref (msg);
+		nopoll_conn_shutdown (conn);
+		return NULL;		
+	} /* end if */
+
+	if (bytes != msg->payload_size) {
+		/* record we've got content pending to be read */
+		msg->remain_bytes = msg->payload_size - bytes;
+
+		/* set connection in remaining data to read */
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Received fewer bytes than expected (%d < %d)", bytes, msg->payload_size);
+	} /* end if */
+
+	/* now unmask content (if required) */
+	if (msg->is_masked) {
+		iter = 0;
+		while (iter < msg->payload_size) {
+			/* rotate mask and apply it */
+			mask_index = iter % 4;
+			((char *) msg->payload)[iter] ^= (char) msg->mask[mask_index];
+			iter++;
+		} /* end while */
+	} /* end if */
+
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Message received: %s", (const char *) msg->payload);
+
+	return msg;
 }
 
 /** 
