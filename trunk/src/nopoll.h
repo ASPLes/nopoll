@@ -81,6 +81,26 @@ nopoll_bool nopoll_base64_decode (const char * content,
 
 nopoll_bool nopoll_nonce (char * buffer, int nonce_size);
 
+int    nopoll_get_bit (char byte, int position);
+
+void   nopoll_set_bit     (char * buffer, int position);
+
+void   nopoll_show_byte (noPollCtx * ctx, char byte, const char * label);
+
+char * nopoll_int2bin (int a, char *buffer, int buf_size);
+
+void   nopoll_int2bin_print (noPollCtx * ctx, int value);
+
+int    nopoll_get_8bit  (const char * buffer);
+
+int    nopoll_get_16bit (const char * buffer);
+
+void   nopoll_set_16bit (int value, char * buffer);
+
+void   nopoll_set_32bit (int value, char * buffer);
+
+int    nopoll_get_32bit (const char * buffer);
+
 /* @} */
 
 END_C_DECLS

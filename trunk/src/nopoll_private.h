@@ -100,6 +100,12 @@ struct _noPollCtx {
 	 */
 	noPollActionHandler on_open;
 	noPollPtr           on_open_data;
+
+	/** 
+	 * @internal Reference to the defined on message handling.
+	 */
+	noPollOnMessageHandler on_msg;
+	noPollPtr              on_msg_data;
 };
 
 struct _noPollConn {
@@ -201,13 +207,16 @@ struct _noPollIoEngine {
 };
 
 struct _noPollMsg {
-	nopoll_bool has_fin;
-	short       op_code;
-	nopoll_bool is_masked;
+	nopoll_bool    has_fin;
+	short          op_code;
+	nopoll_bool    is_masked;
 
-	noPollPtr          payload;
-	long int           payload_size;
-	int                refs;
+	noPollPtr      payload;
+	long int       payload_size;
+	int            refs;
+
+	char           mask[4];
+	int            remain_bytes;
 };
 
 struct _noPollHandshake {

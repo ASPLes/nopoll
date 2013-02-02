@@ -159,9 +159,10 @@ void nopoll_loop_process_data (noPollCtx * ctx, noPollConn * conn)
 		return;
 
 	/* found message, notify it */
-	if (conn->on_msg) {
+	if (ctx->on_msg)
+		ctx->on_msg (ctx, conn, msg, conn->on_msg_data);
+	else if (conn->on_msg) 
 		conn->on_msg (ctx, conn, msg, conn->on_msg_data);
-	} /* end if */
 
 	/* release message */
 	nopoll_msg_unref (msg);

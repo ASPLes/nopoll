@@ -70,6 +70,9 @@ int main (int argc, char ** argv)
 
 	printf ("noPoll listener started at: %s:%s..\n", nopoll_conn_host (listener), nopoll_conn_port (listener));
 
+	/* set on message received */
+	
+
 	/* process events */
 	nopoll_loop_wait (ctx, 0);
 
