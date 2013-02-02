@@ -219,7 +219,6 @@ struct _noPollHandshake {
 	nopoll_bool     connection_upgrade;
 	nopoll_bool     received_101; 
 	char          * websocket_key;
-	char          * websocket_accept;
 	char          * websocket_version;
 };
 

@@ -1,4 +1,5 @@
-dnl  Copyright (C) 2011 Advanced Software Production Line, S.L.
+dnl LibNoPoll: A websocket library
+dnl  Copyright (C) 2013 Advanced Software Production Line, S.L.
 dnl
 dnl  This program is free software; you can redistribute it and/or
 dnl  modify it under the terms of the GNU Lesser General Public
@@ -23,7 +24,8 @@ dnl  any royalty or fee but returning back any change, improvement or
 dnl  addition in the form of source code, project image, documentation
 dnl  patches, etc.
 dnl
-dnl  For commercial support on build XML enabled solutions contact us:
+dnl  For commercial support on build Websocket enabled solutions
+dnl  contact us:
 dnl          
 dnl      Postal address:
 dnl         Advanced Software Production Line, S.L.
@@ -33,16 +35,16 @@ dnl         Alcalá de Henares 28802 Madrid
 dnl         Spain
 dnl
 dnl      Email address:
-dnl         info@aspl.es - http://www.aspl.es/xml
+dnl         info@aspl.es - http://www.aspl.es/nopoll
 dnl
 AC_INIT(src/nopoll.h)
 
 configure_dir=`dirname "$0"`
-AXL_VERSION=`cat $configure_dir/VERSION`
-AC_SUBST(AXL_VERSION)
+NOPOLL_VERSION=`cat $configure_dir/VERSION`
+AC_SUBST(NOPOLL_VERSION)
 
 AC_CONFIG_AUX_DIR(.)
-AM_INIT_AUTOMAKE(nopoll, $AXL_VERSION)
+AM_INIT_AUTOMAKE(nopoll, $NOPOLL_VERSION)
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
 
