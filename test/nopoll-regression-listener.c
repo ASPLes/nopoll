@@ -38,6 +38,19 @@
  */
 #include <nopoll.h>
 
+void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr * user_data)
+{
+	printf ("Listener received (size: %d): %s\n", 
+		nopoll_msg_get_payload_size (msg),
+		(const char *) nopoll_msg_get_payload (msg));
+
+	/* send reply as received */
+	nopoll_conn_send_text (conn, (const char *) nopoll_msg_get_payload (msg), 
+			       nopoll_msg_get_payload_size (msg));
+
+	return;
+}
+
 int main (int argc, char ** argv)
 {
 	noPollCtx      * ctx;
@@ -71,6 +84,7 @@ int main (int argc, char ** argv)
 	printf ("noPoll listener started at: %s:%s..\n", nopoll_conn_host (listener), nopoll_conn_port (listener));
 
 	/* set on message received */
+	nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);
 	
 
 	/* process events */

@@ -64,6 +64,10 @@ void           nopoll_ctx_set_on_accept (noPollCtx           * ctx,
 					 noPollActionHandler   on_accept,
 					 noPollPtr             user_data);
 
+void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
+					 noPollOnMessageHandler   on_msg,
+					 noPollPtr                user_data);
+
 noPollConn   * nopoll_ctx_foreach_conn (noPollCtx * ctx, noPollForeachConn foreach, noPollPtr user_data);
 
 void           nopoll_ctx_free (noPollCtx * ctx);

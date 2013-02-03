@@ -43,7 +43,7 @@
 
 const noPollPtr  nopoll_msg_get_payload (noPollMsg * msg);
 
-int          nopoll_msg_get_pyaload_size (noPollMsg * msg);
+int          nopoll_msg_get_payload_size (noPollMsg * msg);
 
 nopoll_bool  nopoll_msg_ref (noPollMsg * msg);
 
