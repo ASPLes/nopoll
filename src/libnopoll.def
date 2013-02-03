@@ -47,6 +47,12 @@ nopoll_ctx_set_on_open
 nopoll_ctx_unref
 nopoll_ctx_unregister_conn
 nopoll_free
+nopoll_get_16bit
+nopoll_get_32bit
+nopoll_get_8bit
+nopoll_get_bit
+nopoll_int2bin
+nopoll_int2bin_print
 nopoll_io_get_engine
 nopoll_io_release_engine
 nopoll_io_wait_select_add_to
@@ -78,6 +84,10 @@ nopoll_msg_unref
 nopoll_ncmp
 nopoll_nonce
 nopoll_realloc
+nopoll_set_16bit
+nopoll_set_32bit
+nopoll_set_bit
+nopoll_show_byte
 nopoll_sleep
 nopoll_strdup_printf
 nopoll_strdup_printfv
