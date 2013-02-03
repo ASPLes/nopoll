@@ -279,6 +279,10 @@ int main (int argc, char ** argv)
 
 	/* test checking protocols and denying it */
 
+	/* test sending ping */
+
+	/* test sending pong (without ping) */
+
 
 	return 0;
 }

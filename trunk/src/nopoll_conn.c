@@ -1445,6 +1445,22 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		msg->payload_size |= buffer[5];
 	} /* end if */
 
+	if (msg->op_code == NOPOLL_PONG_FRAME) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PONG received over connection id=%d", conn->id);
+		nopoll_msg_unref (msg);
+		return NULL;
+	} /* end if */
+
+	if (msg->op_code == NOPOLL_PING_FRAME) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PING received over connection id=%d, replying PONG", conn->id);
+		nopoll_msg_unref (msg);
+
+		/* call to send pong */
+		nopoll_conn_send_pong (conn);
+
+		return NULL;
+	} /* end if */
+
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Detected incoming websocket frame: fin(%d), op_code(%d), is_masked(%d), payload size(%ld), mask=%d", 
 		    msg->has_fin, msg->op_code, msg->is_masked, msg->payload_size, msg->mask);
 
@@ -1516,6 +1532,35 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 }
 
 /** 
+ * @brief Allows to send a ping message over the Websocket connection
+ * provided. The function will not block the caller.
+ *
+ * @param conn The connection where the PING operation will be sent.
+ *
+ * @param nopoll_true if the operation was sent without any error,
+ * otherwise nopoll_false is returned.
+ */
+nopoll_bool      nopoll_conn_send_ping (noPollConn * conn)
+{
+	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PING_FRAME, 0, NULL);
+}
+
+/** 
+ * @internal Allows to send a pong message over the Websocket
+ * connection provided. The function will not block the caller. This
+ * function is not intended to be used by normal API consumer.
+ *
+ * @param conn The connection where the PING operation will be sent.
+ *
+ * @param nopoll_true if the operation was sent without any error,
+ * otherwise nopoll_false is returned.
+ */
+nopoll_bool      nopoll_conn_send_pong (noPollConn * conn)
+{
+	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PONG_FRAME, 0, NULL);
+}
+
+/** 
  * @internal Function used to send a frame over the provided
  * connection.
  *
@@ -1581,7 +1626,8 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	
 	/* copy content to be sent */
 	memcpy (send_buffer, header, header_size);
-	memcpy (send_buffer + header_size, content, length);
+	if (length > 0)
+		memcpy (send_buffer + header_size, content, length);
 	
 	/* send content */
 	bytes_written = conn->send (conn, send_buffer, length + header_size);
