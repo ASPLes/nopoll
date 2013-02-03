@@ -203,6 +203,12 @@ nopoll_bool test_02 (void) {
 
 	/* wait for the reply */
 	while ((msg = nopoll_conn_get_msg (conn)) == NULL) {
+
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR: received websocket connection close during wait reply..\n");
+			return nopoll_false;
+		}
+
 		printf ("Message still not received..\n");
 		nopoll_sleep (10000);
 	} /* end if */
@@ -227,7 +233,7 @@ int main (int argc, char ** argv)
 	printf ("** NoPoll regression tests: version=%s\n**\n",
 		VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");
-	printf ("**     >> time ./nopoll-regression-client\n**\n");
+	printf ("**     >> time ./nopoll-regression-client [--debug]\n**\n");
 	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
 	printf ("**     >> libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./nopoll-regression-client\n**\n");
 	printf ("**\n");
@@ -274,6 +280,17 @@ int main (int argc, char ** argv)
 		printf ("Test 01: Simple request/reply [ FAILED ]\n");
 		return -1;
 	}
+
+	/* test streaming api */
+
+	/* test sending wrong mime headers */
+
+	/* test sending missing mime headers */
+
+	/* test injecting wrong bytes */
+
+	/* test sending lot of MIME headers (really lot of
+	 * information) */
 
 	/* test checking origing in on open and denying it */
 

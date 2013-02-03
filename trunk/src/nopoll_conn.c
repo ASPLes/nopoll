@@ -284,7 +284,7 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 
 	/* create accept and store */
 	conn->handshake = nopoll_new (noPollHandShake, 1);
-	conn->handshake->websocket_key = strdup (key);
+	conn->handshake->expected_accept = strdup (key);
 
 	/* send initial handshake */
 	return nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nOrigin: %s\r\n%s%s%s%sSec-WebSocket-Version: 8\r\n\r\n", 
@@ -639,6 +639,7 @@ void nopoll_conn_unref (noPollConn * conn)
 	if (conn->handshake) {
 		nopoll_free (conn->handshake->websocket_key);
 		nopoll_free (conn->handshake->websocket_version);
+		nopoll_free (conn->handshake->websocket_accept);
 		nopoll_free (conn->handshake);
 	} /* end if */
 
@@ -772,7 +773,9 @@ int         nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen
 		if (errno == NOPOLL_EINTR)
 			goto keep_reading;
 		
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "unable to readn=%d, error code was: %d", maxlen, errno);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "unable to readn=%d, error code was: %d (shutting down connection)", maxlen, errno);
+		nopoll_conn_shutdown (conn);
+		return -1;
 	}
 
 	/* ensure we don't access outside the array */
@@ -918,7 +921,12 @@ char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_k
 	char      * static_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";	
 	char      * accept_key;	
 	int         accept_key_size;
-	int         key_length  = strlen (websocket_key);
+	int         key_length;
+
+	if (websocket_key == NULL)
+		return NULL;
+
+	key_length  = strlen (websocket_key);
 
 	unsigned char   buffer[EVP_MAX_MD_SIZE];
 	EVP_MD_CTX      mdctx;
@@ -1030,11 +1038,11 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 	nopoll_bool    result;
 
 	/* check all data received */
-	if (! conn->handshake->websocket_key ||
+	if (! conn->handshake->websocket_accept ||
 	    ! conn->handshake->upgrade_websocket ||
 	    ! conn->handshake->connection_upgrade) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received uncomplete listener handshake reply (%p %d %d)",
-			    conn->handshake->websocket_key, conn->handshake->upgrade_websocket, conn->handshake->connection_upgrade);
+			    conn->handshake->websocket_accept, conn->handshake->upgrade_websocket, conn->handshake->connection_upgrade);
 		return nopoll_false;
 	} /* end if */
 
@@ -1197,14 +1205,14 @@ int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, c
 		return 0;
 	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Connection", INT_TO_PTR (conn->handshake->connection_upgrade))) 
 		return 0;
-	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Key", conn->handshake->websocket_key)) 
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Accept", conn->handshake->websocket_accept)) 
 		return 0;
 	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Protocol", conn->protocols)) 
 		return 0;
 	
 	/* set the value if required */
-	if (strcasecmp (header, "Sec-Websocket-Key") == 0)
-		conn->handshake->websocket_key = value;
+	if (strcasecmp (header, "Sec-Websocket-Accept") == 0)
+		conn->handshake->websocket_accept = value;
 	else if (strcasecmp (header, "Sec-Websocket-Protocol") == 0)
 		conn->protocols = value;
 	else if (strcasecmp (header, "Upgrade") == 0) {
@@ -1291,6 +1299,22 @@ void nopoll_conn_complete_handshake (noPollConn * conn)
 	return;
 }
 
+void nopoll_conn_mask_content (char * payload, int payload_size, char * mask)
+{
+	int iter       = 0;
+	int mask_index = 0;
+
+	while (iter < payload_size) {
+		/* rotate mask and apply it */
+		mask_index = iter % 4;
+		payload[iter] ^= mask[mask_index];
+		iter++;
+	} /* end while */
+
+	return;
+} 
+
+
 /** 
  * @brief Allows to get the next message available on the provided
  * connection. The function returns NULL in the case no message is
@@ -1310,8 +1334,6 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	char        buffer[20];
 	int         bytes;
 	noPollMsg * msg;
-	int         iter;
-	int         mask_index;
 
 	if (conn == NULL)
 		return NULL;
@@ -1353,8 +1375,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 
 	/* get the first 4 bytes from the websocket header */
 	bytes = nopoll_conn_receive (conn, buffer, 2);
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received %d bytes for websocket header", bytes);
-	if (bytes == 0) {
+	if (bytes <= 0) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received connection close, finishing connection session");
 		nopoll_conn_shutdown (conn);
 		return NULL;
@@ -1366,6 +1387,8 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		nopoll_conn_shutdown (conn);
 		return NULL;
 	} /* end if */
+
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received %d bytes for websocket header", bytes);
 
 	/* build next message */
 	msg = nopoll_new (noPollMsg, 1);
@@ -1493,13 +1516,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 
 	/* now unmask content (if required) */
 	if (msg->is_masked) {
-		iter = 0;
-		while (iter < msg->payload_size) {
-			/* rotate mask and apply it */
-			mask_index = iter % 4;
-			((char *) msg->payload)[iter] ^= (char) msg->mask[mask_index];
-			iter++;
-		} /* end while */
+		nopoll_conn_mask_content (msg->payload, msg->payload_size, msg->mask);
 	} /* end if */
 
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Message received: %s", (const char *) msg->payload);
@@ -1527,6 +1544,18 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 	if (conn == NULL || content == NULL || length < 0)
 		return -1;
 
+	if (conn->role == NOPOLL_ROLE_MAIN_LISTENER) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Trying to send content over a master listener connection");
+		return -1;
+	} /* end if */
+
+	/* sending content as client */
+	if (conn->role == NOPOLL_ROLE_CLIENT) {
+		return nopoll_conn_send_frame (conn, /* fin */ nopoll_true, /* masked */ nopoll_true, 
+					       NOPOLL_TEXT_FRAME, length, (noPollPtr) content);
+	} /* end if */
+
+	/* sending content as listener */
 	return nopoll_conn_send_frame (conn, /* fin */ nopoll_true, /* masked */ nopoll_false, 
 				       NOPOLL_TEXT_FRAME, length, (noPollPtr) content);
 }
@@ -1584,8 +1613,10 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	int    header_size;
 	char * send_buffer;
 	int    bytes_written;
-	int    mask;
+	char   mask[4];
+	int    mask_value = 0;
 
+	/* clear header */
 	memset (header, 0, 14);
 
 	/* set header codes */
@@ -1596,7 +1627,8 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		nopoll_set_bit (header + 1, 7);
 		
 		/* define a random mask */
-		mask = random ();
+		mask_value = random ();
+		nopoll_set_32bit (mask_value, mask);
 	} /* end if */
 
 	if (op_code) {
@@ -1608,7 +1640,6 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	/* according to message length */
 	if (length < 126) {
 		header[1] |= length;
-
 	} else if (length < 65535) {
 		/* not supported yet */
 		return -1;
@@ -1616,6 +1647,12 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		/* not supported yet */
 		return -1;
 	}
+
+	/* place mask */
+	if (masked) {
+		nopoll_set_32bit (mask_value, header + header_size);
+		header_size += 4;
+	} /* end if */
 
 	/* allocate enough memory to send content */
 	send_buffer = nopoll_new (char, length + header_size);
@@ -1626,8 +1663,15 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	
 	/* copy content to be sent */
 	memcpy (send_buffer, header, header_size);
-	if (length > 0)
+	if (length > 0) {
 		memcpy (send_buffer + header_size, content, length);
+
+		/* mask content before sending if requested */
+		if (masked) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Masking content to be sent...");
+			nopoll_conn_mask_content (send_buffer + header_size, length - header_size, mask);
+		}
+	} /* end if */
 	
 	/* send content */
 	bytes_written = conn->send (conn, send_buffer, length + header_size);
@@ -1637,6 +1681,6 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	nopoll_free (send_buffer);
 	
 	/* return bytes written */
-	return bytes_written;
+	return bytes_written - header_size;
 }
 
