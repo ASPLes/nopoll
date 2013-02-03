@@ -283,6 +283,18 @@ int main (int argc, char ** argv)
 
 	/* test sending pong (without ping) */
 
+	/* test sending frames 126 == ( 65536) */
+
+	/* test sending frames 127 == ( more than 65536) */
+
+	/* test applying limits to incoming content */
+
+	/* test splitting into several frames content bigger */
+
+	/* test TLS support */
+
+	/* test wrong UTF-8 content received on text frames */
+
 
 	return 0;
 }
