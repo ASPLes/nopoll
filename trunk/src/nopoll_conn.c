@@ -1508,37 +1508,89 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
  */
 int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length)
 {
-	char buffer[14];
 	if (conn == NULL || content == NULL || length < 0)
 		return -1;
+
+	return nopoll_conn_send_frame (conn, /* fin */ nopoll_true, /* masked */ nopoll_false, 
+				       NOPOLL_TEXT_FRAME, length, (noPollPtr) content);
+}
+
+/** 
+ * @internal Function used to send a frame over the provided
+ * connection.
+ *
+ * @param conn The connection where the send operation will hapen.
+ *
+ * @param fin If the frame to be sent must be flagged as a fin frame.
+ *
+ * @param masked The frame to be sent is masked or not.
+ *
+ * @param op_code The frame op code to be configured.
+ *
+ * @param length The frame payload length.
+ *
+ * @param content Pointer to the data to be sent in the frame.
+ */
+int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool masked,
+			    noPollOpCode op_code, long length, noPollPtr content)
+
+{
+	char   header[14];
+	int    header_size;
+	char * send_buffer;
+	int    bytes_written;
+	int    mask;
+
+	memset (header, 0, 14);
+
+	/* set header codes */
+	if (fin) 
+		nopoll_set_bit (header, 7);
 	
-	memset (buffer, 0, 14);
-	buffer[0] |= 0x80; /* set fin bit */
-	buffer[0] |= 0x01; /* set is masked */
-	buffer[0] |= 0x02; /* set opcode 0x1 text message */
+	if (masked) {
+		nopoll_set_bit (header + 1, 7);
+		
+		/* define a random mask */
+		mask = random ();
+	} /* end if */
+
+	if (op_code) {
+		/* set initial 4 bits */
+		header[0]   |= op_code & 0x0f;
+		header_size  = 2;
+	}
 
 	/* according to message length */
 	if (length < 126) {
-		/* payload length (7 bits) */
-		buffer[0] = length;
-	} else if (length < 65535) {
-		/* payload length (16 bits) */
-		buffer[1] = 126;
+		header[1] |= length;
 
-		buffer[3] = length & 0x00FF;
+	} else if (length < 65535) {
+		/* not supported yet */
+		return -1;
 	} else if (length < 9223372036854775807) {
-		/* payload length (63 bits) */
-		buffer[1] = 127;
-		buffer[2] = (length & 0xFF000000) << 8;
-		buffer[3] = (length & 0xFF00) << 8;
-		buffer[4] = (length & 0xFF00) << 8;
-		buffer[5] = (length & 0xFF00) << 8;
-		buffer[6] = (length & 0xFF00) << 8;
-		buffer[7] = (length & 0xFF00) << 8;
-		buffer[8] = (length & 0xFF00) << 8;
+		/* not supported yet */
+		return -1;
 	}
 
+	/* allocate enough memory to send content */
+	send_buffer = nopoll_new (char, length + header_size);
+	if (send_buffer == NULL) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to allocate memory to implement send operation");
+		return -1;
+	} /* end if */
 	
-	return -1;
+	/* copy content to be sent */
+	memcpy (send_buffer, header, header_size);
+	memcpy (send_buffer + header_size, content, length);
+	
+	/* send content */
+	bytes_written = conn->send (conn, send_buffer, length + header_size);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Bytes written to the wire %d", bytes_written);
+
+	/* release memory */
+	nopoll_free (send_buffer);
+	
+	/* return bytes written */
+	return bytes_written;
 }
 

@@ -76,6 +76,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn);
 
 int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length);
 
+int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool masked,
+			    noPollOpCode op_code, long length, noPollPtr content);
+
 /** internal api **/
 void nopoll_conn_complete_handshake (noPollConn * conn);
 

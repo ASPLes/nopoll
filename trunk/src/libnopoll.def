@@ -30,6 +30,7 @@ nopoll_conn_readline
 nopoll_conn_receive
 nopoll_conn_ref
 nopoll_conn_role
+nopoll_conn_send_frame
 nopoll_conn_send_text
 nopoll_conn_set_sock_block
 nopoll_conn_set_sock_tcp_nodelay
@@ -43,6 +44,7 @@ nopoll_ctx_new
 nopoll_ctx_ref
 nopoll_ctx_register_conn
 nopoll_ctx_set_on_accept
+nopoll_ctx_set_on_msg
 nopoll_ctx_set_on_open
 nopoll_ctx_unref
 nopoll_ctx_unregister_conn

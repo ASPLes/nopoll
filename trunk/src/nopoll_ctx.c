@@ -308,6 +308,33 @@ void              nopoll_ctx_set_on_accept (noPollCtx            * ctx,
 }
 
 /** 
+ * @brief Allows to set a general handler to get notifications about a
+ * message received over any connection that is running under the
+ * provided context (noPollCtx).
+ *
+ * @param ctx The context where the notification will happen
+ *
+ * @param on_msg The handler to be called when an incoming message is
+ * received.
+ *
+ * @param user_data User defined pointer that is passed in into the
+ * handler when called.
+ *
+ */
+void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
+					 noPollOnMessageHandler   on_msg,
+					 noPollPtr                user_data)
+{
+	nopoll_return_if_fail (ctx, ctx);
+	
+	/* set new handler */
+	ctx->on_msg      = on_msg;
+	ctx->on_msg_data = user_data;
+
+	return;
+}
+
+/** 
  * @brief Allows to iterate over all connections currently registered
  * on the provided context, optionally stopping the foreach process,
  * returning the connection reference selected if the foreach handler

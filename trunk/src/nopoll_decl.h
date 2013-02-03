@@ -356,6 +356,40 @@ if (!(expr)) { __nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have fa
 # define END_C_DECLS /* empty */
 #endif
 
+
+/** 
+ * @brief Type of frames and opcodes supported by noPoll.
+ */
+typedef enum {
+	/** 
+	 * @brief Denotes a continuation frame.
+	 */
+	NOPOLL_CONTINUATION_FRAME = 0,
+	/** 
+	 * @brief Denotes a text frame (utf-8 content) and the first
+	 * frame of the message.
+	 */
+	NOPOLL_TEXT_FRAME         = 1,
+	/** 
+	 * @brief Denotes a binary frame and the first frame of the
+	 * message.
+	 */
+	NOPOLL_BINARY_FRAME       = 2,
+	/** 
+	 * @brief Denotes a close frame request.
+	 */
+	NOPOLL_CLOSE_FRAME        = 8,
+	/** 
+	 * @brief Denotes a ping frame (used to ring test the circuit
+	 * and to keep alive the connection).
+	 */
+	NOPOLL_PING_FRAME         = 9,
+	/** 
+	 * @brief Denotes a pong frame (reply to ping request).
+	 */
+	NOPOLL_PONG_FRAME         = 10
+} noPollOpCode;
+
 BEGIN_C_DECLS
 
 noPollPtr  nopoll_calloc  (size_t count, size_t size);
