@@ -40,9 +40,17 @@
 
 void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr * user_data)
 {
+	const char * content = (const char *) nopoll_msg_get_payload (msg);
+
 	printf ("Listener received (size: %d): %s\n", 
 		nopoll_msg_get_payload_size (msg),
 		(const char *) nopoll_msg_get_payload (msg));
+
+	if (nopoll_cmp (content, "ping")) {
+		/* send a ping */
+		nopoll_conn_send_ping (conn);
+		return;
+	}
 
 	/* send reply as received */
 	nopoll_conn_send_text (conn, (const char *) nopoll_msg_get_payload (msg), 
