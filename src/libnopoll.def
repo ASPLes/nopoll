@@ -23,6 +23,7 @@ nopoll_conn_get_msg
 nopoll_conn_host
 nopoll_conn_is_ok
 nopoll_conn_is_ready
+nopoll_conn_mask_content
 nopoll_conn_new
 nopoll_conn_port
 nopoll_conn_produce_accept_key
@@ -31,6 +32,8 @@ nopoll_conn_receive
 nopoll_conn_ref
 nopoll_conn_role
 nopoll_conn_send_frame
+nopoll_conn_send_ping
+nopoll_conn_send_pong
 nopoll_conn_send_text
 nopoll_conn_set_sock_block
 nopoll_conn_set_sock_tcp_nodelay
