@@ -110,6 +110,48 @@ nopoll_bool test_01_base64 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_01_masking (void) {
+
+	char         mask[4];
+	int          mask_value;
+	char         buffer[1024];
+	noPollCtx  * ctx;
+
+	/* create context */
+	ctx = create_ctx ();
+
+	mask_value = random ();
+	printf ("Test-01 masking: using masking value %d\n", mask_value);
+	nopoll_set_32bit (mask_value, mask);
+
+	memcpy (buffer, "This is a test value", 20);
+	nopoll_conn_mask_content (ctx, buffer, 20, mask);
+
+	if (nopoll_ncmp (buffer, "This is a test value", 20)) {
+		printf ("ERROR: expected to find different values after masking but found the same..\n");
+		return nopoll_false;
+	}
+
+	/* revert changes */
+	nopoll_conn_mask_content (ctx, buffer, 20, mask);
+
+	if (! nopoll_ncmp (buffer, "This is a test value", 20)) {
+		printf ("ERROR: expected to find SAME values after masking but found the same..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* now check transfering these values to the mask */
+	if (nopoll_get_32bit (mask) != mask_value) {
+		printf ("ERROR: found failure while reading the mask from from buffer..\n");
+		return nopoll_false;
+	}
+	printf ("Test 01 masking: found mask in the buffer %d == %d\n", 
+		nopoll_get_32bit (mask), mask_value);
+
+	nopoll_ctx_unref (ctx);
+	return nopoll_true;
+}
+
 nopoll_bool test_01 (void) {
 	noPollCtx  * ctx;
 	noPollConn * conn;
@@ -173,6 +215,7 @@ nopoll_bool test_02 (void) {
 	noPollCtx  * ctx;
 	noPollConn * conn;
 	noPollMsg  * msg;
+	int          iter;
 
 	/* create context */
 	ctx = create_ctx ();
@@ -195,6 +238,8 @@ nopoll_bool test_02 (void) {
 		return nopoll_false;
 	}
 
+	printf ("Test 02: sending basic content..\n");
+
 	/* send content text(utf-8) */
 	if (nopoll_conn_send_text (conn, "This is a test", 14) != 14) {
 		printf ("ERROR: Expected to find proper send operation..\n");
@@ -202,6 +247,7 @@ nopoll_bool test_02 (void) {
 	}
 
 	/* wait for the reply */
+	iter = 0;
 	while ((msg = nopoll_conn_get_msg (conn)) == NULL) {
 
 		if (! nopoll_conn_is_ok (conn)) {
@@ -211,7 +257,20 @@ nopoll_bool test_02 (void) {
 
 		printf ("Message still not received..\n");
 		nopoll_sleep (10000);
+
+		if (iter > 10)
+			break;
 	} /* end if */
+
+	/* check content received */
+	if (! nopoll_cmp (nopoll_msg_get_payload (msg), "This is a test")) {
+		printf ("ERROR: expected to find message 'This is a test' but something different was received: '%s'..\n",
+			(const char *) nopoll_msg_get_payload (msg));
+		return nopoll_false;
+	} /* end if */
+
+	/* unref message */
+	nopoll_msg_unref (msg);
 
 	/* finish connection */
 	nopoll_conn_close (conn);
@@ -267,6 +326,13 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+	if (test_01_masking ()) {
+		printf ("Test 01-masking: Library websocket content masking support [   OK   ]\n");
+	}else {
+		printf ("Test 01-masking: Library websocket content masking support [ FAILED ]\n");
+		return -1;
+	}
+
 	if (test_01 ()) {	
 		printf ("Test 01: Simple connect and disconnect [   OK   ]\n");
 	}else {
@@ -275,13 +341,15 @@ int main (int argc, char ** argv)
 	}
 
 	if (test_02 ()) {	
-		printf ("Test 01: Simple request/reply [   OK   ]\n");
+		printf ("Test 02: Simple request/reply [   OK   ]\n");
 	}else {
-		printf ("Test 01: Simple request/reply [ FAILED ]\n");
+		printf ("Test 02: Simple request/reply [ FAILED ]\n");
 		return -1;
 	}
 
 	/* test streaming api */
+
+	/* ensure we don't support any version than 13 */
 
 	/* test sending wrong mime headers */
 

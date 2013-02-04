@@ -42,7 +42,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 {
 	const char * content = (const char *) nopoll_msg_get_payload (msg);
 
-	printf ("Listener received (size: %d): %s\n", 
+	printf ("Listener received (size: %d): '%s'\n", 
 		nopoll_msg_get_payload_size (msg),
 		(const char *) nopoll_msg_get_payload (msg));
 
