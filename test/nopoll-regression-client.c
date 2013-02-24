@@ -417,6 +417,8 @@ int main (int argc, char ** argv)
 	/* more streaming api testing, get bigger content as a
 	 * consequence of receiving several messages */
 
+	/* test streaming API when it timeouts */
+
 	/* ensure we don't support any version than 13 */
 
 	/* test sending wrong mime headers */
