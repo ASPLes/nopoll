@@ -1462,9 +1462,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	} else if (msg->payload_size == 126) {
 		/* get extended 2 bytes length as unsigned 16 bit
 		   unsigned integer */
-		msg->payload_size = 0;
-		msg->payload_size = (buffer[2] << 8);
-		msg->payload_size |= buffer[3];
+		msg->payload_size = nopoll_get_16bit (buffer + 2);
 		
 	} else if (msg->payload_size == 127) {
 		/* get extended 2 bytes length as unsigned 16 bit
@@ -1816,8 +1814,11 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	if (length < 126) {
 		header[1] |= length;
 	} else if (length < 65535) {
-		/* not supported yet */
-		return -1;
+		/* set the next header length is at least 65535 */
+		header[1] |= 126;
+		header_size += 2;
+		/* set length into the next bytes */
+		nopoll_set_16bit (length, header + 2);
 	} else if (length < 9223372036854775807) {
 		/* not supported yet */
 		return -1;
@@ -1830,13 +1831,15 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	} /* end if */
 
 	/* allocate enough memory to send content */
-	send_buffer = nopoll_new (char, length + header_size);
+	send_buffer = nopoll_new (char, length + header_size + 1);
 	if (send_buffer == NULL) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to allocate memory to implement send operation");
 		return -1;
 	} /* end if */
 	
 	/* copy content to be sent */
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Copying into the buffer %d bytes of header (total memory allocated: %d)", 
+		    header_size, length + header_size + 1);
 	memcpy (send_buffer, header, header_size);
 	if (length > 0) {
 		memcpy (send_buffer + header_size, content, length);
@@ -1847,16 +1850,20 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		}
 	} /* end if */
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Mask used for this delivery: %d",
-		    nopoll_get_32bit (send_buffer +2));
 	
 	/* send content */
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Mask used for this delivery: %d (about to send %d bytes)",
+		    nopoll_get_32bit (send_buffer + header_size - 2), length + header_size);
 	bytes_written = conn->send (conn, send_buffer, length + header_size);
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Bytes written to the wire %d (masked? %d, mask: %d, header size: %d, length: %d)", 
 		    bytes_written, masked, mask_value, header_size, length);
 
 	/* release memory */
 	nopoll_free (send_buffer);
+
+	/* report possitive values in case of failure */
+	if (bytes_written <= 0)
+		return bytes_written;
 	
 	/* return bytes written */
 	return bytes_written - header_size;

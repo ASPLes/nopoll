@@ -38,6 +38,23 @@
  */
 #include <nopoll_ctx.h>
 #include <nopoll_private.h>
+#include <signal.h>
+
+void __nopoll_ctx_sigpipe_do_nothing (int _signal)
+{
+	/* do nothing sigpipe handler to be able to manage EPIPE error
+	 * returned by write. read calls do not fails because we use
+	 * the vortex reader process that is waiting for changes over
+	 * a connection and that changes include remote peer
+	 * closing. So, EPIPE (or receive SIGPIPE) can't happen. */
+	
+
+	/* the following line is to ensure ancient glibc version that
+	 * restores to the default handler once the signal handling is
+	 * executed. */
+	signal (SIGPIPE, __nopoll_ctx_sigpipe_do_nothing);
+	return;
+}
 
 /** 
  * @brief Creates an empty Nopoll context. 
@@ -67,6 +84,9 @@ noPollCtx * nopoll_ctx_new (void) {
 
 	/* current list length */
 	result->conn_length = 0;
+
+	/* install sigpipe handler */
+	signal (SIGPIPE, __nopoll_ctx_sigpipe_do_nothing);
 
 	return result;
 }
@@ -212,7 +232,7 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 	while (iterator < ctx->conn_length) {
 
 		/* check the connection reference */
-		if (ctx->conn_list[iterator]->id == conn->id) {
+		if (ctx->conn_list && ctx->conn_list[iterator] && ctx->conn_list[iterator]->id == conn->id) {
 			/* remove reference */
 			ctx->conn_list[iterator] = NULL;
 

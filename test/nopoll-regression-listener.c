@@ -41,6 +41,10 @@
 void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr * user_data)
 {
 	const char * content = (const char *) nopoll_msg_get_payload (msg);
+	FILE       * file;
+	char         buffer[1024];
+	int          bytes;
+	int          sent;
 
 	printf ("Listener received (size: %d): '%s'\n", 
 		nopoll_msg_get_payload_size (msg),
@@ -50,7 +54,24 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 		/* send a ping */
 		nopoll_conn_send_ping (conn);
 		return;
-	}
+	} else if (nopoll_cmp (content, "get-file")) {
+		file = fopen ("nopoll-regression-client.c", "rb");
+		while (! feof (file)) {
+			/* read content */
+			bytes = fread (buffer, 1, 1024, file);
+			/* send content */
+			if (bytes > 0) {
+				/* send content and get the result */
+				sent = nopoll_conn_send_text (conn, buffer, bytes);
+				if (sent != bytes)
+					printf ("ERROR: expected to send %d bytes but sent different content size (%d bytes)..\n", bytes, sent);
+			} /* end if */
+			/* next */
+		} /* end while */
+
+		/* now close the handle */
+		fclose (file);
+	} /* end if */
 
 	/* send reply as received */
 	nopoll_conn_send_text (conn, (const char *) nopoll_msg_get_payload (msg), 
