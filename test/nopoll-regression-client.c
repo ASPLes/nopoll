@@ -281,6 +281,65 @@ nopoll_bool test_02 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_03 (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	char         buffer[1024];
+	int          bytes_read;
+
+	/* create context */
+	ctx = create_ctx ();
+
+	/* check connections registered */
+	if (nopoll_ctx_conns (ctx) != 0) {
+		printf ("ERROR: expected to find 0 registered connections but found: %d\n", nopoll_ctx_conns (ctx));
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a listener */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	printf ("Test 02: sending basic content..\n");
+
+	/* send content text(utf-8) */
+	if (nopoll_conn_send_text (conn, "This is a test", 14) != 14) {
+		printf ("ERROR: Expected to find proper send operation..\n");
+		return nopoll_false;
+	}
+
+	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
+	bytes_read = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 3000);
+	
+	if (bytes_read != 14) {
+		printf ("ERROR: expected to find 14 bytes but found %d..\n", bytes_read);
+		return nopoll_false;
+	} /* end if */
+
+	/* check content received */
+	if (! nopoll_cmp (buffer, "This is a test")) {
+		printf ("ERROR: expected to find message 'This is a test' but something different was received: '%s'..\n",
+			buffer);
+		return nopoll_false;
+	} /* end if */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -348,6 +407,15 @@ int main (int argc, char ** argv)
 	}
 
 	/* test streaming api */
+	if (test_03 ()) {	
+		printf ("Test 03: test streaming api [   OK   ]\n");
+	}else {
+		printf ("Test 03: test streaming api [ FAILED ]\n");
+		return -1;
+	}
+
+	/* more streaming api testing, get bigger content as a
+	 * consequence of receiving several messages */
 
 	/* ensure we don't support any version than 13 */
 

@@ -40,47 +40,6 @@
 #include <nopoll_private.h>
 
 /** 
- * @brief Performs a timeval substract leaving the result in
- * (result). Subtract the `struct timeval' values a and b, storing the
- * result in result.
- *
- * @param a First parameter to substract
- *
- * @param b Second parameter to substract
- *
- * @param result Result variable. Do no used a or b to place the
- * result.
- *
- * @return 1 if the difference is negative, otherwise 0 (operations
- * implemented is a - b).
- */ 
-int     nopoll_timeval_substract                  (struct timeval * a, 
-						   struct timeval * b,
-						   struct timeval * result)
-{
-	/* Perform the carry for the later subtraction by updating
-	 * y. */
-	if (a->tv_usec < b->tv_usec) {
-		int nsec = (b->tv_usec - a->tv_usec) / 1000000 + 1;
-		b->tv_usec -= 1000000 * nsec;
-		b->tv_sec += nsec;
-	}
-
-	if (a->tv_usec - b->tv_usec > 1000000) {
-		int nsec = (a->tv_usec - b->tv_usec) / 1000000;
-		b->tv_usec += 1000000 * nsec;
-		b->tv_sec -= nsec;
-	}
-	
-	/* get the result */
-	result->tv_sec = a->tv_sec - b->tv_sec;
-	result->tv_usec = a->tv_usec - b->tv_usec;
-     
-       /* return 1 if result is negative. */
-       return a->tv_sec < b->tv_sec;	
-}
-
-/** 
  * @internal Function used by nopoll_loop_wait to register all
  * connections into the io waiting object.
  */

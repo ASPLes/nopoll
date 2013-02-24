@@ -79,6 +79,10 @@ nopoll_bool nopoll_base64_decode (const char * content,
 				  char       * output, 
 				  int        * output_size);
 
+int         nopoll_timeval_substract  (struct timeval * a, 
+				       struct timeval * b,
+				       struct timeval * result);
+
 nopoll_bool nopoll_nonce (char * buffer, int nonce_size);
 
 int    nopoll_get_bit (char byte, int position);
