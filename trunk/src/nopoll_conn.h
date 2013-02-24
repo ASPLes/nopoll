@@ -76,6 +76,8 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn);
 
 int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length);
 
+int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nopoll_bool block, long int timeout);
+
 nopoll_bool      nopoll_conn_send_ping (noPollConn * conn);
 
 nopoll_bool      nopoll_conn_send_pong (noPollConn * conn);

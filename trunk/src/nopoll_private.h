@@ -193,6 +193,12 @@ struct _noPollConn {
 	 * @internal connection reference counting.
 	 */
 	int    refs;
+
+	/** 
+	 * @internal References to pending content to be read 
+	 */
+	noPollMsg   * pending_msg;
+	long int      pending_diff;
 };
 
 struct _noPollIoEngine {

@@ -623,6 +623,10 @@ void nopoll_conn_unref (noPollConn * conn)
 	}
 	/* release here the mutex */
 
+	/* release message */
+	if (conn->pending_msg)
+		nopoll_msg_unref (conn->pending_msg);
+
 	/* release ctx */
 	nopoll_ctx_unref (conn->ctx);
 	conn->ctx = NULL;
@@ -640,6 +644,7 @@ void nopoll_conn_unref (noPollConn * conn)
 		nopoll_free (conn->handshake->websocket_key);
 		nopoll_free (conn->handshake->websocket_version);
 		nopoll_free (conn->handshake->websocket_accept);
+		nopoll_free (conn->handshake->expected_accept);
 		nopoll_free (conn->handshake);
 	} /* end if */
 
@@ -760,13 +765,13 @@ int         nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen
 {
 	int         nread;
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling to get %d from connection..", maxlen);
+	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling to get %d from connection..", maxlen); */
 
  keep_reading:
 	/* clear buffer */
 	/* memset (buffer, 0, maxlen * sizeof (char )); */
 	if ((nread = conn->receive (conn, buffer, maxlen)) == NOPOLL_SOCKET_ERROR) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning errno=%d", errno);
+		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning errno=%d (%s)", errno, strerror (errno)); */
 		if (errno == NOPOLL_EAGAIN) 
 			return 0;
 		if (errno == NOPOLL_EWOULDBLOCK) 
@@ -779,7 +784,7 @@ int         nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen
 		return -1;
 	}
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning bytes read = %d", nread);
+	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning bytes read = %d", nread); */
 	if (nread == 0) {
 		nopoll_conn_shutdown (conn);
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "received connection close while reading from conn id %d, shutting down connection..", conn->id);
@@ -1378,7 +1383,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	  |                     Payload Data continued ...                |
 	  +---------------------------------------------------------------+
 	*/
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Found data in opened connection id %d..", conn->id);
+	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Found data in opened connection id %d..", conn->id);*/ 
 
 	/* get the first 4 bytes from the websocket header */
 	bytes = nopoll_conn_receive (conn, buffer, 2);
@@ -1577,6 +1582,154 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 	/* sending content as listener */
 	return nopoll_conn_send_frame (conn, /* fin */ nopoll_true, /* masked */ nopoll_false, 
 				       NOPOLL_TEXT_FRAME, length, (noPollPtr) content);
+}
+
+/** 
+ * @brief Allows to read the provided amount of bytes from the
+ * provided connection, leaving the content read on the buffer
+ * provided.
+ *
+ * Optionally, the function allows blocking the caller until the
+ * amount of bytes requested are satisfied. Also, the function allows
+ * to timeout the operation after provided amount of time.
+ *
+ * @param conn The connection where the read operation will take place.
+ *
+ * @param buffer The buffer where the result is returned. Memory
+ * buffer must be enough to hold bytes requested and must be acquired
+ * by the caller.
+ *
+ * @param block If nopoll_true, the caller will be blocked until the
+ * amount of bytes requested are satisfied or until the timeout is
+ * reached (if enabled). If nopoll_false is provided, the function
+ * won't block and will return all bytes available at this moment.
+ *
+ * @paran timeout (milliseconds 1sec = 1000ms) If provided a value
+ * higher than 0, a timeout will be enabled to complete the
+ * operation. If the timeout is reached, the function will return the
+ * bytes read so far. Please note that the function has a precision of
+ * 10ms.
+ *
+ * @return Number of bytes read or -1 if it fails. 
+ *
+ */
+int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nopoll_bool block, long int timeout)
+{
+	long int           wait_slice = 0;
+	noPollMsg        * msg        = NULL;
+	struct  timeval    start;
+	struct  timeval    stop;
+	struct  timeval    diff;
+	long               ellapsed;
+	int                desp       = 0;
+	int                amount;
+	int                total_read = 0;
+
+	/* report error value */
+	if (conn == NULL || buffer == NULL || bytes <= 0)
+		return -1;
+	
+	if (timeout > 1000)
+		wait_slice = 100;
+	else if (timeout > 100)
+		wait_slice = 50;
+	else if (timeout > 10)
+		wait_slice = 10;
+
+	if (timeout > 0)
+		gettimeofday (&start, NULL);
+
+	/* clear the buffer */
+	memset (buffer, 0, bytes);
+
+	/* check here if we have a pending message to read */
+	if (conn->pending_msg)  {
+		/* get references to pending data */
+		amount = conn->pending_diff;
+		msg    = conn->pending_msg;
+		if (amount > bytes) {
+			conn->pending_diff -= bytes;
+			amount = bytes;
+		} else {
+			conn->pending_diff = 0;
+		}
+
+		/* read content */
+		memcpy (buffer + desp, nopoll_msg_get_payload (msg) + (nopoll_msg_get_payload_size (msg) - amount - 1), amount);
+		total_read += amount;
+
+		/* now release internally the content if consumed the message */
+		if (conn->pending_diff == 0) {
+			nopoll_msg_unref (conn->pending_msg);
+			conn->pending_msg = NULL;
+		} /* end if */
+
+		/* see if we have finished */
+		if (amount == bytes || ! block)
+			return amount;
+
+		
+	} /* end if */
+
+
+	/* for for the content */
+	while (nopoll_true) {
+		/* call to get next message */
+		while ((msg = nopoll_conn_get_msg (conn)) == NULL) {
+			
+			if (! nopoll_conn_is_ok (conn)) {
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received websocket connection close during wait reply..");
+				return -1;
+			} /* end if */
+
+		} /* end if */
+
+		/* get the message content into the buffer */
+		if (msg) {
+			/* get the amount of bytes we can read */
+			amount = nopoll_msg_get_payload_size (msg);
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received %d bytes (requested %d bytes)", amount, bytes);
+			if (amount > bytes) {
+				/* save here the difference between
+				 * what we have read and remaining data */
+				conn->pending_diff = amount - bytes;
+				conn->pending_msg  = msg;
+				amount = bytes;
+
+				/* acquire a reference to the message */
+				nopoll_msg_ref (msg);
+			} /* end if */
+			/* copy data */
+			memcpy (buffer + desp, nopoll_msg_get_payload (msg), amount);
+			total_read += amount;
+
+			/* release message */
+			nopoll_msg_unref (msg);
+
+			/* return amount read */
+			if (total_read == bytes || ! block)
+				return total_read;
+		}
+
+		/* if timeout is still bigger continue reading data */
+		if (timeout <= 0)
+			break;
+
+		/* check to stop due to timeout */
+		if (timeout > 0) {
+			gettimeofday (&stop, NULL);
+			nopoll_timeval_substract (&stop, &start, &diff);
+			
+			ellapsed = (diff.tv_sec * 1000000) + diff.tv_usec;
+			if (ellapsed > timeout) 
+				break;
+		} /* end if */
+		
+		nopoll_sleep (wait_slice);
+	} /* end while */
+
+	/* reached this point, return that timeout was reached */
+	return total_read;
 }
 
 /** 

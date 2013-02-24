@@ -27,6 +27,7 @@ nopoll_conn_mask_content
 nopoll_conn_new
 nopoll_conn_port
 nopoll_conn_produce_accept_key
+nopoll_conn_read
 nopoll_conn_readline
 nopoll_conn_receive
 nopoll_conn_ref
