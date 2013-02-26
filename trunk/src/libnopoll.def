@@ -1,5 +1,6 @@
 EXPORTS
 __nopoll_conn_get_client_init
+__nopoll_ctx_sigpipe_do_nothing
 __nopoll_nonce_init
 nopoll_base64_decode
 nopoll_base64_encode

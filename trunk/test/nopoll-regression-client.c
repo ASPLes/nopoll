@@ -344,6 +344,7 @@ nopoll_bool test_04 (void) {
 	noPollConn * conn;
 	char         buffer[1024];
 	int          bytes_read;
+	FILE       * file;
 
 	/* create context */
 	ctx = create_ctx ();
@@ -374,18 +375,34 @@ nopoll_bool test_04 (void) {
 		return nopoll_false;
 	}
 
-	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
-	bytes_read = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 3000);
-	
-	if (bytes_read != 14) {
-		printf ("ERROR: expected to find 14 bytes but found %d..\n", bytes_read);
-		return nopoll_false;
+	file = fopen ("tmp", "w");
+	if (file == NULL) {
+		printf ("ERROR: unable to open file tmp for content comparision\n");
+		return nopoll_false; 
 	} /* end if */
 
-	/* check content received */
-	if (! nopoll_cmp (buffer, "This is a test")) {
-		printf ("ERROR: expected to find message 'This is a test' but something different was received: '%s'..\n",
-			buffer);
+	while (nopoll_true) {
+		/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
+		bytes_read = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 3000);
+		/* printf ("Test 04: read %d bytes over the connection %d\n", bytes_read, nopoll_conn_get_id (conn)); */
+
+		if (bytes_read <= 0) {
+			printf ("ERROR: expected to find bytes from the connection but found: %d\n", bytes_read);
+			return nopoll_false;
+		}
+
+		/* write content */
+		fwrite (buffer, 1, bytes_read, file);
+	
+		if (bytes_read != 1024)
+			break;
+	} /* end while */
+	fclose (file);
+
+	/* now check both files */
+	printf ("Test 04: checking content download...\n");
+	if (system ("diff nopoll-regression-client.c tmp")) {
+		printf ("ERROR: failed to download file from server, content differs. Check: diff nopoll-regression-client.c tmp\n");
 		return nopoll_false;
 	} /* end if */
 
@@ -518,3 +535,5 @@ int main (int argc, char ** argv)
 
 	return 0;
 }
+
+/* end-of-file-found */

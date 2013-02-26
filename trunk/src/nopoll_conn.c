@@ -510,6 +510,22 @@ NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn)
 }
 
 /** 
+ * @brief Allows to get the connection id from the provided
+ * connection.
+ *
+ * @param conn The connection from where the unique identifier will be
+ * returned.
+ *
+ * @return The identifier or -1 if it fails.
+ */
+int           nopoll_conn_get_id (noPollConn * conn)
+{
+	if (conn == NULL)
+		return -1;
+	return conn->id;
+}
+
+/** 
  * @brief Allows to get the connection role.
  *
  * @return The connection role, see \ref noPollRole for details.
@@ -1462,6 +1478,14 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	} else if (msg->payload_size == 126) {
 		/* get extended 2 bytes length as unsigned 16 bit
 		   unsigned integer */
+		bytes = nopoll_conn_receive (conn, buffer + 2, 2);
+		if (bytes != 2) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Failed to get next 2 bytes to read header from the wire, failed to received content, shutting down id=%d the connection", conn->id);
+			nopoll_msg_unref (msg);
+			nopoll_conn_shutdown (conn);
+			return NULL; 	
+		} /* end if */
+			
 		msg->payload_size = nopoll_get_16bit (buffer + 2);
 		
 	} else if (msg->payload_size == 127) {
@@ -1504,6 +1528,14 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		return NULL;
 	} /* end if */
 
+	/* check payload size */
+	if (msg->payload_size == 0) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Found incoming frame with payload size 0, shutting down id=%d the connection", conn->id);
+		nopoll_msg_unref (msg);
+		nopoll_conn_shutdown (conn);
+		return NULL; 	
+	} /* end if */
+
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Detected incoming websocket frame: fin(%d), op_code(%d), is_masked(%d), payload size(%ld), mask=%d", 
 		    msg->has_fin, msg->op_code, msg->is_masked, msg->payload_size, nopoll_get_32bit (msg->mask));
 
@@ -1534,6 +1566,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 
 		/* set connection in remaining data to read */
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Received fewer bytes than expected (%d < %d)", bytes, msg->payload_size);
+		msg->payload_size = bytes;
 	} /* end if */
 
 	/* now unmask content (if required) */
@@ -1541,7 +1574,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		nopoll_conn_mask_content (conn->ctx, msg->payload, msg->payload_size, msg->mask);
 	} /* end if */
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Message received: %s", (const char *) msg->payload);
+	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Message received: %s", (const char *) msg->payload); */
 
 	return msg;
 }
