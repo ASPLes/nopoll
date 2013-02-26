@@ -505,6 +505,8 @@ int main (int argc, char ** argv)
 
 	/* ensure we don't support any version than 13 */
 
+	/* update the library to split message frames into smaller complete frames when bigger messages are received. */
+
 	/* test sending wrong mime headers */
 
 	/* test sending missing mime headers */
