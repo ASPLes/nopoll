@@ -496,6 +496,8 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+	/* upload a file to the server ...*/
+
 	/* more streaming api testing, get bigger content as a
 	 * consequence of receiving several messages */
 
