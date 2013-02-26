@@ -59,6 +59,8 @@ nopoll_bool    nopoll_conn_is_ready (noPollConn * conn);
 
 NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn);
 
+int           nopoll_conn_get_id (noPollConn * conn);
+
 noPollRole    nopoll_conn_role   (noPollConn * conn);
 
 const char  * nopoll_conn_host   (noPollConn * conn);

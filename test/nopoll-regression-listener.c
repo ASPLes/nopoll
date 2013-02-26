@@ -62,6 +62,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 			/* send content */
 			if (bytes > 0) {
 				/* send content and get the result */
+				printf ("Sent message with %d bytes..\n", bytes);
 				sent = nopoll_conn_send_text (conn, buffer, bytes);
 				if (sent != bytes)
 					printf ("ERROR: expected to send %d bytes but sent different content size (%d bytes)..\n", bytes, sent);
