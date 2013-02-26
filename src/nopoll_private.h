@@ -199,6 +199,7 @@ struct _noPollConn {
 	 */
 	noPollMsg   * pending_msg;
 	long int      pending_diff;
+	long int      pending_desp;
 };
 
 struct _noPollIoEngine {

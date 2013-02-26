@@ -1679,15 +1679,27 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 		amount = conn->pending_diff;
 		msg    = conn->pending_msg;
 		if (amount > bytes) {
-			conn->pending_diff -= bytes;
+			/* check if bytes requested are bigger the
+			 * conn->pending_diff */
+			if (bytes < conn->pending_diff) {
+				conn->pending_diff -= bytes;
+			} else {
+				/* update values */
+				bytes = conn->pending_diff;
+				conn->pending_diff = 0;
+			} /* end if */
+
 			amount = bytes;
 		} else {
 			conn->pending_diff = 0;
 		}
 
 		/* read content */
-		memcpy (buffer + desp, nopoll_msg_get_payload (msg) + (nopoll_msg_get_payload_size (msg) - amount - 1), amount);
+		memcpy (buffer, nopoll_msg_get_payload (msg) + conn->pending_desp, amount);
 		total_read += amount;
+		
+		/* increase pending desp */
+		conn->pending_desp += amount;
 
 		/* now release internally the content if consumed the message */
 		if (conn->pending_diff == 0) {
@@ -1723,6 +1735,7 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 			if (amount > bytes) {
 				/* save here the difference between
 				 * what we have read and remaining data */
+				conn->pending_desp = bytes;
 				conn->pending_diff = amount - bytes;
 				conn->pending_msg  = msg;
 				amount = bytes;
