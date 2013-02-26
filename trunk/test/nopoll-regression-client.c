@@ -339,12 +339,14 @@ nopoll_bool test_03 (void) {
 	return nopoll_true;
 }
 
-nopoll_bool test_04 (void) {
+nopoll_bool test_04 (int chunk_size) {
 	noPollCtx  * ctx;
 	noPollConn * conn;
 	char         buffer[1024];
 	int          bytes_read;
 	FILE       * file;
+	struct stat  stat_buf;
+	int          total_read = 0;
 
 	/* create context */
 	ctx = create_ctx ();
@@ -381,9 +383,11 @@ nopoll_bool test_04 (void) {
 		return nopoll_false; 
 	} /* end if */
 
-	while (nopoll_true) {
+	stat ("nopoll-regression-client.c", &stat_buf);
+
+	while (total_read < stat_buf.st_size) {
 		/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
-		bytes_read = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 3000);
+		bytes_read = nopoll_conn_read (conn, buffer, chunk_size, nopoll_false, 3000);
 		/* printf ("Test 04: read %d bytes over the connection %d\n", bytes_read, nopoll_conn_get_id (conn)); */
 
 		if (bytes_read <= 0) {
@@ -394,14 +398,15 @@ nopoll_bool test_04 (void) {
 		/* write content */
 		fwrite (buffer, 1, bytes_read, file);
 	
-		if (bytes_read != 1024)
-			break;
+		/* count total read bytes */
+		total_read += bytes_read;
+
 	} /* end while */
 	fclose (file);
 
 	/* now check both files */
-	printf ("Test 04: checking content download...\n");
-	if (system ("diff nopoll-regression-client.c tmp")) {
+	printf ("Test 04: checking content download (chunk_size=%d)...\n", chunk_size);
+	if (system ("diff nopoll-regression-client.c tmp > /dev/null")) {
 		printf ("ERROR: failed to download file from server, content differs. Check: diff nopoll-regression-client.c tmp\n");
 		return nopoll_false;
 	} /* end if */
@@ -489,10 +494,31 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
-	if (test_04 ()) {	
+	if (test_04 (1024)) {	
 		printf ("Test 04: test streaming api (II) [   OK   ]\n");
 	}else {
 		printf ("Test 04: test streaming api (II) [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_04 (512)) {	
+		printf ("Test 04-a: test streaming api (II) [   OK   ]\n");
+	}else {
+		printf ("Test 04-a: test streaming api (II) [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_04 (137)) {	
+		printf ("Test 04-b: test streaming api (II) [   OK   ]\n");
+	}else {
+		printf ("Test 04-b: test streaming api (II) [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_04 (17)) {	
+		printf ("Test 04-c: test streaming api (II) [   OK   ]\n");
+	}else {
+		printf ("Test 04-c: test streaming api (II) [ FAILED ]\n");
 		return -1;
 	}
 
