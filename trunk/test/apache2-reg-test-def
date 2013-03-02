@@ -1,0 +1,19 @@
+<VirtualHost 192.168.0.159:80>
+	ServerAdmin webmaster@localhost
+        ServerName nopoll-regtest
+
+        AssignUserID acinom acinom
+	
+	DocumentRoot /home/acinom/nopoll/test
+	<Directory /home/acinom/nopoll/test/>
+		Options Indexes FollowSymLinks MultiViews	
+		AllowOverride None
+	</Directory>
+
+	ErrorLog /var/log/apache2/error.log
+
+	# Possible values include: debug, info, notice, warn, error, crit,
+	# alert, emerg.
+	CustomLog /var/log/apache2/access.log combined
+
+</VirtualHost>

@@ -1,0 +1,74 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>noPoll: regression test</title>
+
+
+<!-- include dojo files -->
+<style type="text/css">
+   @import "/dojoroot/dijit/themes/tundra/tundra.css";
+   @import "/dojoroot/dojo/resources/dojo.css";
+   @import "/testConnect.css";
+</style> 
+<script type="text/javascript" src="/dojoroot/dojo/dojo.js" djConfig="parseOnLoad: true"></script>
+
+<!-- include dojo components -->
+<script type="text/javascript">
+  dojo.require("dojo.parser");
+  dojo.require("dijit.layout.ContentPane");
+  dojo.require("dijit.layout.BorderContainer");
+  dojo.require("dijit.form.ValidationTextBox");
+  dojo.require("dijit.form.Button");
+  dojo.require("dijit.form.CheckBox");
+  dojo.require("dijit.form.ComboBox");
+</script>
+
+<!-- include regression test files -->
+<script type="text/javascript" src="testConnect.js"></script>
+</head>
+
+<body class="tundra">
+<!-- load the connector applet -->
+<div class="nopoll-regtest-header">
+  <img style="padding-left: 10px; padding-right: 10px;" src="header-logo.png" alt="[NOPOLL LOGO]">
+  <div class="aspl-logo"><a href="http://www.aspl.es"><img src="aspl-alt-logo.png" alt="[ASPL LOGOG]"></a></div>
+  <h1>noPoll: Open source Websocket framework</h1>
+  <div style="clear: both;"></div>
+</div>
+
+<!-- main form -->
+<div dojoType="dijit.layout.ContentPane" title="noPoll: Regression test suite" id="control-panel">
+
+<table>
+ <tr>  
+   <td>Host:</td><td><div dojoType="dijit.form.ValidationTextBox" id="host" required="true" regExp="(\d|\w|\.|\-)+"></div> </td>
+   <td>
+   <div id="run-test" dojoType="dijit.form.Button">Run test!</div>
+   <div id="clear-log" dojoType="dijit.form.Button">Clear log</div>
+   <div id="invert-selection" dojoType="dijit.form.Button">Invert selection</div>
+   </td>
+ </tr>
+ <tr>
+   <td>Port: </td><td><div dojoType="dijit.form.ValidationTextBox" id="port" required="true" regExp="(\d)+"></div></td>
+   <td>
+     <!-- no need for options for now -->
+   </td>
+ </tr>
+</table>
+
+
+
+</div> <!-- main form -->
+<div dojoType="dijit.layout.BorderContainer" design="headline" id="global-container" liveSizing="false">
+         
+  <div dojoType="dijit.layout.ContentPane" splitter="true" id="test-available-panel" liveSplitters="false" region="leading" style="width: 28%;">
+  </div>  
+         
+  <div dojoType="dijit.layout.ContentPane" region="center" id="log-panel"> 
+  </div> 
+</div>
+
+</body> 
+</html>

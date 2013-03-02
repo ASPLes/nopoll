@@ -1,0 +1,92 @@
+body {
+  margin: 0px;
+  padding: 0px;
+  font-family: arial, verdana, trebuchetms;
+  overflow: hidden;
+}
+
+h1 {
+  color: white;
+  margin: 0px;
+}
+
+.aspl-logo {
+  float: right;
+}
+
+.aspl-logo img {
+  border: 0px;
+}
+
+.nopoll-regtest-header {
+  width: 100%;
+  padding: 0px;
+  margin: 0px;
+  height: 46px;
+  background: #062149;
+  color: white;
+  padding-top: 5px;
+}
+
+.nopoll-regtest-header img {
+  float: left;
+  padding-right: 10px;
+}
+
+.nopoll-regtest-header h1 {
+  padding: 10px;
+}
+
+.log-line {
+  padding: 0px;
+  margin: 0px;
+  font-size: 9pt;
+  color: white;
+  border-bottom: 1px solid white;
+}
+
+.error {
+  background: #cc0000;
+}
+
+.ok {
+  background: #118a11;
+}
+
+.final-ok {
+  background: #118a11;
+  font-weight: bold;
+  font-size: 11pt;
+  padding: 10px;
+}
+
+.info {
+  background: #0073b5;
+}
+
+#control-panel {
+  padding: 10px;
+#  border-bottom: 1px solid #383838;
+}
+
+#global-container {
+  width: 100%;
+  height: 100px;
+}
+
+#log-panel {
+  overflow: auto;
+}
+
+pre { 
+  font-family: arial, verdana, trebuchetms;
+}
+
+.sep { 
+  width: 1px;
+  border-left: 1px solid #acacac;
+  margin-left: 6px;
+  margin-right: 6px;
+  height: 10px;
+  
+}
