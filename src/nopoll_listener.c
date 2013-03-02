@@ -216,13 +216,21 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 	/* release mutex here to protect inet_ntoa */
 	listener->port    = nopoll_strdup_printf ("%d", ntohs (sin.sin_port));
 
-	/* register connection into context */
-	nopoll_ctx_register_conn (ctx, listener);
-
 	/* configure default handlers */
 	listener->receive = nopoll_conn_default_receive;
 	listener->send    = nopoll_conn_default_send;
 
+	/* register connection into context */
+	if (! nopoll_ctx_register_conn (ctx, listener)) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to register connection into the context, unable to create connection");
+		nopoll_conn_ref (listener);
+		return NULL;
+	} /* end if */
+
+	/* reduce reference counting here because ctx_register_conn
+	 * already acquired a reference */
+	nopoll_conn_unref (listener);
+	
 	return listener;
 }
 

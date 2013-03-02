@@ -189,6 +189,8 @@ nopoll_bool test_01 (void) {
 		return nopoll_false;
 	}
 
+	printf ("Test 01: reference counting for the connection: %d\n", nopoll_conn_ref_count (conn));
+
 	/* check if the connection already finished its connection
 	   handshake */
 	while (! nopoll_conn_is_ready (conn)) {
@@ -420,6 +422,57 @@ nopoll_bool test_04 (int chunk_size) {
 	return nopoll_true;
 }
 
+nopoll_bool test_05 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	char         buffer[1024];
+	int          bytes_read;
+	const char * msg = " klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw";
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a listener */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	printf ("Test 05: sending UTF-8 content..\n");
+
+	/* send content text(utf-8) */
+	if (nopoll_conn_send_text (conn, msg, -1) <= 0) {
+		printf ("ERROR: Expected to find proper send operation (nopoll_conn_send_test) returned less or 0..\n");
+		return nopoll_false;
+	}
+
+	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
+	bytes_read = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 3000);
+	printf ("Received %d bytes, checking content..\n", bytes_read);
+	if (bytes_read != 322) {
+		printf ("ERROR: expected to receive 322 bytes, but received %d\n", bytes_read);
+		return nopoll_false;
+	}
+
+	if (! nopoll_cmp (buffer, msg)) {
+		printf ("ERROR: expected to receive another content....\n");
+		printf ("Expected: %s\n", msg);
+		printf ("Received: %s\n", buffer);
+
+		return nopoll_false;
+	}
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -519,6 +572,13 @@ int main (int argc, char ** argv)
 		printf ("Test 04-c: test streaming api (II) [   OK   ]\n");
 	}else {
 		printf ("Test 04-c: test streaming api (II) [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_05 ()) {
+		printf ("Test 05: sending utf-8 content [   OK   ]\n");
+	}else {
+		printf ("Test 05: sending utf-8 content [ FAILED ]\n");
 		return -1;
 	}
 

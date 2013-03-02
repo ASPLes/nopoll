@@ -51,6 +51,8 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 
 nopoll_bool    nopoll_conn_ref (noPollConn * conn);
 
+int            nopoll_conn_ref_count (noPollConn * conn);
+
 void           nopoll_conn_unref (noPollConn * conn);
 
 nopoll_bool    nopoll_conn_is_ok (noPollConn * conn);

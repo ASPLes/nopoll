@@ -38,6 +38,8 @@
  */
 #include <nopoll.h>
 
+#include <signal.h>
+
 void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr * user_data)
 {
 	const char * content = (const char *) nopoll_msg_get_payload (msg);
@@ -46,8 +48,9 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 	int          bytes;
 	int          sent;
 
-	printf ("Listener received (size: %d): '%s'\n", 
+	printf ("Listener received (size: %d, ctx refs: %d): '%s'\n", 
 		nopoll_msg_get_payload_size (msg),
+		nopoll_ctx_ref_count (ctx),
 		(const char *) nopoll_msg_get_payload (msg));
 
 	if (nopoll_cmp (content, "ping")) {
@@ -81,11 +84,23 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 	return;
 }
 
+noPollCtx      * ctx = NULL;
+
+void __terminate_listener (int value)
+{
+	
+	/* unlock listener */
+	nopoll_loop_stop (ctx);
+
+	return;
+}
+
 int main (int argc, char ** argv)
 {
-	noPollCtx      * ctx;
 	noPollConn     * listener;
 	int              iterator;
+
+	signal (SIGTERM,  __terminate_listener);
 
 	/* create the context */
 	ctx = nopoll_ctx_new ();
@@ -111,14 +126,20 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
-	printf ("noPoll listener started at: %s:%s..\n", nopoll_conn_host (listener), nopoll_conn_port (listener));
+	printf ("noPoll listener started at: %s:%s (refs: %d)..\n", nopoll_conn_host (listener), nopoll_conn_port (listener), nopoll_conn_ref_count (listener));
 
 	/* set on message received */
 	nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);
 	
-
 	/* process events */
 	nopoll_loop_wait (ctx, 0);
+
+	/* unref connection */
+	nopoll_conn_close (listener);
+
+	/* finish */
+	printf ("Listener: finishing references: %d\n", nopoll_ctx_ref_count (ctx));
+	nopoll_ctx_unref (ctx);
 
 	return 0;
 }

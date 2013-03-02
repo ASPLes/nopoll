@@ -41,8 +41,8 @@
 
 #include <nopoll.h>
 
-int nopoll_loop_wait (noPollCtx * ctx, long timeout);
-
-int nopoll_loop_stop (noPollCtx * ctx);
+int  nopoll_loop_wait (noPollCtx * ctx, long timeout);
+ 
+void nopoll_loop_stop (noPollCtx * ctx);
 
 #endif

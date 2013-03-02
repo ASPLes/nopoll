@@ -360,7 +360,11 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 	conn->refs = 1;
 
 	/* register connection into context */
-	nopoll_ctx_register_conn (ctx, conn);
+	if (! nopoll_ctx_register_conn (ctx, conn)) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to register connection into the context, unable to create connection");
+		nopoll_free (conn);
+		return NULL;
+	}
 	
 	/* configure context */
 	conn->ctx     = ctx;
@@ -447,6 +451,21 @@ nopoll_bool    nopoll_conn_ref (noPollConn * conn)
 	/* release here the mutex */
 
 	return nopoll_true;
+}
+
+/** 
+ * @brief Allows to get current reference counting state for the
+ * provided connection.
+ *
+ * @param conn The connection queried for its reference counting.
+ *
+ * @return The reference counting or -1 if it fails.
+ */
+int            nopoll_conn_ref_count (noPollConn * conn)
+{
+	if (! conn)
+		return -1;
+	return conn->refs;
 }
 
 /** 
@@ -599,6 +618,8 @@ void          nopoll_conn_close  (noPollConn  * conn)
 	if (conn == NULL)
 		return;
 
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling to close close id=%d (session %d, refs: %d)", 
+		    conn->id, conn->session, conn->refs);
 	if (conn->session) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "requested proper connection close id=%d (session %d)", conn->id, conn->session);
 
@@ -644,7 +665,10 @@ void nopoll_conn_unref (noPollConn * conn)
 		nopoll_msg_unref (conn->pending_msg);
 
 	/* release ctx */
-	nopoll_ctx_unref (conn->ctx);
+	if (conn->ctx) {
+		nopoll_ctx_unref (conn->ctx);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Released context refs, now: %d", conn->ctx->refs);
+	} /* end if */
 	conn->ctx = NULL;
 
 	/* free all internal strings */
@@ -802,8 +826,8 @@ int         nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen
 
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning bytes read = %d", nread); */
 	if (nread == 0) {
-		nopoll_conn_shutdown (conn);
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "received connection close while reading from conn id %d, shutting down connection..", conn->id);
+		nopoll_conn_shutdown (conn);
 	} /* end if */
 
 	/* ensure we don't access outside the array */
@@ -1459,17 +1483,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		return NULL;
 	} /* end if */
 
-	/* get more bytes */
-	if (msg->is_masked) {
-		bytes = nopoll_conn_receive (conn, (noPollPtr) msg->mask, 4);
-		if (bytes != 4) {
-			nopoll_msg_unref (msg);
-			nopoll_conn_shutdown (conn);
-			return NULL; 
-		} /* end if */
-		
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received mask value = %d", nopoll_get_32bit (msg->mask));
-	} /* end if */
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "interim payload size received: %d", msg->payload_size);
 
 	/* read the rest */
 	if (msg->payload_size < 126) {
@@ -1510,6 +1524,18 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		msg->payload_size |= ((long)(buffer[3]) << 16);
 		msg->payload_size |= ((long)(buffer[4]) << 8);
 		msg->payload_size |= buffer[5];
+	} /* end if */
+
+	/* get more bytes */
+	if (msg->is_masked) {
+		bytes = nopoll_conn_receive (conn, (noPollPtr) msg->mask, 4);
+		if (bytes != 4) {
+			nopoll_msg_unref (msg);
+			nopoll_conn_shutdown (conn);
+			return NULL; 
+		} /* end if */
+		
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received mask value = %d", nopoll_get_32bit (msg->mask));
 	} /* end if */
 
 	if (msg->op_code == NOPOLL_PONG_FRAME) {
@@ -1588,7 +1614,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
  * @param content The content to be sent (it should be utf-8 content
  * or the function will fail).
  *
- * @param length Amount of bytes to take from the content to be sent.
+ * @param length Amount of bytes to take from the content to be
+ * sent. If provided -1, it is assumed you are passing in a C-like
+ * string nul terminated, so, that's the content to be sent.
  *
  * @return The number of bytes written otherwise -1 is returned in
  * case of failure. The function will fail if some parameter is NULL
@@ -1596,13 +1624,17 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
  */
 int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length)
 {
-	if (conn == NULL || content == NULL || length < 0)
+	if (conn == NULL || content == NULL || length == 0 || length < -1)
 		return -1;
 
 	if (conn->role == NOPOLL_ROLE_MAIN_LISTENER) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Trying to send content over a master listener connection");
 		return -1;
 	} /* end if */
+
+	if (length == -1)
+		length = strlen (content);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Attempting to send %d bytes", length);
 
 	/* sending content as client */
 	if (conn->role == NOPOLL_ROLE_CLIENT) {

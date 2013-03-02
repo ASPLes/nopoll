@@ -96,14 +96,16 @@ void nopoll_loop_process_listener (noPollCtx * ctx, noPollConn * conn)
 	if (ctx->on_accept) {
 		/* call to on accept */
 		if (! ctx->on_accept (ctx, conn, ctx->on_accept_data)) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Application level denied accepting connection from %s:%s, closing", 
+			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "Application level denied accepting connection from %s:%s, closing", 
 				    listener->host, listener->port);
 			nopoll_conn_shutdown (listener);
 			nopoll_ctx_unregister_conn (ctx, listener);
+			return;
 		} /* end if */
 	} /* end if */
 
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Connection received and accepted from %s:%s", listener->host, listener->port);
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Connection received and accepted from %s:%s (conn refs: %d, ctx refs: %d)", 
+		    listener->host, listener->port, listener->refs, ctx->refs);
 
 	return;
 }
@@ -192,6 +194,21 @@ void nopoll_loop_init (noPollCtx * ctx)
 }
 
 /** 
+ * @brief Flag to stop the current loop implemented (if any) on the provided context.
+ *
+ * @param ctx The context where the loop is being done, and wanted to
+ * be stopped.
+ *
+ */
+void nopoll_loop_stop (noPollCtx * ctx)
+{
+	if (! ctx)
+		return;
+	ctx->keep_looping = nopoll_false;
+	return;
+} /* end if */
+
+/** 
  * @brief Allows to implement a wait over all connections registered
  * under the provided context during the provided timeout until
  * something is detected meaningful to the user, calling to the action
@@ -225,7 +242,10 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 	if (timeout > 0)
 		gettimeofday (&start, NULL);
 	
-	while (nopoll_true) {
+	/* set to keep looping everything this function is called */
+	ctx->keep_looping = nopoll_true;
+
+	while (ctx->keep_looping) {
 		/* ok, now implement wait operation */
 		ctx->io_engine->clear (ctx, ctx->io_engine->io_object);
 		
@@ -259,6 +279,9 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 				break;
 		} /* end if */
 	} /* end while */
+
+	/* release engine */
+	nopoll_io_release_engine (ctx->io_engine);
 
 	return 0;
 }
