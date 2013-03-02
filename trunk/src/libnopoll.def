@@ -45,9 +45,11 @@ nopoll_conn_sock_connect
 nopoll_conn_socket
 nopoll_conn_unref
 nopoll_ctx_conns
+nopoll_ctx_exit
 nopoll_ctx_foreach_conn
 nopoll_ctx_new
 nopoll_ctx_ref
+nopoll_ctx_ref_count
 nopoll_ctx_register_conn
 nopoll_ctx_set_on_accept
 nopoll_ctx_set_on_msg
@@ -84,6 +86,7 @@ nopoll_loop_process
 nopoll_loop_process_data
 nopoll_loop_process_listener
 nopoll_loop_register
+nopoll_loop_stop
 nopoll_loop_wait
 nopoll_msg_get_payload
 nopoll_msg_get_payload_size

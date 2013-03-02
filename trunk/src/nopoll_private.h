@@ -64,6 +64,8 @@ struct _noPollCtx {
 	nopoll_bool     not_executed_color;
 	nopoll_bool     debug_color_enabled;
 
+	nopoll_bool     keep_looping;
+
 	/** 
 	 * @internal noPollConn connection timeout.
 	 */

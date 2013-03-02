@@ -3,19 +3,123 @@
  ** See license.txt or http://www.aspl.es/nopoll
  **/
 
+function testBigMsg () {
+    log ("info", "Connecting to " + this.host + ":" + this.port);
+    var socket = new WebSocket ("ws://" + this.host + ":" + this.port);
+    socket.test = this;
+
+    socket.onopen = testBigMsg.Result;
+    socket.onclose = function (event) {
+	log ("error", "Connection error. Unable to connect to: " + event.target.url + ". Is a server running on that location or the browser is able to resolve that name?" );
+    };
+
+};
+
+testBigMsg.Result = function (event) {
+    /* get socket */
+    var socket = event.target;
+    socket.onclose = null;
+
+    /* send a really big message */
+    socket.onmessage = testBigMsg.Reply;
+
+    console.log ("Sending content with UTF-8");
+    socket.msg = " klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw";
+    socket.send (socket.msg);
+    console.log ("Content sent");
+
+    return;
+};
+
+testBigMsg.Reply = function (event) {
+
+    var socket = event.target;
+
+    /* check reply */
+
+    socket.close ();
+
+    /* next test */
+    socket.test.nextTest ();
+
+    return;
+};
+
+function testRequestReply () {
+
+    log ("info", "Connecting to " + this.host + ":" + this.port);
+    var socket = new WebSocket ("ws://" + this.host + ":" + this.port);
+    socket.test = this;
+
+    socket.onopen = testRequestReply.Result;
+    socket.onclose = function (event) {
+	log ("error", "Connection error. Unable to connect to: " + event.target.url + ". Is a server running on that location or the browser is able to resolve that name?" );
+    };
+
+};
+
+testRequestReply.Result = function (event) {
+
+    var socket = event.target;
+    socket.onclose = null;
+
+    /* send content and wait for the reply */
+    socket.onmessage = testRequestReply.Reply;
+
+    socket.msg = "This is a test message..";
+    socket.send (socket.msg);
+};
+
+testRequestReply.Reply = function (event) {
+
+    /* get the socket */
+    var socket = event.target;
+    var msg    = event.data;
+
+    if (msg != socket.msg) {
+	log ("error", "Expected to find a different message, but found: " + msg);
+	return;
+    } /* end if */
+
+    log ("info", "Message received, nice!");
+
+    /* close the connection */
+    socket.close ();
+
+    var test   = socket.test;
+    test.nextTest ();
+
+    return;
+};
+
 
 /******* BEGIN: testConnect ******/
 function testConnect () {
 
     log ("info", "Connecting to " + this.host + ":" + this.port);
+    var socket = new WebSocket ("ws://" + this.host + ":" + this.port);
+
+    socket.test = this;
+
+    socket.onopen = testConnect.Result;
+    socket.onclose = function (event) {
+	log ("error", "Connection error. Unable to connect to: " + event.target.url + ". Is a server running on that location or the browser is able to resolve that name?" );
+    };
 
     return true;
 }
 
-testConnect.Result = function (conn) {
+testConnect.Result = function (event) {
+
+    log ("info", "Connection received");
+    var socket = event.target;
+    socket.onclose = null;
+
+    /* close the socket */
+    socket.close ();
 
     /* call for the next test */
-    this.nextTest ();
+    socket.test.nextTest ();
 
     return true;
 };
@@ -33,6 +137,33 @@ function testWebSocketAvailable () {
     /* engine available */
     this.nextTest ();
     return true;
+};
+
+function doConnection (uri, onopen, timeout) {
+
+    var socket = new WebSocket (uri);
+    socket.onopen = onopen;
+    socket.onclose = function (event) {
+
+    };
+
+    /* default timeout of 3 seconds */
+    if (! timeout)
+	timeout = 3000;
+
+    socket._interval = setInterval (function () {
+	/* clear interval */
+	clearInterval (socket._interval);
+
+	/* check if the connection was ok */
+	if (socket.readyState == 1)
+	    return;
+
+	var result = {};
+	onopen (result);
+    }, timeout);
+
+    return socket;
 };
 
 /**
@@ -104,7 +235,9 @@ RegressionTest.prototype.nextTest = function () {
  * associated test to show */
 RegressionTest.prototype.tests = [
     {name: "Check if Websocket is available",           testHandler: testWebSocketAvailable},
-    {name: "Websocket basic connection test",           testHandler: testConnect}
+    {name: "Websocket basic connection test",           testHandler: testConnect},
+    {name: "Websocket send basic data (request/reply)", testHandler: testRequestReply},
+    {name: "Websocket send more content (big messages)", testHandler: testBigMsg}
 ];
 
 
@@ -257,7 +390,7 @@ function prepareTest () {
     dojo.byId ("host").value = location.hostname;
 
     /* configure default connection port value */
-    dojo.byId ("port").value = "44010";
+    dojo.byId ("port").value = "1234";
 
     /* fill all tests available */
     var tests              = RegressionTest.prototype.tests;

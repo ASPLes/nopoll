@@ -112,6 +112,7 @@ nopoll_bool    nopoll_ctx_ref (noPollCtx * ctx)
 	return nopoll_true;
 }
 
+
 /** 
  * @brief allows to release a reference acquired to the provided
  * noPoll context.
@@ -120,8 +121,7 @@ nopoll_bool    nopoll_ctx_ref (noPollCtx * ctx)
  */
 void           nopoll_ctx_unref (noPollCtx * ctx)
 {
-	if (ctx == NULL)
-		return;
+	nopoll_return_if_fail (ctx, ctx);
 
 	/* acquire mutex here */
 	ctx->refs--;
@@ -130,7 +130,7 @@ void           nopoll_ctx_unref (noPollCtx * ctx)
 		return;
 	}
 	/* release mutex here */
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Releasing no poll context %p (%d)", ctx, ctx->refs);
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Releasing no poll context %p (%d, conns: %d)", ctx, ctx->refs);
 
 	/* release connection */
 	nopoll_free (ctx->conn_list);
@@ -140,19 +140,38 @@ void           nopoll_ctx_unref (noPollCtx * ctx)
 }
 
 /** 
+ * @brief Allows to get current reference counting for the provided
+ * context.
+ *
+ * @param ctx The context the reference counting is being requested.
+ *
+ * @return The reference counting or -1 if it fails.
+ */
+int            nopoll_ctx_ref_count (noPollCtx * ctx)
+{
+	if (! ctx)
+		return -1;
+
+	return ctx->refs;
+}
+
+/** 
  * @internal Function used to register the provided connection on the
  * provided context.
  *
  * @param ctx The context where the connection will be registered.
  *
  * @param conn The connection to be registered.
+ *
+ * @return nopoll_true if the connection was registered, otherwise
+ * nopoll_false is returned.
  */
-void           nopoll_ctx_register_conn (noPollCtx  * ctx, 
-					 noPollConn * conn)
+nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx, 
+						noPollConn * conn)
 {
 	int iterator;
 
-	nopoll_return_if_fail (ctx, ctx && conn);
+	nopoll_return_val_if_fail (ctx, ctx && conn, nopoll_false);
 
 	/* acquire mutex here */
 	conn->id = ctx->conn_id;
@@ -172,14 +191,13 @@ void           nopoll_ctx_register_conn (noPollCtx  * ctx,
 			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "registered connection id %d, role: %d", conn->id, conn->role);
 
 			/* acquire reference */
-			ctx->refs++;
+			nopoll_ctx_ref (ctx);
 			
 			/* acquire a reference to the conection */
 			nopoll_conn_ref (conn);
 
 			/* release mutex here */
-
-			return;
+			return nopoll_true;
 		}
 		
 		iterator++;
@@ -191,7 +209,7 @@ void           nopoll_ctx_register_conn (noPollCtx  * ctx,
 	ctx->conn_list = nopoll_realloc (ctx->conn_list, sizeof (noPollConn *) * (ctx->conn_length));
 	if (ctx->conn_list == NULL) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "General connection registration error, memory acquisition failed..");
-		return;
+		return nopoll_false;
 	} /* end if */
 	
 	/* clear new positions */
@@ -205,9 +223,7 @@ void           nopoll_ctx_register_conn (noPollCtx  * ctx,
 	/* release mutex here */
 
 	/* ok, now register connection because we have memory */
-	nopoll_ctx_register_conn (ctx, conn);
-
-	return;
+	return nopoll_ctx_register_conn (ctx, conn);
 }
 
 /** 
