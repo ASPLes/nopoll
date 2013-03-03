@@ -136,6 +136,12 @@ int main (int argc, char ** argv)
 		return -1;
 	} /* end if */
 
+	/* configure certificates to be used by this listener */
+	if (! nopoll_listener_set_certificate (listener2, "test-certificate.crt", "test-private.key", NULL)) {
+		printf ("ERROR: unable to configure certificates for TLS websocket..\n");
+		return -1;
+	}
+
 	/* set on message received */
 	nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);
 	

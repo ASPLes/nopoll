@@ -313,7 +313,7 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res)
 	case SSL_ERROR_WANT_WRITE:
 	case SSL_ERROR_WANT_READ:
 	case SSL_ERROR_WANT_X509_LOOKUP:
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL_read returned that isn't ready to read: retrying");
+		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL_read returned that isn't ready to read: retrying"); */
 		return -2;
 	case SSL_ERROR_SYSCALL:
 		if(res < 0) { /* not EOF */
@@ -350,15 +350,13 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res)
 int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 {
 	int res;
-
-retry:
 	/* call to read content */
 	res = SSL_read (conn->ssl, buffer, buffer_size);
+	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: received %d bytes..", res); */
 
 	/* call to handle error */
 	res = __nopoll_conn_tls_handle_error (conn, res);
-	if (res == -2)
-		goto retry;
+	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "  SSL: after procesing error %d bytes..", res); */
 	return res;
 }
 
@@ -369,14 +367,13 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 {
 	int res;
 
-retry:
 	/* call to read content */
 	res = SSL_write (conn->ssl, buffer, buffer_size);
+	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: sent %d bytes (requested: %d)..", res, buffer_size); */
 
 	/* call to handle error */
 	res = __nopoll_conn_tls_handle_error (conn, res);
-	if (res == -2)
-		goto retry;
+	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "   SSL: after processing error, sent %d bytes (requested: %d)..",  res, buffer_size); */
 	return res;
 }
 
@@ -496,10 +493,10 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
  
 			switch (ssl_error) {
 			case SSL_ERROR_WANT_READ:
-				nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because read wanted");
+				/* nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because read wanted"); */
 				break;
 			case SSL_ERROR_WANT_WRITE:
-				nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because write wanted");
+				/* nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because write wanted"); */
 				break;
 			case SSL_ERROR_SYSCALL:
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "syscall error while doing TLS handshake, ssl error (code:%d)",
@@ -512,7 +509,10 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 					    ssl_error, ERR_error_string (ssl_error, NULL));
 				return NULL;
 			} /* end switch */
+
 		} /* end while */
+
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Client TLS handshake finished, configuring I/O handlers");
 
 		/* check remote certificate (if it is present) */
 		server_cert = SSL_get_peer_certificate (conn->ssl);
@@ -526,6 +526,8 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 		/* configure default handlers */
 		conn->receive = nopoll_conn_tls_receive;
 		conn->send    = nopoll_conn_tls_send;
+
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "TLS I/O handlers configured");
 	} /* end if */
 
 	/* call to send content */
@@ -534,6 +536,8 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 		nopoll_conn_shutdown (conn);
 		conn = NULL;
 	} /* end if */
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Web socket initial client handshake sent");
 
 	/* release content */
 	nopoll_free (content);
@@ -910,6 +914,10 @@ void nopoll_conn_unref (noPollConn * conn)
 	nopoll_free (conn->protocols);
 	nopoll_free (conn->get_url);
 
+	/* release TLS certificates */
+	nopoll_free (conn->certificate_file);
+	nopoll_free (conn->private_file);
+
 	/* release handshake internal data */
 	if (conn->handshake) {
 		nopoll_free (conn->handshake->websocket_key);
@@ -1029,6 +1037,20 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 
 }
 
+void __nopoll_pack_content (char * buffer, int start, int bytes)
+{
+	int iterator = 0;
+	while (iterator < bytes) {
+		/* copy bytes to the begining of the array */
+		buffer[iterator] = buffer[start + iterator];
+		
+		/* next position */
+		iterator++;
+	} /* end while */
+
+	return;
+}
+
 /** 
  * @internal Function used to read bytes from the wire..
  */
@@ -1036,7 +1058,33 @@ int         nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen
 {
 	int         nread;
 
-	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling to get %d from connection..", maxlen); */
+	if (conn->pending_buf_bytes > 0) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling with bytes we can reuse (%d), requested: %d",
+			    conn->pending_buf_bytes, maxlen);
+
+		if (conn->pending_buf_bytes > maxlen) {
+			/* we have more in the buffer to serve than
+			 * requested, ok, copy into the buffer and
+			 * pack */
+
+			memcpy (buffer, conn->pending_buf, maxlen);
+			__nopoll_pack_content (conn->pending_buf, maxlen, conn->pending_buf_bytes - maxlen);
+			return maxlen;
+		} 
+
+		/* ok, we don't have enough bytes to serve
+		 * directly, so copy what we have */
+		memcpy (buffer, conn->pending_buf, conn->pending_buf_bytes);
+
+		/* copy number of bytes served to reduce next request */
+		nread = conn->pending_buf_bytes;
+		conn->pending_buf_bytes = 0;
+
+		/* call again to get bytes reducing the request in the
+		 * amount of bytes served */
+		return nopoll_conn_receive (conn, buffer + nread, maxlen - nread) + nread;
+		
+	} /* end if */
 
  keep_reading:
 	/* clear buffer */
@@ -1530,7 +1578,7 @@ void nopoll_conn_complete_handshake (noPollConn * conn)
 	if (conn->handshake_ok)
 		return;
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Checking to complete connection id %d handshake, role %d", conn->id, conn->role);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Checking to complete connection id %d WebSocket handshake, role %d", conn->id, conn->role);
 
 	/* ensure handshake object is created */
 	if (conn->handshake == NULL)
@@ -1617,10 +1665,57 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	char        buffer[20];
 	int         bytes;
 	noPollMsg * msg;
+	int         ssl_error;
 
 	if (conn == NULL)
 		return NULL;
 	
+	/* check for accept SSL connection */
+	if (conn->pending_ssl_accept) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received connect over a connection (id %d) with TLS handshake pending to be finished, processing..",
+			    conn->id);
+
+		/* get ssl error */
+		ssl_error = SSL_accept (conn->ssl);
+		if (ssl_error == -1) {
+			/* get error */
+			ssl_error = SSL_get_error (conn->ssl, -1);
+ 
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "accept function have failed (for listener side) ssl_error=%d : dumping error stack..", ssl_error);
+ 
+			switch (ssl_error) {
+			case SSL_ERROR_WANT_READ:
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because read wanted");
+				return NULL;
+			case SSL_ERROR_WANT_WRITE:
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because write wanted");
+				return NULL;
+			default:
+				break;
+			} /* end switch */
+
+			/* TLS-fication process have failed */
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "there was an error while accepting TLS connection");
+			nopoll_conn_shutdown (conn);
+			return NULL;
+		} /* end if */
+
+		/* ssl accept */
+		conn->pending_ssl_accept = nopoll_false;
+		nopoll_conn_set_sock_block (conn->session, nopoll_false);
+
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Completed TLS operation from %s:%s (conn id %d)",
+			    conn->host, conn->port, conn->id);
+
+		/* configure default handlers */
+		conn->receive = nopoll_conn_tls_receive;
+		conn->send    = nopoll_conn_tls_send;
+
+		/* report NULL because this was a call to complete TLS */
+		return NULL;
+		
+	} /* end if */
+
 	/* check connection status */
 	if (! conn->handshake_ok) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Connection id %d handshake is not complete, running..", conn->id);
@@ -1669,14 +1764,19 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		return NULL;
 	} /* end if */
 
-	if (bytes != 2) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Expected to receive complete websocket frame header but found only %d bytes, closing session: %d",
+	if (bytes != 2) { 
+		/* ok, store content read into the pending buffer for next call */
+		memcpy (conn->pending_buf + conn->pending_buf_bytes, buffer, bytes);
+		conn->pending_buf_bytes += bytes;
+		
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Expected to receive complete websocket frame header but found only %d bytes, saving to reuse later",
 			    bytes, conn->id);
-		nopoll_conn_shutdown (conn);
 		return NULL;
 	} /* end if */
 
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received %d bytes for websocket header", bytes);
+	nopoll_show_byte (conn->ctx, buffer[0], "header[0]");
+	nopoll_show_byte (conn->ctx, buffer[1], "header[1]");
 
 	/* build next message */
 	msg = nopoll_new (noPollMsg, 1);
@@ -1757,20 +1857,14 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		msg->payload_size |= buffer[5];
 	} /* end if */
 
-	/* get more bytes */
-	if (msg->is_masked) {
-		bytes = nopoll_conn_receive (conn, (noPollPtr) msg->mask, 4);
-		if (bytes != 4) {
-			nopoll_msg_unref (msg);
-			nopoll_conn_shutdown (conn);
-			return NULL; 
-		} /* end if */
-		
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received mask value = %d", nopoll_get_32bit (msg->mask));
-	} /* end if */
-
 	if (msg->op_code == NOPOLL_PONG_FRAME) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PONG received over connection id=%d", conn->id);
+		nopoll_msg_unref (msg);
+		return NULL;
+	} /* end if */
+
+	if (msg->op_code == NOPOLL_CLOSE_FRAME) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Proper connection close frame received id=%d, shutting down", conn->id);
 		nopoll_msg_unref (msg);
 		return NULL;
 	} /* end if */
@@ -1783,6 +1877,18 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		nopoll_conn_send_pong (conn);
 
 		return NULL;
+	} /* end if */
+
+	/* get more bytes */
+	if (msg->is_masked) {
+		bytes = nopoll_conn_receive (conn, (noPollPtr) msg->mask, 4);
+		if (bytes != 4) {
+			nopoll_msg_unref (msg);
+			nopoll_conn_shutdown (conn);
+			return NULL; 
+		} /* end if */
+		
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received mask value = %d", nopoll_get_32bit (msg->mask));
 	} /* end if */
 
 	/* check payload size */
@@ -2237,44 +2343,55 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * conn)
 
 		/* accept TLS connection */
 		listener->ssl_ctx  = SSL_CTX_new (TLSv1_server_method ());
+
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate file: %s", conn->certificate_file);
 		if (SSL_CTX_use_certificate_file (listener->ssl_ctx, conn->certificate_file, SSL_FILETYPE_PEM) <= 0) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
-				    "there was an error while setting certificate file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_certificate_file function.");
+				    "there was an error while setting certificate file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_certificate_file function. Tried certificate file: %s", conn->certificate_file);
 			/* dump error stack */
 			nopoll_conn_shutdown (listener);
-			return;
+			return NULL;
 		} /* end if */
 
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate key: %s", conn->private_file);
 		if (SSL_CTX_use_PrivateKey_file (listener->ssl_ctx, conn->private_file, SSL_FILETYPE_PEM) <= 0) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
-				    "there was an error while setting private file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_PrivateKey_file function.");
+				    "there was an error while setting private file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_PrivateKey_file function. Tried private file: %s", conn->private_file);
 			/* dump error stack */
 			nopoll_conn_shutdown (listener);
-			return;
+			return NULL;
 		}
 
 		/* check for private key and certificate file to match. */
 		if (! SSL_CTX_check_private_key (listener->ssl_ctx)) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
-				    "seems that certificate file and private key doesn't match!, unable to start TLS profile. Failure found at SSL_CTX_check_private_key function.");
+				    "seems that certificate file and private key doesn't match!, unable to start TLS profile. Failure found at SSL_CTX_check_private_key function. Used certificate %s, and key: %s",
+				    conn->certificate_file, conn->private_file);
 			/* dump error stack */
 			nopoll_conn_shutdown (listener);
-			return;
+			return NULL;
 		} /* end if */
 
-		listener->ssl = SSL_new (ssl_ctx);       
+		listener->ssl = SSL_new (listener->ssl_ctx);       
 		if (listener->ssl == NULL) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "error while creating TLS transport, SSL_new (%p) returned NULL", listener->ssl_ctx);
 			nopoll_conn_shutdown (listener);
-			return;
+			return NULL;
 		} /* end if */
 
 		/* set the file descriptor */
-		SSL_set_fd (listener->ssl, socket);
+		SSL_set_fd (listener->ssl, listener->session);
 
-		
+		/* don't complete here the operation but flag it as
+		 * pending */
+		listener->pending_ssl_accept = nopoll_true;
+		nopoll_conn_set_sock_block (listener->session, nopoll_false);
+
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Prepared TLS session to be activated on next reads (conn id %d)", listener->id);
 		
 	} /* end if */
+
+	
 		
 
 	return listener;
