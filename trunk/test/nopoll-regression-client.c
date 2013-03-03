@@ -204,7 +204,7 @@ nopoll_bool test_01 (void) {
 	/* reinit again */
 	ctx = create_ctx ();
 
-	/* call to create a listener */
+	/* call to create a connection */
 	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
@@ -267,7 +267,7 @@ nopoll_bool test_02 (void) {
 	/* reinit again */
 	ctx = create_ctx ();
 
-	/* call to create a listener */
+	/* call to create a connection */
 	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
@@ -336,7 +336,7 @@ nopoll_bool test_03 (void) {
 	/* reinit again */
 	ctx = create_ctx ();
 
-	/* call to create a listener */
+	/* call to create a connection */
 	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
@@ -398,7 +398,7 @@ nopoll_bool test_04 (int chunk_size) {
 	/* reinit again */
 	ctx = create_ctx ();
 
-	/* call to create a listener */
+	/* call to create a connection */
 	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
@@ -467,7 +467,7 @@ nopoll_bool test_05 (void) {
 	/* reinit again */
 	ctx = create_ctx ();
 
-	/* call to create a listener */
+	/* call to create a connection */
 	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
@@ -514,7 +514,7 @@ nopoll_bool test_06 (void) {
 	/* reinit again */
 	ctx = create_ctx ();
 
-	/* call to create a listener */
+	/* call to create a connection */
 	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1235", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
@@ -551,7 +551,7 @@ nopoll_bool test_07 (void) {
 	/* reinit again */
 	ctx = create_ctx ();
 
-	/* call to create a listener */
+	/* call to create a connection */
 	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1235", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
@@ -574,6 +574,34 @@ nopoll_bool test_07 (void) {
 	printf ("Test 07: testing sending TLS content over the wire..\n");
 	if (! test_sending_and_check_echo (conn, "Test 07", "This is a test"))
 		return nopoll_false;
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+nopoll_bool test_08 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * conn;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to connect to TLS port expecting non-TLS protocol */
+	conn = nopoll_conn_new (ctx, "localhost", "1235", NULL, NULL, NULL, NULL);
+
+	/* wait a bit 100ms */
+	nopoll_sleep (100000);
+
+	if (nopoll_conn_is_ready (conn)) {
+		printf ("ERROR: Expected to FAILING connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
 
 	/* finish connection */
 	nopoll_conn_close (conn);
@@ -707,7 +735,12 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
-	/* test TLS to a socket without TLS */
+	if (test_08 ()) {
+		printf ("Test 08: test normal connect to TLS port [   OK   ]\n");
+	} else {
+		printf ("Test 08: test normal connect to TLS port [ FAILED ]\n");
+		return -1;
+	}
 
 	/* upload a file to the server ...*/
 
@@ -747,6 +780,8 @@ int main (int argc, char ** argv)
 
 	/* test wrong UTF-8 content received on text frames */
 
+	/* call to cleanup */
+	nopoll_cleanup_library ();
 	printf ("All tests ok!!\n");
 
 
