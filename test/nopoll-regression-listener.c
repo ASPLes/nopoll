@@ -150,10 +150,15 @@ int main (int argc, char ** argv)
 
 	/* unref connection */
 	nopoll_conn_close (listener);
+	nopoll_conn_close (listener2);
 
 	/* finish */
 	printf ("Listener: finishing references: %d\n", nopoll_ctx_ref_count (ctx));
 	nopoll_ctx_unref (ctx);
+
+	/* call to release all pending memory allocated as a
+	 * consequence of using nopoll (especially TLS) */
+	nopoll_cleanup_library ();
 
 	return 0;
 }

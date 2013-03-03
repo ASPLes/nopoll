@@ -649,3 +649,25 @@ int    nopoll_get_32bit (const char * buffer)
 	return part1 | part2 | part3 | part4;
 }
 
+extern nopoll_bool __nopoll_tls_was_init;
+
+/** 
+ * @brief Optional function that can be called at the very end of the
+ * noPoll usage to ensure all memory allocated by the library is
+ * released so debugging operations are easier.
+ *
+ * It is not required to call this function to get proper operation by
+ * the library. It is provided, especially due to TLS, to release all
+ * internal memory that may be allocated.
+ */
+void nopoll_cleanup_library (void)
+{
+	
+	if (__nopoll_tls_was_init) {
+		EVP_cleanup ();
+		CRYPTO_cleanup_all_ex_data ();
+		ERR_free_strings ();
+	} /* end if */
+	
+	return;
+} /* end if */
