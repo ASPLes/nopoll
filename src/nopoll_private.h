@@ -208,10 +208,23 @@ struct _noPollConn {
 	 * reception.
 	 */
 	nopoll_bool   tls_on;
+	/** 
+	 * @internal Flag that indicates that the provided session
+	 * must call to accept the TLS session before proceeding.
+	 */
+	nopoll_bool   pending_ssl_accept;
 
 	/* SSL support */
 	SSL_CTX        * ssl_ctx;
 	SSL            * ssl;
+
+	/* certificates */
+	char           * certificate_file;
+	char           * private_file;
+
+	/* pending buffer */
+	char             pending_buf[100];
+	int              pending_buf_bytes;
 };
 
 struct _noPollIoEngine {

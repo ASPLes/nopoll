@@ -3,6 +3,97 @@
  ** See license.txt or http://www.aspl.es/nopoll
  **/
 
+function testTLSRequestReply () {
+
+    var tls_port = Number(this.port) + 1;
+
+    log ("info", "Connecting to " + this.host + ":" + tls_port);
+    var socket = new WebSocket ("wss://" + this.host + ":" + tls_port);
+    socket.test = this;
+
+    socket.onopen = testTLSRequestReply.Result;
+    socket.onclose = function (event) {
+	log ("error", "Connection error. Unable to connect to: " + event.target.url + ". Is a server running on that location or the browser is able to resolve that name?" );
+    };
+    socket.onerror = function (event) {
+	log ("error", "Connection error. Unable to connect to: " + event.target.url + ". Is a server running on that location or the browser is able to resolve that name?" );
+    };
+
+};
+
+testTLSRequestReply.Result = function (event) {
+
+    var socket = event.target;
+    socket.onclose = null;
+
+    /* send content and wait for the reply */
+    socket.onmessage = testTLSRequestReply.Reply;
+
+    socket.msg = "This is a test message..";
+    socket.send (socket.msg);
+};
+
+testTLSRequestReply.Reply = function (event) {
+
+    /* get the socket */
+    var socket = event.target;
+    var msg    = event.data;
+
+    if (msg != socket.msg) {
+	log ("error", "Expected to find a different message, but found: " + msg);
+	return;
+    } /* end if */
+
+    log ("info", "Message received (TLS), nice!");
+
+    /* close the connection */
+    socket.close ();
+
+    var test   = socket.test;
+    test.nextTest ();
+
+    return;
+};
+
+/******* BEGIN: testTLSConnect ******/
+function testTLSConnect () {
+
+    var tls_port = Number(this.port) + 1;
+
+    log ("info", "Connecting to " + this.host + ":" + tls_port);
+    var socket = new WebSocket ("wss://" + this.host + ":" + tls_port);
+
+    socket.test = this;
+
+    socket.onopen = testTLSConnect.Result;
+    socket.onclose = function (event) {
+	log ("error", "Connection error. Unable to connect to: " + event.target.url + ". Is a server running on that location or the browser is able to resolve that name?" );
+    };
+
+    return true;
+}
+
+testTLSConnect.Result = function (event) {
+
+    log ("info", "Connection TLS received");
+    var socket = event.target;
+    socket.onclose = null;
+
+    if (socket.readyState != 1) {
+	log ("error", "Expected a ready state of 1 (OPEN) but found: " + socket.readyState);
+	return false;
+    }
+
+    /* close the socket */
+    socket.close ();
+
+    /* call for the next test */
+    socket.test.nextTest ();
+
+    return true;
+};
+/******* END: testTLSConnect ******/
+
 function testBigMsg () {
     log ("info", "Connecting to " + this.host + ":" + this.port);
     var socket = new WebSocket ("ws://" + this.host + ":" + this.port);
@@ -114,6 +205,11 @@ testConnect.Result = function (event) {
     log ("info", "Connection received");
     var socket = event.target;
     socket.onclose = null;
+
+    if (socket.readyState != 1) {
+	log ("error", "Expected a ready state of 1 (OPEN) but found: " + socket.readyState);
+	return false;
+    }
 
     /* close the socket */
     socket.close ();
@@ -234,10 +330,12 @@ RegressionTest.prototype.nextTest = function () {
 /* list of regression test available with its
  * associated test to show */
 RegressionTest.prototype.tests = [
-    {name: "Check if Websocket is available",           testHandler: testWebSocketAvailable},
-    {name: "Websocket basic connection test",           testHandler: testConnect},
-    {name: "Websocket send basic data (request/reply)", testHandler: testRequestReply},
-    {name: "Websocket send more content (big messages)", testHandler: testBigMsg}
+    {name: "Check if Websocket is available",                  testHandler: testWebSocketAvailable},
+    {name: "Websocket basic connection test",                  testHandler: testConnect},
+    {name: "Websocket send basic data (request/reply)",        testHandler: testRequestReply},
+    {name: "Websocket send more content (big messages)",       testHandler: testBigMsg},
+    {name: "TLS: Websocket basic connect",                     testHandler: testTLSConnect},
+    {name: "TLS: Websocket send basic data (request/reply)",   testHandler: testTLSRequestReply}
 ];
 
 

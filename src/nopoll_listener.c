@@ -201,6 +201,61 @@ noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
 }
 
 /** 
+ * @brief Allows to configure the TLS certificate and key to be used
+ * on the provided connection.
+ *
+ * @param ctx The context where the configuration operation will take place.
+ *
+ * @param certificate The path to the public certificate file (PEM
+ * format) to be used for every TLS connection received under the
+ * provided listener.
+ *
+ * @param private The path to the key file (PEM format) to be used for
+ * every TLS connection received under the provided listener.
+ *
+ * @param chain_file The path to additional chain certificates (PEM
+ * format). You can safely pass here a NULL value.
+ *
+ * @return nopoll_true if the certificates were configured, otherwise
+ * nopoll_false is returned.
+ */
+nopoll_bool           nopoll_listener_set_certificate (noPollConn * listener,
+						       const char * certificate,
+						       const char * private,
+						       const char * chain_file)
+{
+	FILE * handle;
+
+	if (! listener || ! certificate || ! private)
+		return nopoll_false;
+
+	/* check certificate file */
+	handle = fopen (certificate, "r");
+	if (! handle) {
+		nopoll_log (listener->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to open certificate file from %s", certificate);
+		return nopoll_false;
+	} /* end if */
+	fclose (handle);
+
+	/* check private file */
+	handle = fopen (private, "r");
+	if (! handle) {
+		nopoll_log (listener->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to open private key file from %s", private);
+		return nopoll_false;
+	} /* end if */
+	fclose (handle);
+
+	/* copy certificates to be used */
+	listener->certificate_file = strdup (certificate);
+	listener->private_file     = strdup (private);
+	nopoll_log (listener->ctx, NOPOLL_LEVEL_DEBUG, "Configured certificate: %s, key: %s, for conn id: %d",
+		    listener->certificate_file, listener->private_file, listener->id);
+
+	/* certificates configured */
+	return nopoll_true;
+}
+
+/** 
  * @brief Creates a websocket listener from the socket provided.
  *
  * @param ctx The context where the listener will be associated.
@@ -273,7 +328,7 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 NOPOLL_SOCKET nopoll_listener_accept (NOPOLL_SOCKET server_socket)
 {
 	struct sockaddr_in inet_addr;
-#if defined(AXL_OS_WIN32)
+#if defined(NOPOLL_OS_WIN32)
 	int               addrlen;
 #else
 	socklen_t         addrlen;

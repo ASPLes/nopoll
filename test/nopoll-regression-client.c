@@ -40,6 +40,40 @@
 
 nopoll_bool debug = nopoll_false;
 
+nopoll_bool test_sending_and_check_echo (noPollConn * conn, const char * label, const char * msg)
+{
+	char  buffer[1024];
+	int   length = strlen (msg);
+	int   bytes_read;
+
+	/* send content text(utf-8) */
+	printf ("%s: sending content..\n", label);
+	if (nopoll_conn_send_text (conn, msg, length) != length) {
+		printf ("ERROR: Expected to find proper send operation..\n");
+		return nopoll_false;
+	}
+
+	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
+	bytes_read = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 3000);
+	
+	if (bytes_read != length) {
+		printf ("ERROR: expected to find 14 bytes but found %d..\n", bytes_read);
+		return nopoll_false;
+	} /* end if */
+
+	/* check content received */
+	if (! nopoll_cmp (buffer, msg)) {
+		printf ("ERROR: expected to find message 'This is a test' but something different was received: '%s'..\n",
+			buffer);
+		return nopoll_false;
+	} /* end if */
+
+	printf ("%s: received reply and echo matches..\n", label);
+
+	/* return that we sent and received the echo reply */
+	return nopoll_true;
+}
+
 noPollCtx * create_ctx (void) {
 	
 	/* create a context */
@@ -510,6 +544,47 @@ nopoll_bool test_06 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_07 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * conn;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a listener */
+	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1235", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* check if the connection already finished its connection
+	   handshake */
+	while (! nopoll_conn_is_ready (conn)) {
+
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR (4): expected to find proper connection handshake finished, but found it is still not prepared..\n");
+			return nopoll_false;
+		} /* end if */
+
+		/* wait a bit 10ms */
+		nopoll_sleep (10000);
+	} /* end if */
+
+	printf ("Test 07: testing sending TLS content over the wire..\n");
+	if (! test_sending_and_check_echo (conn, "Test 07", "This is a test"))
+		return nopoll_false;
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -623,6 +698,13 @@ int main (int argc, char ** argv)
 		printf ("Test 06: testing basic TLS connect [   OK   ]\n");
 	} else {
 		printf ("Test 06: testing basic TLS connect [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_07 ()) {
+		printf ("Test 07: testing TLS request/reply [   OK   ]\n");
+	} else {
+		printf ("Test 07: testing TLS request/reply [ FAILED ]\n");
 		return -1;
 	}
 

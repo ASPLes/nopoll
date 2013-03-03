@@ -53,6 +53,11 @@ noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
 					   const char * host,
 					   const char * port);
 
+nopoll_bool       nopoll_listener_set_certificate (noPollConn * listener,
+						   const char * certificate,
+						   const char * private,
+						   const char * chain_file);
+
 noPollConn      * nopoll_listener_from_socket (noPollCtx      * ctx,
 					       NOPOLL_SOCKET    session);
 
