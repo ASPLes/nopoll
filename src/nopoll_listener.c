@@ -1,6 +1,6 @@
 /*
  *  LibNoPoll: A websocket library
- *  Copyright (C) 2011 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2013 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -172,6 +172,35 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 }
 
 /** 
+ * @brief Allows to create a new WebSocket listener but expecting the
+ * incoming connection to be under TLS supervision. The function works
+ * like \ref nopoll_listener_new.
+ *
+ * @param host The hostname or address interface to bind on.
+ *
+ * @param port The port where to listen, or NULL to use default port: 80.
+ *
+ * @return A reference to a \ref noPollConn object representing the
+ * listener or NULL if it fails.
+ */
+noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
+					   const char * host,
+					   const char * port)
+{
+	noPollConn * listener;
+
+	/* call to get listener from base function */
+	listener = nopoll_listener_new (ctx, host, port);
+	if (! listener)
+		return listener;
+
+	/* setup TLS support */
+	listener->tls_on = nopoll_true;
+
+	return listener;
+}
+
+/** 
  * @brief Creates a websocket listener from the socket provided.
  *
  * @param ctx The context where the listener will be associated.
@@ -184,8 +213,7 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 					    NOPOLL_SOCKET    session)
 {
-	noPollConn * listener;
-
+	noPollConn         * listener;
 	struct sockaddr_in   sin;
 #if defined(NOPOLL_OS_WIN32)
 	/* windows flavors */

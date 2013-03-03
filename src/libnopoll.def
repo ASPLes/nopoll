@@ -1,11 +1,14 @@
 EXPORTS
 __nopoll_conn_get_client_init
+__nopoll_conn_new_common
+__nopoll_conn_tls_handle_error
 __nopoll_ctx_sigpipe_do_nothing
 __nopoll_nonce_init
 nopoll_base64_decode
 nopoll_base64_encode
 nopoll_calloc
 nopoll_cmp
+nopoll_conn_accept
 nopoll_conn_check_mime_header_repeated
 nopoll_conn_close
 nopoll_conn_complete_handshake
@@ -25,6 +28,7 @@ nopoll_conn_get_msg
 nopoll_conn_host
 nopoll_conn_is_ok
 nopoll_conn_is_ready
+nopoll_conn_is_tls_on
 nopoll_conn_mask_content
 nopoll_conn_new
 nopoll_conn_port
@@ -33,6 +37,7 @@ nopoll_conn_read
 nopoll_conn_readline
 nopoll_conn_receive
 nopoll_conn_ref
+nopoll_conn_ref_count
 nopoll_conn_role
 nopoll_conn_send_frame
 nopoll_conn_send_ping
@@ -43,9 +48,11 @@ nopoll_conn_set_sock_tcp_nodelay
 nopoll_conn_shutdown
 nopoll_conn_sock_connect
 nopoll_conn_socket
+nopoll_conn_tls_new
+nopoll_conn_tls_receive
+nopoll_conn_tls_send
 nopoll_conn_unref
 nopoll_ctx_conns
-nopoll_ctx_exit
 nopoll_ctx_foreach_conn
 nopoll_ctx_new
 nopoll_ctx_ref
@@ -76,6 +83,7 @@ nopoll_listener_accept
 nopoll_listener_from_socket
 nopoll_listener_new
 nopoll_listener_sock_listen
+nopoll_listener_tls_new
 nopoll_log
 nopoll_log_color_enable
 nopoll_log_color_is_enabled
@@ -84,7 +92,6 @@ nopoll_log_is_enabled
 nopoll_loop_init
 nopoll_loop_process
 nopoll_loop_process_data
-nopoll_loop_process_listener
 nopoll_loop_register
 nopoll_loop_stop
 nopoll_loop_wait

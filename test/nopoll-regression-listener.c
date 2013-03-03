@@ -1,6 +1,6 @@
 /*
  *  LibNoPoll: A websocket library
- *  Copyright (C) 2011 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2013 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -98,6 +98,7 @@ void __terminate_listener (int value)
 int main (int argc, char ** argv)
 {
 	noPollConn     * listener;
+	noPollConn     * listener2;
 	int              iterator;
 
 	signal (SIGTERM,  __terminate_listener);
@@ -127,6 +128,13 @@ int main (int argc, char ** argv)
 	}
 
 	printf ("noPoll listener started at: %s:%s (refs: %d)..\n", nopoll_conn_host (listener), nopoll_conn_port (listener), nopoll_conn_ref_count (listener));
+
+	/* now start a TLS version */
+	listener2 = nopoll_listener_tls_new (ctx, "localhost", "1235");
+	if (! nopoll_conn_is_ok (listener)) {
+		printf ("ERROR: Expected to find proper listener TLS connection status, but found..\n");
+		return -1;
+	} /* end if */
 
 	/* set on message received */
 	nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);

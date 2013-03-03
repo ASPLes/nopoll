@@ -1,6 +1,6 @@
 /*
  *  LibNoPoll: A websocket library
- *  Copyright (C) 2011 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2013 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -64,53 +64,6 @@ nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 }
 
 /** 
- * @internal Function used by nopool_loop_process to handle new
- * incoming connections.
- */
-void nopoll_loop_process_listener (noPollCtx * ctx, noPollConn * conn)
-{
-	NOPOLL_SOCKET   session;
-	noPollConn    * listener;
-
-	/* recevied a new connection: accept the
-	 * connection and ask the app level to accept
-	 * or not */
-	session = nopoll_listener_accept (conn->session);
-	if (session <= 0) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received invalid socket value from accept(2): %d, error code errno=: %d", 
-			    session, errno);
-		return;
-	} /* end if */
-
-	/* configure non blocking mode */
-	nopoll_conn_set_sock_block (session, nopoll_true);
-	
-	/* create the connection */
-	listener = nopoll_listener_from_socket (ctx, session);
-	if (listener == NULL) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received NULL pointer after calling to create listener from session..");
-		return;
-	} /* end if */
-	
-	/* now check for accept handler */
-	if (ctx->on_accept) {
-		/* call to on accept */
-		if (! ctx->on_accept (ctx, conn, ctx->on_accept_data)) {
-			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "Application level denied accepting connection from %s:%s, closing", 
-				    listener->host, listener->port);
-			nopoll_conn_shutdown (listener);
-			nopoll_ctx_unregister_conn (ctx, listener);
-			return;
-		} /* end if */
-	} /* end if */
-
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Connection received and accepted from %s:%s (conn refs: %d, ctx refs: %d)", 
-		    listener->host, listener->port, listener->refs, ctx->refs);
-
-	return;
-}
-
-/** 
  * @internal Function used to handle incoming data from from the
  * connection and to notify this data on the connection.
  */
@@ -155,7 +108,7 @@ nopoll_bool nopoll_loop_process (noPollCtx * ctx, noPollConn * conn, noPollPtr u
 			break;
 		case NOPOLL_ROLE_MAIN_LISTENER:
 			/* call to handle */
-			nopoll_loop_process_listener (ctx, conn);
+			nopoll_conn_accept (ctx, conn);
 			break;
 		default:
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Found connection with unknown role, closing and dropping");

@@ -1,6 +1,6 @@
 /*
  *  LibNoPoll: A websocket library
- *  Copyright (C) 2011 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2013 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -48,6 +48,10 @@ NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
 noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 				       const char * host,
 				       const char * port);
+
+noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
+					   const char * host,
+					   const char * port);
 
 noPollConn      * nopoll_listener_from_socket (noPollCtx      * ctx,
 					       NOPOLL_SOCKET    session);
