@@ -1,6 +1,6 @@
 /*
  *  LibNoPoll: A websocket library
- *  Copyright (C) 2011 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2013 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -300,45 +300,105 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 				     conn->protocols ? "\r\n" : "");
 }
 
+int __nopoll_conn_tls_handle_error (noPollConn * conn, int res)
+{
+	int ssl_err;
+
+	/* get error returned */
+	ssl_err = SSL_get_error (conn->ssl, res);
+	switch (ssl_err) {
+	case SSL_ERROR_NONE:
+		/* no error, return the number of bytes read */
+		return res;
+	case SSL_ERROR_WANT_WRITE:
+	case SSL_ERROR_WANT_READ:
+	case SSL_ERROR_WANT_X509_LOOKUP:
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL_read returned that isn't ready to read: retrying");
+		return -2;
+	case SSL_ERROR_SYSCALL:
+		if(res < 0) { /* not EOF */
+			if(errno == NOPOLL_EINTR) {
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL read interrupted by a signal: retrying");
+				/* report to retry */
+				return -2;
+			}
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "SSL_read (SSL_ERROR_SYSCALL)");
+			return -1;
+		}
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL socket closed on SSL_read (res=%d, ssl_err=%d, errno=%d)",
+			    res, ssl_err, errno);
+		return res;
+	case SSL_ERROR_ZERO_RETURN: /* close_notify received */
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL closed on SSL_read");
+		return res;
+	case SSL_ERROR_SSL:
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "SSL_read function error (res=%d, ssl_err=%d, errno=%d)",
+			    res, ssl_err, errno);
+		return -1;
+	default:
+		/* nothing to handle */
+		break;
+	}
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "SSL_read/SSL_get_error returned %d", res);
+	return -1;
+	
+}
 
 /** 
- * @brief Creates a new Websocket connection to the provided
- * destination, physically located at host_ip and host_port.
- *
- * @param ctx The Nopoll context to which this new connection will be associated.
- *
- * @param host_ip The websocket server address to connect to.
- *
- * @param host_port The websocket server port to connect to. If NULL
- * is provided, port 80 is used.
- *
- * @param host_name This is the Host: header value that will be
- * sent. This header is used by the websocket server to activate the
- * right virtual host configuration. If null is provided, Host: will
- * use host_ip value.
- *
- * @param get_url As part of the websocket handshake, an url is passed
- * to the remote server inside a GET method. This parameter allows to
- * configure this. If NULL is provided, then / will be used.
- *
- * @param origin Websocket origin to be notified to the server.
- *
- * @param protocols Optional protocols requested to be activated for
- * this connection (an string of list of strings separated by a white
- * space).
+ * @internal Default connection receive until handshake is complete.
  */
-noPollConn * nopoll_conn_new (noPollCtx  * ctx,
-			      const char * host_ip, 
-			      const char * host_port, 
-			      const char * host_name,
-			      const char * get_url, 
-			      const char * protocols,
-			      const char * origin)
+int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
+{
+	int res;
+
+retry:
+	/* call to read content */
+	res = SSL_read (conn->ssl, buffer, buffer_size);
+
+	/* call to handle error */
+	res = __nopoll_conn_tls_handle_error (conn, res);
+	if (res == -2)
+		goto retry;
+	return res;
+}
+
+/** 
+ * @internal Default connection send until handshake is complete.
+ */
+int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
+{
+	int res;
+
+retry:
+	/* call to read content */
+	res = SSL_write (conn->ssl, buffer, buffer_size);
+
+	/* call to handle error */
+	res = __nopoll_conn_tls_handle_error (conn, res);
+	if (res == -2)
+		goto retry;
+	return res;
+}
+
+
+/** 
+ * @internal Internal implementation used to do a connect.
+ */
+noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
+				       nopoll_bool    enable_tls,
+				       const char   * host_ip, 
+				       const char   * host_port, 
+				       const char   * host_name,
+				       const char   * get_url, 
+				       const char   * protocols,
+				       const char   * origin)
 {
 	noPollConn     * conn;
 	NOPOLL_SOCKET    session;
 	char           * content;
 	int              size;
+	int              ssl_error;
+	X509           * server_cert;
 
 	nopoll_return_val_if_fail (ctx, ctx && host_ip, NULL);
 
@@ -413,6 +473,61 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sending websocket client init: %s", content);
 	size = strlen (content);
 
+	/* check for TLS support */
+	if (enable_tls) {
+		/* found TLS connection request, enable it */
+		conn->ssl_ctx  = SSL_CTX_new (TLSv1_client_method ()); 
+		conn->ssl      = SSL_new (conn->ssl_ctx);       
+		if (conn->ssl_ctx == NULL || conn->ssl == NULL) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to create SSL context");
+			nopoll_conn_shutdown (conn);
+			return NULL;
+		} /* end if */
+		
+		/* set socket */
+		SSL_set_fd (conn->ssl, conn->session);
+
+		/* do the initial connect connect */
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "connecting to remote TLS site");
+		while (SSL_connect (conn->ssl) <= 0) {
+		
+			/* get ssl error */
+			ssl_error = SSL_get_error (conn->ssl, -1);
+ 
+			switch (ssl_error) {
+			case SSL_ERROR_WANT_READ:
+				nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because read wanted");
+				break;
+			case SSL_ERROR_WANT_WRITE:
+				nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because write wanted");
+				break;
+			case SSL_ERROR_SYSCALL:
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "syscall error while doing TLS handshake, ssl error (code:%d)",
+					    ssl_error);
+			
+				nopoll_conn_shutdown (conn);
+				return NULL;
+			default:
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "there was an error with the TLS negotiation, ssl error (code:%d) : %s",
+					    ssl_error, ERR_error_string (ssl_error, NULL));
+				return NULL;
+			} /* end switch */
+		} /* end while */
+
+		/* check remote certificate (if it is present) */
+		server_cert = SSL_get_peer_certificate (conn->ssl);
+		if (server_cert == NULL) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "server side didn't set a certificate for this session, these are bad news");
+			/* vortex_support_free (2, ssl, SSL_free, ctx, SSL_CTX_free); */
+			return nopoll_false;
+		}
+		X509_free (server_cert);
+
+		/* configure default handlers */
+		conn->receive = nopoll_conn_tls_receive;
+		conn->send    = nopoll_conn_tls_send;
+	} /* end if */
+
 	/* call to send content */
 	if (size != conn->send (conn, content, size)) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to send websocket init message, error code was: %d, closing session", errno);
@@ -425,6 +540,103 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 
 	/* return connection created */
 	return conn;
+}
+
+
+/** 
+ * @brief Creates a new Websocket connection to the provided
+ * destination, physically located at host_ip and host_port.
+ *
+ * @param ctx The noPoll context to which this new connection will be associated.
+ *
+ * @param host_ip The websocket server address to connect to.
+ *
+ * @param host_port The websocket server port to connect to. If NULL
+ * is provided, port 80 is used.
+ *
+ * @param host_name This is the Host: header value that will be
+ * sent. This header is used by the websocket server to activate the
+ * right virtual host configuration. If null is provided, Host: will
+ * use host_ip value.
+ *
+ * @param get_url As part of the websocket handshake, an url is passed
+ * to the remote server inside a GET method. This parameter allows to
+ * configure this. If NULL is provided, then / will be used.
+ *
+ * @param origin Websocket origin to be notified to the server.
+ *
+ * @param protocols Optional protocols requested to be activated for
+ * this connection (an string of list of strings separated by a white
+ * space).
+ */
+noPollConn * nopoll_conn_new (noPollCtx  * ctx,
+			      const char * host_ip, 
+			      const char * host_port, 
+			      const char * host_name,
+			      const char * get_url, 
+			      const char * protocols,
+			      const char * origin)
+{
+	/* call common implementation */
+	return __nopoll_conn_new_common (ctx, nopoll_false, 
+					 host_ip, host_port, host_name, 
+					 get_url, protocols, origin);
+}
+
+nopoll_bool __nopoll_tls_was_init = nopoll_false;
+
+/** 
+ * @brief Allows to create a client WebSocket connection over TLS.
+ *
+ * The function works like nopoll_tls_conn_new with the same semantics
+ * but providing a way to create a WebSocket session under the
+ * supervision of TLS.
+ *
+ * @param ctx The context where the operation will take place.
+ *
+ * @param tls_options For now, pass NULL for this parameter. It will
+ * be used in future releases to provide support for TLS
+ * configuration.
+ *
+ * @param host_ip The websocket server address to connect to.
+ *
+ * @param host_port The websocket server port to connect to. If NULL
+ * is provided, port 443 is used.
+ *
+ * @param host_name This is the Host: header value that will be
+ * sent. This header is used by the websocket server to activate the
+ * right virtual host configuration. If null is provided, Host: will
+ * use host_ip value.
+ *
+ * @param get_url As part of the websocket handshake, an url is passed
+ * to the remote server inside a GET method. This parameter allows to
+ * configure this. If NULL is provided, then / will be used.
+ *
+ * @param origin Websocket origin to be notified to the server.
+ *
+ * @param protocols Optional protocols requested to be activated for
+ * this connection (an string of list of strings separated by a white
+ * space).
+ * 
+ */
+noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
+				  noPollPtr    tls_options,
+				  const char * host_ip, 
+				  const char * host_port, 
+				  const char * host_name,
+				  const char * get_url, 
+				  const char * protocols,
+				  const char * origin)
+{
+	/* init ssl ciphers and engines */
+	if (! __nopoll_tls_was_init)
+		SSL_library_init ();
+	__nopoll_tls_was_init = nopoll_true;
+
+	/* call common implementation */
+	return __nopoll_conn_new_common (ctx, nopoll_true, 
+					 host_ip, host_port, host_name, 
+					 get_url, protocols, origin);
 }
 
 /** 
@@ -513,6 +725,25 @@ nopoll_bool    nopoll_conn_is_ready (noPollConn * conn)
 		/* release here handshake mutex */
 	}
 	return conn->handshake_ok;
+}
+
+/** 
+ * @brief Allows to check if the provided connection is working under
+ * a TLS session.
+ *
+ * @param conn The connection where the TLS is being queired to be enabled.
+ *
+ * @return nopoll_true in the case TLS is enabled, otherwise
+ * nopoll_false is returned. Note the function also returns
+ * nopoll_false when the reference received is NULL.
+ */
+nopoll_bool    nopoll_conn_is_tls_on (noPollConn * conn)
+{
+	if (! conn)
+		return nopoll_false;
+
+	/* return TLS on */
+	return conn->tls_on;
 }
 
 /** 
@@ -1947,3 +2178,104 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	return bytes_written - header_size;
 }
 
+/** 
+ * @brief Allows to accept a new incoming WebSocket connection on the
+ * provided listener.
+ *
+ * @param ctx The context where the operation will take place.
+ *
+ * @param conn The WebSocket listener that is receiving a new incoming connection.
+ *
+ * @return A newly created \ref noPollConn reference or NULL if it
+ * fails.
+ */
+noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * conn)
+{
+	NOPOLL_SOCKET   session;
+	noPollConn    * listener;
+
+	/* recevied a new connection: accept the
+	 * connection and ask the app level to accept
+	 * or not */
+	session = nopoll_listener_accept (conn->session);
+	if (session <= 0) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received invalid socket value from accept(2): %d, error code errno=: %d", 
+			    session, errno);
+		return NULL;
+	} /* end if */
+
+	/* configure non blocking mode */
+	nopoll_conn_set_sock_block (session, nopoll_true);
+	
+	/* create the connection */
+	listener = nopoll_listener_from_socket (ctx, session);
+	if (listener == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received NULL pointer after calling to create listener from session..");
+		return NULL;
+	} /* end if */
+	
+	/* now check for accept handler */
+	if (ctx->on_accept) {
+		/* call to on accept */
+		if (! ctx->on_accept (ctx, conn, ctx->on_accept_data)) {
+			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "Application level denied accepting connection from %s:%s, closing", 
+				    listener->host, listener->port);
+			nopoll_conn_shutdown (listener);
+			nopoll_ctx_unregister_conn (ctx, listener);
+			return NULL;
+		} /* end if */
+	} /* end if */
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Connection received and accepted from %s:%s (conn refs: %d, ctx refs: %d)", 
+		    listener->host, listener->port, listener->refs, ctx->refs);
+
+	if (conn->tls_on) {
+		/* init ssl ciphers and engines */
+		if (! __nopoll_tls_was_init)
+			SSL_library_init ();
+		__nopoll_tls_was_init = nopoll_true;
+
+		/* accept TLS connection */
+		listener->ssl_ctx  = SSL_CTX_new (TLSv1_server_method ());
+		if (SSL_CTX_use_certificate_file (listener->ssl_ctx, conn->certificate_file, SSL_FILETYPE_PEM) <= 0) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
+				    "there was an error while setting certificate file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_certificate_file function.");
+			/* dump error stack */
+			nopoll_conn_shutdown (listener);
+			return;
+		} /* end if */
+
+		if (SSL_CTX_use_PrivateKey_file (listener->ssl_ctx, conn->private_file, SSL_FILETYPE_PEM) <= 0) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
+				    "there was an error while setting private file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_PrivateKey_file function.");
+			/* dump error stack */
+			nopoll_conn_shutdown (listener);
+			return;
+		}
+
+		/* check for private key and certificate file to match. */
+		if (! SSL_CTX_check_private_key (listener->ssl_ctx)) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
+				    "seems that certificate file and private key doesn't match!, unable to start TLS profile. Failure found at SSL_CTX_check_private_key function.");
+			/* dump error stack */
+			nopoll_conn_shutdown (listener);
+			return;
+		} /* end if */
+
+		listener->ssl = SSL_new (ssl_ctx);       
+		if (listener->ssl == NULL) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "error while creating TLS transport, SSL_new (%p) returned NULL", listener->ssl_ctx);
+			nopoll_conn_shutdown (listener);
+			return;
+		} /* end if */
+
+		/* set the file descriptor */
+		SSL_set_fd (listener->ssl, socket);
+
+		
+		
+	} /* end if */
+		
+
+	return listener;
+}

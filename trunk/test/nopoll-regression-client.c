@@ -1,6 +1,6 @@
 /*
  *  LibNoPoll: A websocket library
- *  Copyright (C) 2011 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2013 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -473,6 +473,43 @@ nopoll_bool test_05 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_06 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * conn;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a listener */
+	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1235", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* check if the connection already finished its connection
+	   handshake */
+	while (! nopoll_conn_is_ready (conn)) {
+
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR (4): expected to find proper connection handshake finished, but found it is still not prepared..\n");
+			return nopoll_false;
+		} /* end if */
+
+		/* wait a bit 10ms */
+		nopoll_sleep (10000);
+	} /* end if */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -480,7 +517,7 @@ int main (int argc, char ** argv)
 	int iterator;
 
 	printf ("** NoPoll: Websocket toolkit (regression test).\n");
-	printf ("** Copyright (C) 2011 Advanced Software Production Line, S.L.\n**\n");
+	printf ("** Copyright (C) 2013 Advanced Software Production Line, S.L.\n**\n");
 	printf ("** NoPoll regression tests: version=%s\n**\n",
 		VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");
@@ -577,10 +614,19 @@ int main (int argc, char ** argv)
 
 	if (test_05 ()) {
 		printf ("Test 05: sending utf-8 content [   OK   ]\n");
-	}else {
+	} else {
 		printf ("Test 05: sending utf-8 content [ FAILED ]\n");
 		return -1;
 	}
+
+	if (test_06 ()) {
+		printf ("Test 06: testing basic TLS connect [   OK   ]\n");
+	} else {
+		printf ("Test 06: testing basic TLS connect [ FAILED ]\n");
+		return -1;
+	}
+
+	/* test TLS to a socket without TLS */
 
 	/* upload a file to the server ...*/
 
@@ -617,8 +663,6 @@ int main (int argc, char ** argv)
 	/* test applying limits to incoming content */
 
 	/* test splitting into several frames content bigger */
-
-	/* test TLS support */
 
 	/* test wrong UTF-8 content received on text frames */
 
