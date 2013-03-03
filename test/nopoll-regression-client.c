@@ -484,7 +484,6 @@ nopoll_bool test_05 (void) {
 
 	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
 	bytes_read = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 3000);
-	printf ("Received %d bytes, checking content..\n", bytes_read);
 	if (bytes_read != 322) {
 		printf ("ERROR: expected to receive 322 bytes, but received %d\n", bytes_read);
 		return nopoll_false;
@@ -747,6 +746,8 @@ int main (int argc, char ** argv)
 	/* test splitting into several frames content bigger */
 
 	/* test wrong UTF-8 content received on text frames */
+
+	printf ("All tests ok!!\n");
 
 
 	return 0;
