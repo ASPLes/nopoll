@@ -85,6 +85,8 @@ int         nopoll_timeval_substract  (struct timeval * a,
 
 nopoll_bool nopoll_nonce (char * buffer, int nonce_size);
 
+void        nopoll_cleanup_library (void);
+
 int    nopoll_get_bit (char byte, int position);
 
 void   nopoll_set_bit     (char * buffer, int position);

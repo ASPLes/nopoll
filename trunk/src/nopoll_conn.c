@@ -918,6 +918,11 @@ void nopoll_conn_unref (noPollConn * conn)
 	nopoll_free (conn->certificate_file);
 	nopoll_free (conn->private_file);
 
+	if (conn->ssl)
+		SSL_free (conn->ssl);
+	if (conn->ssl_ctx)
+		SSL_CTX_free (conn->ssl_ctx);
+
 	/* release handshake internal data */
 	if (conn->handshake) {
 		nopoll_free (conn->handshake->websocket_key);

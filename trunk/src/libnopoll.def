@@ -4,10 +4,12 @@ __nopoll_conn_new_common
 __nopoll_conn_tls_handle_error
 __nopoll_ctx_sigpipe_do_nothing
 __nopoll_nonce_init
+__nopoll_pack_content
 __nopoll_tls_was_init
 nopoll_base64_decode
 nopoll_base64_encode
 nopoll_calloc
+nopoll_cleanup_library
 nopoll_cmp
 nopoll_conn_accept
 nopoll_conn_check_mime_header_repeated
