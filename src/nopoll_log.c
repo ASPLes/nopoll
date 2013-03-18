@@ -39,12 +39,12 @@
 #include <nopoll_log.h>
 #include <nopoll_private.h>
 
-/**
- * \defgroup nopoll_log_module Nopoll Log: Console log reporting for NOPOLL library
+/** 
+ * \defgroup nopoll_log noPoll Log: Console log reporting for noPoll library
  */
 
 /** 
- * \addtogroup nopoll_log_module
+ * \addtogroup nopoll_log
  * @{
  */
 
@@ -82,6 +82,8 @@ nopoll_bool    nopoll_log_color_is_enabled (noPollCtx * ctx)
 /** 
  * @brief Allows to control how to activate the log reporting to the
  * console from the nopoll core library.
+ *
+ * @param ctx The context where the operation will take place.
  * 
  * @param value nopoll_true to enable log to console, otherwise nopoll_false is
  * returned.
@@ -99,6 +101,8 @@ void     nopoll_log_enable (noPollCtx * ctx, nopoll_bool value)
 /** 
  * @brief Allows to control how to activate the colog log reporting to
  * the console from the nopoll core library.
+ *
+ * @param ctx The context where the operation will take place.
  * 
  * @param value nopoll_true to enable log to console, otherwise nopoll_false is
  * returned.
@@ -126,19 +130,18 @@ void     nopoll_log_color_enable (noPollCtx * ctx, nopoll_bool value)
  * 
  * \code
  * // drop a log about current library initialization
- * nopoll_log ("nopoll", NOPOLL_LEVEL_DEBUG, "library properly initialized status=%d", status);
+ * nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "library properly initialized status=%d", status);
  * \endcode
  *
  *
- * @param domain The domain where the log as generated. if NULL is
- * provided a log with no domain will be generated.
+ * @param ctx The context where the operation will take place.
  *
  * @param level The level that this message is classificed. 
  * 
  * @param message The message to report. The message to report must be
  * not NULL.
  */
-void nopoll_log (noPollCtx * ctx, noPollDebugLevel level, char * message, ...)
+void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * file, int line, noPollDebugLevel level, const char * message, ...)
 {
 
 #ifdef SHOW_DEBUG_LOG
@@ -167,7 +170,7 @@ void nopoll_log (noPollCtx * ctx, noPollDebugLevel level, char * message, ...)
 			printf ("(\e[1;31mcritical\e[0m) ");
 			break;
 		}
-	}else {
+	} else {
 		switch (level) {
 		case NOPOLL_LEVEL_DEBUG:
 			printf ("(debug)");
@@ -182,7 +185,7 @@ void nopoll_log (noPollCtx * ctx, noPollDebugLevel level, char * message, ...)
 	}
 
 	/* drop a log according to the domain */
-	printf ("%s: ", __NOPOLL_FILE__);
+	printf ("%s:%d (%s) ", file, line, function_name);
 
 	/* print the message */
 	va_start (args, message);

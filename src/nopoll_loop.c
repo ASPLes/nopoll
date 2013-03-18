@@ -40,6 +40,15 @@
 #include <nopoll_private.h>
 
 /** 
+ * \defgroup nopoll_loop noPoll Loop: basic support to create a watching loop for WebSocket listeners
+ */
+
+/** 
+ * \addtogroup nopoll_loop
+ * @{
+ */
+
+/** 
  * @internal Function used by nopoll_loop_wait to register all
  * connections into the io waiting object.
  */
@@ -239,6 +248,6 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 	return 0;
 }
 
-
+/* @} */
 
 

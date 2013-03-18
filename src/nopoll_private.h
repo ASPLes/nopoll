@@ -108,6 +108,12 @@ struct _noPollCtx {
 	 */
 	noPollOnMessageHandler on_msg;
 	noPollPtr              on_msg_data;
+
+	/** 
+	 * @internal Basic fake support for protocol version, by
+	 * default: 13, due to RFC6455 standard
+	 */
+	int protocol_version;
 };
 
 struct _noPollConn {
@@ -225,6 +231,11 @@ struct _noPollConn {
 	/* pending buffer */
 	char             pending_buf[100];
 	int              pending_buf_bytes;
+
+	/** 
+	 * @internal Support for an user defined pointer.
+	 */
+	noPollPtr             hook;
 };
 
 struct _noPollIoEngine {

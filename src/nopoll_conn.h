@@ -74,7 +74,11 @@ nopoll_bool    nopoll_conn_is_tls_on (noPollConn * conn);
 
 NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn);
 
+void           nopoll_conn_set_socket (noPollConn * conn, NOPOLL_SOCKET _socket);
+
 int           nopoll_conn_get_id (noPollConn * conn);
+
+noPollCtx   * nopoll_conn_ctx    (noPollConn * conn);
 
 noPollRole    nopoll_conn_role   (noPollConn * conn);
 
@@ -82,9 +86,17 @@ const char  * nopoll_conn_host   (noPollConn * conn);
 
 const char  * nopoll_conn_port   (noPollConn * conn);
 
+const char  * nopoll_conn_get_origin (noPollConn * conn);
+
+const char  * nopoll_conn_get_host_header (noPollConn * conn);
+
 void          nopoll_conn_shutdown (noPollConn * conn);
 
 void          nopoll_conn_close  (noPollConn  * conn);
+
+void          nopoll_conn_set_hook (noPollConn * conn, noPollPtr ptr);
+
+noPollPtr     nopoll_conn_get_hook (noPollConn * conn);
 
 nopoll_bool   nopoll_conn_set_sock_block         (NOPOLL_SOCKET socket,
 						  nopoll_bool   enable);
@@ -101,6 +113,9 @@ nopoll_bool      nopoll_conn_send_pong (noPollConn * conn);
 
 int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool masked,
 			    noPollOpCode op_code, long length, noPollPtr content);
+
+nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
+							  int          timeout);
 
 /** internal api **/
 void nopoll_conn_complete_handshake (noPollConn * conn);

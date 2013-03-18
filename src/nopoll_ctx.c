@@ -40,6 +40,15 @@
 #include <nopoll_private.h>
 #include <signal.h>
 
+/** 
+ * \defgroup nopoll_ctx noPoll Context: context handling functions used by the library
+ */
+
+/** 
+ * \addtogroup nopoll_ctx
+ * @{
+ */
+
 void __nopoll_ctx_sigpipe_do_nothing (int _signal)
 {
 	/* do nothing sigpipe handler to be able to manage EPIPE error
@@ -87,6 +96,9 @@ noPollCtx * nopoll_ctx_new (void) {
 
 	/* install sigpipe handler */
 	signal (SIGPIPE, __nopoll_ctx_sigpipe_do_nothing);
+
+	/* setup default protocol version */
+	result->protocol_version = 13;
 
 	return result;
 }
@@ -155,6 +167,8 @@ int            nopoll_ctx_ref_count (noPollCtx * ctx)
 	return ctx->refs;
 }
 
+int conn_id = 1;
+
 /** 
  * @internal Function used to register the provided connection on the
  * provided context.
@@ -174,8 +188,10 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 	nopoll_return_val_if_fail (ctx, ctx && conn, nopoll_false);
 
 	/* acquire mutex here */
-	conn->id = ctx->conn_id;
-	ctx->conn_id ++;
+
+	/* get connection */
+	conn->id = conn_id;
+	conn_id ++;
 
 	/* register connection */
 	iterator = 0;
@@ -310,8 +326,6 @@ void           nopoll_ctx_set_on_open (noPollCtx            * ctx,
 	else
 		ctx->on_open_data = user_data;
 	return;
-
-	return;
 }
 
 /** 
@@ -430,5 +444,32 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
 }
 
 
+/** 
+ * @brief Allows to change the protocol version that is send in all
+ * client connections created under the provided context and the
+ * protocol version accepted by listener created under this context
+ * too.
+ *
+ * This is a really basic (mostly fake) protocol version support
+ * because it only allows to change the version string sent (but
+ * nothing more for now). It is useful for testing purposes.
+ *
+ * @param ctx The noPoll context where the protocol version change
+ * will be applied.
+ *
+ * @param version The value representing the protocol version. By
+ * default this function isn't required to be called because it
+ * already has the right protocol value configured (13). 
+ */ 
+void           nopoll_ctx_set_protocol_version (noPollCtx * ctx, int version)
+{
+	/* check input data */
+	nopoll_return_if_fail (ctx, ctx || version);
 
+	/* setup the new protocol version */
+	ctx->protocol_version = version;
 
+	return;
+}
+
+/* @} */

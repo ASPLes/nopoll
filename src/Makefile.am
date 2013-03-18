@@ -25,6 +25,7 @@ libnopoll_la_SOURCES     = \
 
 libnopollinclude_HEADERS = \
 	nopoll.h \
+	nopoll_handlers.h \
 	nopoll_config.h \
 	nopoll_decl.h \
 	nopoll_private.h \
