@@ -36,6 +36,16 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
+
+/** 
+ * \defgroup nopoll_conn noPoll Connection: functions required to create WebSocket client connections.
+ */
+
+/** 
+ * \addtogroup nopoll_conn
+ * @{
+ */
+
 #include <nopoll_conn.h>
 #include <nopoll_private.h>
 
@@ -287,7 +297,7 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 	conn->handshake->expected_accept = strdup (key);
 
 	/* send initial handshake */
-	return nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nOrigin: %s\r\n%s%s%s%sSec-WebSocket-Version: 13\r\n\r\n", 
+	return nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nOrigin: %s\r\n%s%s%s%sSec-WebSocket-Version: %d\r\n\r\n", 
 				     conn->get_url, conn->host_name, 
 				     /* sec-websocket-key */
 				     key,
@@ -297,7 +307,8 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 				     conn->protocols ? "Sec-WebSocket-Protocol" : "",
 				     conn->protocols ? ": " : "",
 				     conn->protocols ? conn->protocols : "",
-				     conn->protocols ? "\r\n" : "");
+				     conn->protocols ? "\r\n" : "",
+				     conn->ctx->protocol_version);
 }
 
 int __nopoll_conn_tls_handle_error (noPollConn * conn, int res)
@@ -764,6 +775,22 @@ NOPOLL_SOCKET nopoll_conn_socket (noPollConn * conn)
 }
 
 /** 
+ * @brief Allows to set up the socket reference to be used by this
+ * noPollConn.
+ *
+ * @param conn The connection to setup with a new socket.
+ *
+ * @param _socket The socket that will be configured.
+ */
+void           nopoll_conn_set_socket (noPollConn * conn, NOPOLL_SOCKET _socket)
+{
+	if (conn == NULL)
+		return;
+	conn->session = _socket;
+	return;
+}
+
+/** 
  * @brief Allows to get the connection id from the provided
  * connection.
  *
@@ -777,6 +804,21 @@ int           nopoll_conn_get_id (noPollConn * conn)
 	if (conn == NULL)
 		return -1;
 	return conn->id;
+}
+
+/** 
+ * @brief Allows to get the noPollCtx context object associated to the
+ * connection (or where the connection is working).
+ *
+ * @param conn The connection that is requested to return its context.
+ *
+ * @return A reference to the context or NULL if it fails.
+ */
+noPollCtx   * nopoll_conn_ctx    (noPollConn * conn)
+{
+	if (conn == NULL)
+		return NULL;
+	return conn->ctx;
 }
 
 /** 
@@ -795,6 +837,10 @@ noPollRole    nopoll_conn_role   (noPollConn * conn)
  * @brief Returns the host location this connection connects to or it is
  * listening (according to the connection role \ref noPollRole).
  *
+ * If you are looking for a way to get the Host: header value received
+ * for this connection during the handshake, use: \ref
+ * nopoll_conn_get_host_header.
+ *
  * @param conn The connection to check for the host value.
  *
  * @return The host location value or NULL if it fails.
@@ -804,6 +850,38 @@ const char  * nopoll_conn_host   (noPollConn * conn)
 	if (conn == NULL)
 		return NULL;
 	return conn->host;
+}
+
+/** 
+ * @brief Allows to get the connection Origin header content received.
+ *
+ * @param conn The websocket connection where the operation takes place.
+ *
+ * @return The Origin value received during the handshake for this
+ * connection or NULL if it fails to get this value.
+ */
+const char  * nopoll_conn_get_origin (noPollConn * conn)
+{
+	if (conn == NULL || conn->handshake == NULL)
+		return NULL;
+	return conn->origin;
+} /* end if */
+
+/** 
+ * @brief Allows to get the Host: header value that was received for
+ * this connection during the handshake.
+ *
+ * @param conn The websocket connection where the operation takes place.
+ *
+ * @return The Host value received during the handshake for this
+ * connection or NULL if it fails to get this value (or it wasn't
+ * defined).
+ */
+const char  * nopoll_conn_get_host_header (noPollConn * conn)
+{
+	if (conn == NULL || conn->host_name == NULL)
+		return NULL;
+	return conn->host_name;
 }
 
 /** 
@@ -875,6 +953,39 @@ void          nopoll_conn_close  (noPollConn  * conn)
 }
 
 /** 
+ * @brief Allows to define a user level pointer associated to this
+ * connection. This pointer can be later be retrieved using \ref
+ * nopoll_conn_get_hook.
+ *
+ * @param conn The connection where the pointer will be associated.
+ *
+ * @param ptr The pointer to associate to the connection.
+ */
+void          nopoll_conn_set_hook (noPollConn * conn, noPollPtr ptr)
+{
+	if (conn == NULL)
+		return;
+	conn->hook = ptr;
+	return;
+}
+
+
+/** 
+ * @brief Allows to get the user level pointer defined by \ref
+ * nopoll_conn_get_hook.
+ *
+ * @param conn The connection where the uesr level pointer was stored.
+ *
+ * @return A reference to the pointer stored.
+ */
+noPollPtr     nopoll_conn_get_hook (noPollConn * conn)
+{
+	if (conn == NULL)
+		return NULL;
+	return conn->hook;
+}
+
+/** 
  * @brief Allows to unref connection reference acquired via \ref
  * nopoll_conn_ref.
  *
@@ -901,8 +1012,8 @@ void nopoll_conn_unref (noPollConn * conn)
 
 	/* release ctx */
 	if (conn->ctx) {
-		nopoll_ctx_unref (conn->ctx);
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Released context refs, now: %d", conn->ctx->refs);
+		nopoll_ctx_unref (conn->ctx);
 	} /* end if */
 	conn->ctx = NULL;
 
@@ -1032,7 +1143,8 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 			/* if the conn is closed, just return
 			 * without logging a message */
 			if (nopoll_conn_is_ok (conn)) {
-				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to read a line, error code errno: %d", errno);
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to read a line, error code errno: %d (%s)", 
+					    errno, strerror (errno));
 			}
 			return (-1);
 		}
@@ -1103,14 +1215,20 @@ int         nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen
 		if (errno == NOPOLL_EINTR) 
 			goto keep_reading;
 		
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "unable to readn=%d, error code was: %d (shutting down connection)", maxlen, errno);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "unable to readn=%d, error code was: %d (%s) (shutting down connection)", maxlen, errno, strerror (errno));
 		nopoll_conn_shutdown (conn);
 		return -1;
 	}
 
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning bytes read = %d", nread); */
 	if (nread == 0) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "received connection close while reading from conn id %d, shutting down connection..", conn->id);
+		/* check for blocking operations */
+		if (errno == NOPOLL_EAGAIN || errno == NOPOLL_EWOULDBLOCK)
+			return 0;
+
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "received connection close while reading from conn id %d (errno=%d : %s) (%d, %d, %d), shutting down connection..", 
+			    conn->id, errno, strerror (errno),
+			    NOPOLL_EAGAIN, NOPOLL_EWOULDBLOCK, NOPOLL_EINTR);
 		nopoll_conn_shutdown (conn);
 	} /* end if */
 
@@ -1318,6 +1436,13 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 			    conn->handshake->websocket_key,
 			    conn->origin,
 			    conn->handshake->websocket_version);
+		return nopoll_false;
+	} /* end if */
+
+	/* check protocol support */
+	if (strtod (conn->handshake->websocket_version, NULL) != ctx->protocol_version) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received request for an unsupported protocol version: %s, expected: %d",
+			    conn->handshake->websocket_version, ctx->protocol_version);
 		return nopoll_false;
 	} /* end if */
 	
@@ -1976,7 +2101,7 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 
 	if (length == -1)
 		length = strlen (content);
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Attempting to send %d bytes", length);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_send_text: Attempting to send %d bytes", length);
 
 	/* sending content as client */
 	if (conn->role == NOPOLL_ROLE_CLIENT) {
@@ -2002,20 +2127,30 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
  *
  * @param buffer The buffer where the result is returned. Memory
  * buffer must be enough to hold bytes requested and must be acquired
- * by the caller.
+ * by the caller. 
+ *
+ * @param bytes Number of bytes to be read from the connection.
  *
  * @param block If nopoll_true, the caller will be blocked until the
  * amount of bytes requested are satisfied or until the timeout is
  * reached (if enabled). If nopoll_false is provided, the function
  * won't block and will return all bytes available at this moment.
  *
- * @paran timeout (milliseconds 1sec = 1000ms) If provided a value
+ * @param timeout (milliseconds 1sec = 1000ms) If provided a value
  * higher than 0, a timeout will be enabled to complete the
  * operation. If the timeout is reached, the function will return the
  * bytes read so far. Please note that the function has a precision of
  * 10ms.
  *
- * @return Number of bytes read or -1 if it fails. 
+ * @return Number of bytes read or -1 if it fails. The function
+ * returns -1 when no content is available to be read and you pass
+ * block == nopoll_false
+ *
+ * Note that the function doesn't clear the buffer received. Only
+ * memory (bytes) notified by the value returned by this function
+ * should be accessed by the caller. In the same direction you can't
+ * use the buffer as a nul-terminated string because the function
+ * doesn't add the final \0 to the content read.
  *
  */
 int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nopoll_bool block, long int timeout)
@@ -2025,10 +2160,11 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 	struct  timeval    start;
 	struct  timeval    stop;
 	struct  timeval    diff;
-	long               ellapsed;
+	long               ellapsed   = 0;
 	int                desp       = 0;
 	int                amount;
 	int                total_read = 0;
+	int                total_pending = 0;
 
 	/* report error value */
 	if (conn == NULL || buffer == NULL || bytes <= 0)
@@ -2049,6 +2185,7 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 
 	/* check here if we have a pending message to read */
 	if (conn->pending_msg)  {
+		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_read (found pending content: %d, requested %d)", conn->pending_diff, bytes); */
 		/* get references to pending data */
 		amount = conn->pending_diff;
 		msg    = conn->pending_msg;
@@ -2071,6 +2208,8 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 		/* read content */
 		memcpy (buffer, nopoll_msg_get_payload (msg) + conn->pending_desp, amount);
 		total_read += amount;
+		desp        = amount;
+		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_read total amount satisfied is not %d, requested %d", total_read, bytes); */
 		
 		/* increase pending desp */
 		conn->pending_desp += amount;
@@ -2082,37 +2221,53 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 		} /* end if */
 
 		/* see if we have finished */
-		if (amount == bytes || ! block)
-			return amount;
+		if (total_read == bytes || ! block) {
+			if (total_read == 0 && ! block) 
+				return -1;
 
+			return total_read;
+		}
 		
+		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "### ====> Read %d bytes from previous pending frame, requested %d. Pending diff %d", total_read, bytes, conn->pending_diff); */
 	} /* end if */
 
 
 	/* for for the content */
 	while (nopoll_true) {
+		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reading more content (read so far: %d, requested %d, non-blocking: %d, timeout: %ld, ellapsed: %ld)", total_read, bytes, block, timeout, ellapsed);  */
+
 		/* call to get next message */
-		while ((msg = nopoll_conn_get_msg (conn)) == NULL) {
+		msg = nopoll_conn_get_msg (conn);
+		if (msg == NULL) {
 			
 			if (! nopoll_conn_is_ok (conn)) {
 				nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received websocket connection close during wait reply..");
-				return -1;
+				if (total_read == 0 && ! block)
+					return -1;
+				return total_read;
 			} /* end if */
 
+			if (! block) {
+				if (total_read == 0 && ! block) 
+					return -1;
+				return total_read;
+			} /* end if */
+			
 		} /* end if */
 
 		/* get the message content into the buffer */
 		if (msg) {
 			/* get the amount of bytes we can read */
 			amount = nopoll_msg_get_payload_size (msg);
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received %d bytes (requested %d bytes)", amount, bytes);
-			if (amount > bytes) {
+			total_pending = bytes - total_read;
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "(New Frame) received %d bytes (pending requested %d bytes, desp: %d)", amount, total_pending, desp);
+			if (amount > total_pending) {
 				/* save here the difference between
 				 * what we have read and remaining data */
-				conn->pending_desp = bytes;
-				conn->pending_diff = amount - bytes;
+				conn->pending_desp = total_pending;
+				conn->pending_diff = amount - total_pending;
 				conn->pending_msg  = msg;
-				amount = bytes;
+				amount = total_pending;
 
 				/* acquire a reference to the message */
 				nopoll_msg_ref (msg);
@@ -2120,26 +2275,31 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 			/* copy data */
 			memcpy (buffer + desp, nopoll_msg_get_payload (msg), amount);
 			total_read += amount;
+			desp       += amount;
+			/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_read total amount satisfied is not %d, requested %d, desp: %d",
+			   total_read, bytes, desp); */
 
 			/* release message */
 			nopoll_msg_unref (msg);
 
 			/* return amount read */
-			if (total_read == bytes || ! block)
-				return total_read;
-		}
+			if (total_read == bytes || ! block) {
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Finishing nopoll_conn_read because block=%d or total bytes requested=%d satisfied=%d ", 
+					    block, bytes, total_read);
 
-		/* if timeout is still bigger continue reading data */
-		if (timeout <= 0)
-			break;
+				if (total_read == 0 && ! block) 
+					return -1;
+				return total_read;
+			}
+		}
 
 		/* check to stop due to timeout */
 		if (timeout > 0) {
 			gettimeofday (&stop, NULL);
 			nopoll_timeval_substract (&stop, &start, &diff);
 			
-			ellapsed = (diff.tv_sec * 1000000) + diff.tv_usec;
-			if (ellapsed > timeout) 
+			ellapsed = (diff.tv_sec * 1000) + (diff.tv_usec / 1000);
+			if (ellapsed > (timeout)) 
 				break;
 		} /* end if */
 		
@@ -2147,6 +2307,11 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 	} /* end while */
 
 	/* reached this point, return that timeout was reached */
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Finishing nopoll_conn_read timeout reached=%ld ms , returning total bytes requested=%d satisfied=%d ", 
+		    timeout, bytes, total_read);
+
+	if (total_read == 0 && ! block)
+		return -1;
 	return total_read;
 }
 
@@ -2156,7 +2321,7 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
  *
  * @param conn The connection where the PING operation will be sent.
  *
- * @param nopoll_true if the operation was sent without any error,
+ * @return nopoll_true if the operation was sent without any error,
  * otherwise nopoll_false is returned.
  */
 nopoll_bool      nopoll_conn_send_ping (noPollConn * conn)
@@ -2275,8 +2440,13 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Mask used for this delivery: %d (about to send %d bytes)",
 		    nopoll_get_32bit (send_buffer + header_size - 2), length + header_size);
 	bytes_written = conn->send (conn, send_buffer, length + header_size);
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Bytes written to the wire %d (masked? %d, mask: %d, header size: %d, length: %d)", 
-		    bytes_written, masked, mask_value, header_size, length);
+	if (bytes_written != (length + header_size)) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Requested to write %d bytes but found %d written (masked? %d, mask: %d, header size: %d, length: %d), errno = %d : %s", 
+			    bytes_written, length + header_size, masked, mask_value, header_size, length, errno, strerror (errno));
+	} else {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Bytes written to the wire %d (masked? %d, mask: %d, header size: %d, length: %d)", 
+			    bytes_written, masked, mask_value, header_size, length);
+	} /* end if */
 
 	/* release memory */
 	nopoll_free (send_buffer);
@@ -2401,3 +2571,41 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * conn)
 
 	return listener;
 }
+
+/** 
+ * @brief Allows to implement a wait operation until the provided
+ * connection is ready or the provided timeout is reached.
+ *
+ * @param conn The connection that is being waited to be created.
+ *
+ * @param timeout The timeout operation to limit the wait operation. 
+ *
+ * @return The function returns when the timeout was reached or the
+ * connection is ready. In the case the connection is ready when the
+ * function finished nopoll_true is returned, otherwise nopoll_false.
+ */
+nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
+							  int          timeout)
+{
+	long int total_timeout = timeout * 1000000;
+
+	/* check if the connection already finished its connection
+	   handshake */
+	while (! nopoll_conn_is_ready (conn) && total_timeout > 0) {
+
+		/* check if the connection is ok */
+		if (! nopoll_conn_is_ok (conn)) 
+			return nopoll_false;
+
+		/* wait a bit 0,5ms */
+		nopoll_sleep (500);
+
+		/* reduce the amount of time we have to wait */
+		total_timeout = total_timeout - 10000;
+	} /* end if */
+
+	/* report if the connection is ok */
+	return nopoll_conn_is_ok (conn);
+}
+
+/* @} */

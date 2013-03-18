@@ -1,0 +1,188 @@
+/* strong aspl blue:                   #00568d; */
+/* soft grey used as separator:        #c9c9c9; */
+/* soft yellow for the function panel: #fffddf; */
+/* strong grey for some backgrounds:   #b0b0b0; */
+
+body { 
+}
+
+h1, h2, h3, a { 
+   color: #172e4b;
+}
+
+p, b, ul, li, i {
+}
+
+a:visited {
+	color: #1066be;
+}
+
+.af-arch-header { 
+  width: 100%;
+  background: #193141;
+  margin: 0;
+}
+
+.separator { 
+ border: 2px solid #c9c9c9;
+ background: #7d0000;
+ height: 10px;
+}
+
+.footer { 
+ padding: 4px;
+ clear: left;
+ background: #193141;
+ color: white;
+ font-weight: bold;
+}
+
+.thepage { 
+ background: white;
+ border-right: 1px solid #193141;
+ width: 80%;
+ padding: 5px;
+ padding-left: 15px;
+}
+
+.onepage { 
+ width: 70%;
+ text-align: justify;
+}
+
+.license-table { 
+  border: 1px solid #000000;
+  padding: 0;
+  margin: 12px;
+  margin-left: 24px;
+  background-color: #c9c9c9;
+}
+
+
+.license-table tr { 
+  margin: 0;
+  padding: 0;
+}
+
+.licence-table tr.impar { 
+  border: 0;
+}
+
+.license-table tr.par { 
+  border: 0;
+  background-color: #fffddf;
+}
+
+.license-table td { 
+  padding: 6;
+  border: 0;
+}
+
+.nobullet { 
+  list-style: none;
+}
+
+.syntax { 
+  margin-left: 28px;
+  margin-right: 28px;
+  font-size: 100%;
+  font-family: Monospace,Fixed;
+  border: 1px solid #07445e;
+  background-color: #bed7e2;
+}
+
+.initial-index li { 
+  padding-bottom: 3px;
+}
+
+.contact { 
+  margin-left: 40px;
+  border: 2px solid #00366d;
+  background-color:  #84afdc;
+  font-size: 110%;
+  font-family: Sans,Arial,Helvetica;
+}
+.contact tr { 
+  border: 0px;
+}
+.contact td { 
+  border: 0px;
+}
+
+div.navtab { 
+  background: #ffffd8;
+  border: 1px solid #b0b0b0;
+}
+
+div.navtab .qindexHL { 
+  background: #193141;
+  color: white;
+}
+
+div.navtab a:hover { 
+  background: #b0b0b0;
+  color: white;
+}
+
+h2 a.anchor { 
+  padding: 2px;
+  background: #fff url("body_back.gif") repeat-x;
+  border: 1px solid #b0b0b0; 
+}
+
+pre.fragment {
+  font-family: Monospace,Fixed,Courier;
+  font-size: 90%;
+}
+
+.mdRow {
+  font-family: Monospace,Fixed,Courier;
+  font-size: 90%;
+}
+
+.mdTable .mdRow table td { 
+  width: 10px;
+}
+
+.aspl-logo-header { 
+  padding: 0px;
+  margin: 0px;
+  padding-top: 6px;
+  padding-right: 10px;
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  float: right;
+  border: 0px;
+}
+
+.ads { 
+  width: 100%;
+  height: 112px;
+  border-top: 1px solid #193141;
+  border-bottom: 1px solid #193141;
+  background: #c9c9c9;
+}
+
+.ads iframe { 
+  width: 802px;
+  height: 102px;
+  position: absolute;
+  top: 90px;
+  left: 200px;
+  background: #c9c9c9 url("bg.png");
+}
+
+.lateral-ad { 
+  position: absolute;
+  left: 84%;
+  top: 30%;
+  background: #c9c9c9;
+  z-index: -1;
+}
+
+.lateral-ad iframe { 
+  width: 152px;
+  height: 420px; 
+  background: #c9c9c9;
+}

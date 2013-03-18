@@ -40,6 +40,15 @@
 #include <nopoll_private.h>
 
 /** 
+ * \defgroup nopoll_support noPoll Support: core support functions used by the library
+ */
+
+/** 
+ * \addtogroup nopoll_support
+ * @{
+ */
+
+/** 
  * @brief Allows to check if provided strings are equal.
  *
  * @param string1 The first string to check. The string must be ended by 0.
@@ -671,3 +680,52 @@ void nopoll_cleanup_library (void)
 	
 	return;
 } /* end if */
+
+/** 
+ * \mainpage noPoll: a toolkit to add WebSocket support to your project.
+ *
+ * \section intro Introduction
+ *
+ * <b>noPoll</b> is a clean implemetnation of the <b>RFC 6455 : The Websocket protocol</b> definition, written in <b>ANSI C</b>.
+ *
+ * Some of its features are:
+ *
+ * - Context based API design making the library stateless. Support to run several execution contexts in the same process.
+ * - Support for stream based API and message based API
+ * - Robust and well tested implementation checked by a strong regression test to ensure the library keeps on working as new features are added.
+ * - Flexible design that allows its integration into a external loop or to use its own waiting loop
+ *
+ * noPoll is been developed by <b>Advanced Software Production Line,
+ * S.L.</b> (http://www.aspl.es). It is licensed under the LGPL 2.1
+ * which allows open source and commercial usage.
+ *
+ * Check out <b>noPoll API documentation</b> in the following links:
+ *
+ * 1) Common API definition:
+ *
+ * - \ref nopoll_support
+ * - \ref nopoll_decl_module
+ * - \ref nopoll_ctx
+ * - \ref nopoll_handlers
+ * - \ref nopoll_log
+ * - \ref nopoll_loop
+ *
+ * 2) Function for creating connections and listeners
+ *
+ * - \ref nopoll_conn
+ * - \ref nopoll_listener
+ *
+ * 3) Functions to handle messages (message based API):
+ *
+ * - \ref nopoll_msg
+ *
+ * \section contact_aspl Contact Us
+ * 
+ * You can reach us at the <b>noPoll mailing list:</b> at <a href="http://lists.aspl.es/cgi-bin/mailman/listinfo/nopoll">noPoll users</a>
+ * for any question you may find. 
+ *
+ * If you are interested on getting commercial support, you can also
+ * contact us at: info@aspl.es.
+ */
+
+/* @} */

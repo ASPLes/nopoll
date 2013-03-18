@@ -72,6 +72,8 @@ void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
 
 noPollConn   * nopoll_ctx_foreach_conn (noPollCtx * ctx, noPollForeachConn foreach, noPollPtr user_data);
 
+void           nopoll_ctx_set_protocol_version (noPollCtx * ctx, int version);
+
 void           nopoll_ctx_free (noPollCtx * ctx);
 
 #endif

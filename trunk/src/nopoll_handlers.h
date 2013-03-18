@@ -40,19 +40,28 @@
 #define __NOPOLL_HANDLERS_H__
 
 /** 
+ * \defgroup nopoll_handlers noPoll Handlers: Handler definitions used by the library to du async notifications
+ */
+
+/** 
+ * \addtogroup nopoll_handlers
+ * @{
+ */
+
+/** 
  * @brief General async handler definition used to notify generic
  * events associated to a connection.
  *
  * Currently this handler is used by:
- * - \ref nopoll_listener_set_on_accept
+ * - \ref nopoll_ctx_set_on_accept
+ * - \ref nopoll_ctx_set_on_open
  *
  * @param ctx The context where the wait is happening.
  *
  * @param conn The connection where the data or something meaningful
  * was detected.
  *
- * @param user_data Optional user data pointer defined by the user at
- * \ref nopoll_ctx_set_action_handler
+ * @param user_data Optional user data pointer passed in into the handler.
  *
  * @return The function returns a boolean value which is interpreted
  * in an especific form according to the event.
@@ -189,3 +198,5 @@ typedef void (*noPollOnMessageHandler) (noPollCtx  * ctx,
 					noPollPtr  * user_data);
 
 #endif
+
+/* @} */

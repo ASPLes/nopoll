@@ -40,7 +40,16 @@
 #include <nopoll_private.h>
 
 /** 
- * @brief Creates a listener socket on the provided port.
+ * \defgroup nopoll_listener noPoll Listener: functions required to create WebSocket listener connections.
+ */
+
+/** 
+ * \addtogroup nopoll_listener
+ * @{
+ */
+
+/** 
+ * @internal Creates a listener socket on the provided port.
  */
 NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
 						    const char  * host,
@@ -127,6 +136,8 @@ NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
  * @brief Creates a new websocket server listener on the provided host
  * name and port. 
  *
+ * @param ctx The context where the operation will take place.
+ *
  * @param host The hostname or address interface to bind on.
  *
  * @param port The port where to listen, or NULL to use default port: 80.
@@ -176,6 +187,8 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
  * incoming connection to be under TLS supervision. The function works
  * like \ref nopoll_listener_new.
  *
+ * @param ctx The context where the operation will take place.
+ *
  * @param host The hostname or address interface to bind on.
  *
  * @param port The port where to listen, or NULL to use default port: 80.
@@ -204,7 +217,7 @@ noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
  * @brief Allows to configure the TLS certificate and key to be used
  * on the provided connection.
  *
- * @param ctx The context where the configuration operation will take place.
+ * @param listener The listener that is going to be configured with the providing certificate and key.
  *
  * @param certificate The path to the public certificate file (PEM
  * format) to be used for every TLS connection received under the
@@ -318,7 +331,7 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 }
 
 /** 
- * @brief Public function that performs a TCP listener accept.
+ * @internal Public function that performs a TCP listener accept.
  *
  * @param server_socket The listener socket where the accept()
  * operation will be called.
@@ -338,3 +351,5 @@ NOPOLL_SOCKET nopoll_listener_accept (NOPOLL_SOCKET server_socket)
 	/* accept the connection new connection */
 	return accept (server_socket, (struct sockaddr *)&inet_addr, &addrlen);
 }
+
+/* @} */

@@ -247,6 +247,7 @@ AC_OUTPUT([
 Makefile
 src/Makefile
 doc/Makefile
+doc/nopoll.doxygen
 test/Makefile
 nopoll.pc])
 

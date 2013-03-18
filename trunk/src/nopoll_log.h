@@ -56,20 +56,39 @@ void            nopoll_log_enable (noPollCtx * ctx, nopoll_bool value);
  
 void            nopoll_log_color_enable (noPollCtx * ctx, nopoll_bool value);
 
+/* include this at this place to load GNU extensions */
+#if defined(__GNUC__)
+#  ifndef _GNU_SOURCE
+#  define _GNU_SOURCE
+#  endif
+#  define __function_name__ __PRETTY_FUNCTION__
+#  define __line__            __LINE__
+#  define __file__            __FILE__
+#elif defined(_MSC_VER)
+#  define __function_name__ __FUNCDNAME__
+#  define __line__            __LINE__
+#  define __line__            __FILE__
+#else
+/* unknown compiler */
+#define __function_name__ ""
+#define __line__            0
+#define __file__            ""
+#endif
+
 
 #if defined(SHOW_DEBUG_LOG)
-# define __nopoll_log nopoll_log
+# define nopoll_log(ctx,level,message, ...) do{__nopoll_log(ctx, __function_name__, __file__, __line__, level, message, ##__VA_ARGS__);}while(0)
 #else
 # if defined(NOPOLL_OS_WIN32) && !( defined (__GNUC__) || _MSC_VER >= 1400)
 /* default case where '...' is not supported but log is still
  * disabled */
-#   define __nopoll_log nopoll_log 
+#   define nopoll_log __nopoll_log 
 # else
-#   define __nopoll_log(domain, level, message, ...) /* nothing */
+#   define nopoll_log(ctx, level, message, ...) /* nothing */
 # endif
 #endif
 
-void nopoll_log (noPollCtx * ctx, noPollDebugLevel level, char * message, ...);
+void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * file, int line, noPollDebugLevel level, const char * message, ...);
 
 /* @} */
 

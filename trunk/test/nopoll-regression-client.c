@@ -54,7 +54,9 @@ nopoll_bool test_sending_and_check_echo (noPollConn * conn, const char * label, 
 	}
 
 	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
-	bytes_read = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 3000);
+	bytes_read = nopoll_conn_read (conn, buffer, length, nopoll_true, 3000);
+	if (bytes_read > 0)
+		buffer[bytes_read] = 0;
 	
 	if (bytes_read != length) {
 		printf ("ERROR: expected to find 14 bytes but found %d..\n", bytes_read);
@@ -343,7 +345,7 @@ nopoll_bool test_03 (void) {
 		return nopoll_false;
 	}
 
-	printf ("Test 02: sending basic content..\n");
+	printf ("Test 03: sending basic content..\n");
 
 	/* send content text(utf-8) */
 	if (nopoll_conn_send_text (conn, "This is a test", 14) != 14) {
@@ -352,7 +354,8 @@ nopoll_bool test_03 (void) {
 	}
 
 	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
-	bytes_read = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 3000);
+	printf ("Test 03: now reading reply..\n");
+	bytes_read = nopoll_conn_read (conn, buffer, 14, nopoll_true, 3000);
 	
 	if (bytes_read != 14) {
 		printf ("ERROR: expected to find 14 bytes but found %d..\n", bytes_read);
@@ -360,7 +363,7 @@ nopoll_bool test_03 (void) {
 	} /* end if */
 
 	/* check content received */
-	if (! nopoll_cmp (buffer, "This is a test")) {
+	if (! nopoll_ncmp (buffer, "This is a test", 14)) {
 		printf ("ERROR: expected to find message 'This is a test' but something different was received: '%s'..\n",
 			buffer);
 		return nopoll_false;
@@ -422,13 +425,18 @@ nopoll_bool test_04 (int chunk_size) {
 	stat ("nopoll-regression-client.c", &stat_buf);
 
 	while (total_read < stat_buf.st_size) {
-		/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
-		bytes_read = nopoll_conn_read (conn, buffer, chunk_size, nopoll_false, 3000);
-		/* printf ("Test 04: read %d bytes over the connection %d\n", bytes_read, nopoll_conn_get_id (conn)); */
+		/* wait for the reply (try to read 1024, blocking) */
+		bytes_read = nopoll_conn_read (conn, buffer, chunk_size, nopoll_true, 100);
+		/* printf ("Test 04: read %d bytes over the connection %d\n", bytes_read, nopoll_conn_get_id (conn));  */
 
-		if (bytes_read <= 0) {
+		if (bytes_read < 0) {
 			printf ("ERROR: expected to find bytes from the connection but found: %d\n", bytes_read);
 			return nopoll_false;
+		}
+
+		if (bytes_read == 0) {
+			/* printf ("Test 04: nothing found (0 bytes), total read %d, total requested: %ld\n", total_read, stat_buf.st_size); */
+			continue;
 		}
 
 		/* write content */
@@ -452,6 +460,62 @@ nopoll_bool test_04 (int chunk_size) {
 	
 	/* finish */
 	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+nopoll_bool test_04a (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	char         buffer[1024];
+	int          result;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* attempt to read without blocking */
+	printf ("Test 04-a: checking non-blocking API..\n");
+	result = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 0);
+	if (result != -1) {
+		printf ("ERROR: expected return result -1(%d)\n", result);
+		return nopoll_false;
+	}
+		
+	printf ("Test 04-a: ok, operation not blocked, result %d\n", result);
+	if (result != -1) {
+		printf ("ERROR: expected return result -1(%d)\n", result);
+		return nopoll_false;
+	}
+
+	result = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 300);
+	if (result != -1) {
+		printf ("ERROR: expected return result -1(%d)\n", result);
+		return nopoll_false;
+	}
+
+	printf ("Test 04-a: ok, operation not blocked, result %d\n", result);
+
+	result = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 1000);
+	if (result != -1) {
+		printf ("ERROR: expected return result -1(%d)\n", result);
+		return nopoll_false;
+	}
+
+	printf ("Test 04-a: ok, operation not blocked, result %d\n", result);
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+	
 
 	return nopoll_true;
 }
@@ -482,14 +546,14 @@ nopoll_bool test_05 (void) {
 		return nopoll_false;
 	}
 
-	/* wait for the reply (try to read 1024, blocking and with a 3 seconds timeout) */
-	bytes_read = nopoll_conn_read (conn, buffer, 1024, nopoll_false, 3000);
+	/* wait for the reply (try to read 322, blocking and with a 3 seconds timeout) */
+	bytes_read = nopoll_conn_read (conn, buffer, 322, nopoll_true, 3000);
 	if (bytes_read != 322) {
 		printf ("ERROR: expected to receive 322 bytes, but received %d\n", bytes_read);
 		return nopoll_false;
 	}
 
-	if (! nopoll_cmp (buffer, msg)) {
+	if (! nopoll_ncmp (buffer, msg, 322)) {
 		printf ("ERROR: expected to receive another content....\n");
 		printf ("Expected: %s\n", msg);
 		printf ("Received: %s\n", buffer);
@@ -612,6 +676,139 @@ nopoll_bool test_08 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_09 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * conn;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* setup the protocol version to see how it breaks (it should) */
+	nopoll_ctx_set_protocol_version (ctx, 12);
+
+	/* call to connect to TLS port expecting non-TLS protocol */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+
+	/* wait a bit 100ms */
+	nopoll_sleep (100000);
+
+	if (nopoll_conn_is_ready (conn)) {
+		printf ("ERROR: Expected to FAILING connection status due to protocol version error, but it working..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+nopoll_bool test_10 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * conn;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to connect from an origining that shouldn't be allowed */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, "http://deny.aspl.es");
+
+	/* wait a bit 100ms */
+	nopoll_sleep (100000);
+
+	if (nopoll_conn_is_ready (conn)) {
+		printf ("ERROR: Expected to FAILING connection status due to origing denied, but it working..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+nopoll_bool test_11 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * conn;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* create a working connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+
+	if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
+		printf ("ERROR: Expected to FAILING connection status due to origing denied, but it working..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	return nopoll_true;
+}
+
+nopoll_bool test_12 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	int          iterator;
+
+	/* time tracking */
+	struct  timeval    start;
+	struct  timeval    stop;
+	struct  timeval    diff;
+
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* start */
+	gettimeofday (&start, NULL);
+
+	iterator = 0;
+	while (iterator < 1000) {
+		/* create a working connection */
+		conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+		
+		if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
+			printf ("ERROR: Expected to FAILING connection status due to origing denied, but it working..\n");
+			return nopoll_false;
+		} /* end if */
+
+		/* finish connection */
+		nopoll_conn_close (conn);
+
+		iterator++;
+	} /* end while */
+
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	/* stop */
+	gettimeofday (&stop, NULL);
+
+	nopoll_timeval_substract (&stop, &start, &diff);
+
+	printf ("Test 12: created %d connections in %ld.%ld secs\n", 
+		iterator, diff.tv_sec, diff.tv_usec);
+	
+	
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -642,6 +839,8 @@ int main (int argc, char ** argv)
 		/* next position */
 		iterator++;
 	}
+
+	printf ("INFO: starting tests with pid: %d\n", getpid ());
 
 	if (test_01_strings ()) {
 		printf ("Test 01-strings: Library strings support [   OK   ]\n");
@@ -694,23 +893,30 @@ int main (int argc, char ** argv)
 	}
 
 	if (test_04 (512)) {	
-		printf ("Test 04-a: test streaming api (II) [   OK   ]\n");
+		printf ("Test 04-a: test streaming api (III) [   OK   ]\n");
 	}else {
-		printf ("Test 04-a: test streaming api (II) [ FAILED ]\n");
+		printf ("Test 04-a: test streaming api (III) [ FAILED ]\n");
 		return -1;
 	}
 
 	if (test_04 (137)) {	
-		printf ("Test 04-b: test streaming api (II) [   OK   ]\n");
+		printf ("Test 04-b: test streaming api (IV) [   OK   ]\n");
 	}else {
-		printf ("Test 04-b: test streaming api (II) [ FAILED ]\n");
+		printf ("Test 04-b: test streaming api (IV) [ FAILED ]\n");
 		return -1;
 	}
 
 	if (test_04 (17)) {	
-		printf ("Test 04-c: test streaming api (II) [   OK   ]\n");
+		printf ("Test 04-c: test streaming api (V) [   OK   ]\n");
 	}else {
-		printf ("Test 04-c: test streaming api (II) [ FAILED ]\n");
+		printf ("Test 04-c: test streaming api (V) [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_04a ()) {
+		printf ("Test 04-a: check non-blocking streaming and message based API  [   OK   ]\n");
+	} else {
+		printf ("Test 04-a: check non-blocking streaming and message based API [ FAILED ]\n");
 		return -1;
 	}
 
@@ -742,16 +948,58 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+	if (test_09 ()) {
+		printf ("Test 09: ensure we only support Sec-WebSocket-Version: 13 [   OK   ]\n");
+	} else {
+		printf ("Test 09: ensure we only support Sec-WebSocket-Version: 13 [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_10 ()) {
+		printf ("Test 10: test checking origing in on open and denying it [   OK   ]\n");
+	} else {
+		printf ("Test 10: test checking origing in on open and denying it [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_11 ()) {
+		printf ("Test 11: release context after connection [   OK   ]\n");
+	} else {
+		printf ("Test 11: release context after connection [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_12 ()) {
+		printf ("Test 12: create huge amount of connections in a short time [   OK   ]\n");
+	} else {
+		printf ("Test 12: create huge amount of connections in a short time [ FAILED ]\n");
+		return -1;
+	}
+
+	/* send a frame with few content as indicated by the payload
+	 * header (fragmented and unfragmented) */
+
+	/* add support to reply with redirect 301 to an opening
+	 * request: page 19 and 22 */
+
+	/* add support for basic HTTP auth before proceding with the
+	 * handshake. The the possibility to use htpasswd tools. Page 19 and 22 */
+
+	/* add support to define cookies by the server: page 20 */
+
+	/* update the library to split message frames into smaller
+	 * complete frames when bigger messages are received. */
+
+	/* add support for proxy mode */
+
+	/* check control files aren't flagged as fragmented */
+	
 	/* upload a file to the server ...*/
 
 	/* more streaming api testing, get bigger content as a
 	 * consequence of receiving several messages */
 
 	/* test streaming API when it timeouts */
-
-	/* ensure we don't support any version than 13 */
-
-	/* update the library to split message frames into smaller complete frames when bigger messages are received. */
 
 	/* test sending wrong mime headers */
 
@@ -761,8 +1009,6 @@ int main (int argc, char ** argv)
 
 	/* test sending lot of MIME headers (really lot of
 	 * information) */
-
-	/* test checking origing in on open and denying it */
 
 	/* test checking protocols and denying it */
 
@@ -779,6 +1025,9 @@ int main (int argc, char ** argv)
 	/* test splitting into several frames content bigger */
 
 	/* test wrong UTF-8 content received on text frames */
+
+	/* add support to sending close frames with status code and a
+	 * textual indication as defined by page 36 */
 
 	/* call to cleanup */
 	nopoll_cleanup_library ();

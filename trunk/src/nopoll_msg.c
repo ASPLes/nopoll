@@ -40,6 +40,15 @@
 #include <nopoll_private.h>
 
 /** 
+ * \defgroup nopoll_msg noPoll Message: functions for handling and using noPoll messages (websocket messages)
+ */
+
+/** 
+ * \addtogroup nopoll_msg
+ * @{
+ */
+
+/** 
  * @brief Allows to get a reference to the payload content inside the
  * provided websocket message.
  *
@@ -119,3 +128,4 @@ void         nopoll_msg_unref (noPollMsg * msg)
 }
 
 
+/* @} */

@@ -213,7 +213,7 @@ typedef struct _noPollCtx noPollCtx;
 typedef struct _noPollConn noPollConn;
 
 /** 
- * @brief Abstraction that represents a selected IO wait mechanism..
+ * @brief Abstraction that represents a selected IO wait mechanism.
  */
 typedef struct _noPollIoEngine noPollIoEngine;
 
@@ -267,7 +267,7 @@ typedef enum {
 	NOPOLL_ROLE_UNKNOWN,
 	/** 
 	 * @brief When the connection was created connecting to a web
-	 * socket server (see \ref nopoll_conn_connect).
+	 * socket server (see \ref nopoll_conn_new).
 	 */
 	NOPOLL_ROLE_CLIENT,
 	/** 
@@ -319,21 +319,24 @@ typedef enum {
 /** 
  * @brief Allows to check a condition and return if it is not meet.
  * 
+ * @param ctx The context where the operation will take place.
  * @param expr The expresion to check.
  */
 #define nopoll_return_if_fail(ctx, expr)					\
-if (!(expr)) {__nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed at %s (%s:%d)", #expr, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return;}
+	if (!(expr)) {__nopoll_log (ctx, __function_name__, __file__, __line__, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed at %s (%s:%d)", #expr, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return;}
 
 /** 
  * @brief Allows to check a condition and return the given value if it
  * is not meet.
+ *
+ * @param ctx The context where the operation will take place.
  * 
  * @param expr The expresion to check.
  *
  * @param val The value to return if the expression is not meet.
  */
 #define nopoll_return_val_if_fail(ctx, expr, val)			\
-if (!(expr)) { __nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed, returning: %s at %s (%s:%d)", #expr, #val, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return val;}
+	if (!(expr)) { __nopoll_log (ctx, __function_name__, __file__, __line__, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed, returning: %s at %s (%s:%d)", #expr, #val, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return val;}
 
 
 /** 

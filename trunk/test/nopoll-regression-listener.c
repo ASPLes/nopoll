@@ -40,6 +40,21 @@
 
 #include <signal.h>
 
+nopoll_bool on_connection_opened (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	/* check to reject */
+	if (nopoll_cmp (nopoll_conn_get_origin (conn), "http://deny.aspl.es"))  {
+		printf ("INFO: rejected connection from %s, with Host: %s and Origin: %s\n",
+			nopoll_conn_host (conn), nopoll_conn_get_host_header (conn), nopoll_conn_get_origin (conn));
+		return nopoll_false;
+	} /* end if */
+
+	/* notify connection accepted */
+	printf ("INFO: connection received from %s, with Host: %s and Origin: %s\n",
+		nopoll_conn_host (conn), nopoll_conn_get_host_header (conn), nopoll_conn_get_origin (conn));
+	return nopoll_true;
+}
+
 void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr * user_data)
 {
 	const char * content = (const char *) nopoll_msg_get_payload (msg);
@@ -75,6 +90,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 
 		/* now close the handle */
 		fclose (file);
+		return;
 	} /* end if */
 
 	/* send reply as received */
@@ -144,6 +160,9 @@ int main (int argc, char ** argv)
 
 	/* set on message received */
 	nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);
+
+	/* set on open */
+	nopoll_ctx_set_on_open (ctx, on_connection_opened, NULL);
 	
 	/* process events */
 	nopoll_loop_wait (ctx, 0);
