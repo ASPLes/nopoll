@@ -118,7 +118,7 @@ void     nopoll_log_color_enable (noPollCtx * ctx, nopoll_bool value)
 }
 
 /** 
- * @brief Allows to drop a log to the console.
+ * @internal Allows to drop a log to the console.
  *
  * This function allow to drop a log to the console using the given
  * domain, as an identification of which subsystem have reported the
