@@ -311,7 +311,7 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 				     conn->ctx->protocol_version);
 }
 
-int __nopoll_conn_tls_handle_error (noPollConn * conn, int res)
+int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * label)
 {
 	int ssl_err;
 
@@ -329,28 +329,28 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res)
 	case SSL_ERROR_SYSCALL:
 		if(res < 0) { /* not EOF */
 			if(errno == NOPOLL_EINTR) {
-				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL read interrupted by a signal: retrying");
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "%s interrupted by a signal: retrying", label);
 				/* report to retry */
 				return -2;
 			}
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "SSL_read (SSL_ERROR_SYSCALL)");
 			return -1;
 		}
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL socket closed on SSL_read (res=%d, ssl_err=%d, errno=%d)",
-			    res, ssl_err, errno);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "SSL socket closed on %s (res=%d, ssl_err=%d, errno=%d)",
+			    label, res, ssl_err, errno);
 		return res;
 	case SSL_ERROR_ZERO_RETURN: /* close_notify received */
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL closed on SSL_read");
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL closed on %s", label);
 		return res;
 	case SSL_ERROR_SSL:
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "SSL_read function error (res=%d, ssl_err=%d, errno=%d)",
-			    res, ssl_err, errno);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "%s function error (res=%d, ssl_err=%d, errno=%d)",
+			    label, res, ssl_err, errno);
 		return -1;
 	default:
 		/* nothing to handle */
 		break;
 	}
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "SSL_read/SSL_get_error returned %d", res);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "%s/SSL_get_error returned %d", label, res);
 	return -1;
 	
 }
@@ -366,7 +366,7 @@ int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: received %d bytes..", res); */
 
 	/* call to handle error */
-	res = __nopoll_conn_tls_handle_error (conn, res);
+	res = __nopoll_conn_tls_handle_error (conn, res, "SSL_read");
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "  SSL: after procesing error %d bytes..", res); */
 	return res;
 }
@@ -383,7 +383,7 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: sent %d bytes (requested: %d)..", res, buffer_size); */
 
 	/* call to handle error */
-	res = __nopoll_conn_tls_handle_error (conn, res);
+	res = __nopoll_conn_tls_handle_error (conn, res, "SSL_write");
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "   SSL: after processing error, sent %d bytes (requested: %d)..",  res, buffer_size); */
 	return res;
 }
@@ -539,6 +539,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 		conn->send    = nopoll_conn_tls_send;
 
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "TLS I/O handlers configured");
+		conn->tls_on = nopoll_true;
 	} /* end if */
 
 	/* call to send content */
