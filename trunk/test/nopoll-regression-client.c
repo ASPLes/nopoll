@@ -598,6 +598,11 @@ nopoll_bool test_06 (void) {
 		nopoll_sleep (10000);
 	} /* end if */
 
+	if (! nopoll_conn_is_tls_on (conn)) {
+		printf ("ERROR (5): expected to find TLS enabled on the connection but found it isn't..\n");
+		return nopoll_false;
+	} /* end if */
+
 	/* finish connection */
 	nopoll_conn_close (conn);
 	
