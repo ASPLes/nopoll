@@ -325,7 +325,7 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 
 	/* reduce reference counting here because ctx_register_conn
 	 * already acquired a reference */
-	nopoll_conn_unref (listener);
+	nopoll_conn_unref (listener); 
 	
 	return listener;
 }
