@@ -928,6 +928,8 @@ void          nopoll_conn_shutdown (noPollConn * conn)
  */ 
 void          nopoll_conn_close  (noPollConn  * conn)
 {
+	int refs;
+
 	/* check input data */
 	if (conn == NULL)
 		return;
@@ -945,7 +947,13 @@ void          nopoll_conn_close  (noPollConn  * conn)
 	} /* end if */
 
 	/* unregister connection from context */
+	refs = nopoll_conn_ref_count (conn);
 	nopoll_ctx_unregister_conn (conn->ctx, conn);
+
+	/* avoid calling next unref in the case not enough references
+	 * are found */
+	if (refs <= 1)
+		return;
 
 	/* call to unref connection */
 	nopoll_conn_unref (conn);
@@ -1842,6 +1850,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		conn->receive = nopoll_conn_tls_receive;
 		conn->send    = nopoll_conn_tls_send;
 
+		/* set this connection has TLS ok */
+		conn->tls_on  = nopoll_true;
+
 		/* report NULL because this was a call to complete TLS */
 		return NULL;
 		
@@ -2512,6 +2523,14 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * conn)
 		    listener->host, listener->port, listener->refs, ctx->refs);
 
 	if (conn->tls_on) {
+		/* check certificates and private key */
+		if (conn->certificate_file == NULL || conn->private_file == NULL) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept secure web socket connection, certificate file %p and/or key file isn't defined %p",
+				    conn->certificate_file, conn->private_file);
+			nopoll_conn_shutdown (listener);
+			return NULL;
+		} /* end if */
+
 		/* init ssl ciphers and engines */
 		if (! __nopoll_tls_was_init)
 			SSL_library_init ();
