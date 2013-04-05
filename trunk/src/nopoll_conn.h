@@ -58,7 +58,12 @@ noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
 				  const char * protocols,
 				  const char * origin);
 
-noPollConn   * nopoll_conn_accept (noPollCtx * ctx, noPollConn * conn);
+noPollConn   * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener);
+
+nopoll_bool    nopoll_conn_accept_complete (noPollCtx      * ctx, 
+					    noPollConn     * listener, 
+					    noPollConn     * conn, 
+					    NOPOLL_SOCKET    session);
 
 nopoll_bool    nopoll_conn_ref (noPollConn * conn);
 
