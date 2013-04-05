@@ -133,6 +133,9 @@ nopoll_bool    nopoll_ctx_ref (noPollCtx * ctx)
  */
 void           nopoll_ctx_unref (noPollCtx * ctx)
 {
+	noPollCertificate * cert;
+	int iterator;
+
 	nopoll_return_if_fail (ctx, ctx);
 
 	/* acquire mutex here */
@@ -143,6 +146,24 @@ void           nopoll_ctx_unref (noPollCtx * ctx)
 	}
 	/* release mutex here */
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Releasing no poll context %p (%d, conns: %d)", ctx, ctx->refs);
+
+	iterator = 0;
+	while (iterator < ctx->certificates_length) {
+		/* get reference */
+		cert = &(ctx->certificates[iterator]);
+
+		/* release */
+		nopoll_free (cert->serverName);
+		nopoll_free (cert->certificateFile);
+		nopoll_free (cert->privateKey);
+		nopoll_free (cert->optionalChainFile);
+
+		/* next position */
+		iterator++;
+	} /* end while */
+
+	/* release all certificates buckets */
+	nopoll_free (ctx->certificates);
 
 	/* release connection */
 	nopoll_free (ctx->conn_list);
@@ -296,6 +317,130 @@ int            nopoll_ctx_conns (noPollCtx * ctx)
 {
 	nopoll_return_val_if_fail (ctx, ctx, -1);
 	return ctx->conn_num;
+}
+
+/** 
+ * @brief Allows to find the certificate associated to the provided serverName. 
+ *
+ * @param ctx The context where the operation will take place.
+ *
+ * @param serverName the servername to use as pattern to find the
+ * right certificate. If NULL is provided the first certificate not
+ * refering to any serverName will be returned.
+ *
+ * @param certificateFile If provided a reference and the function
+ * returns nopoll_true, it will contain the certificateFile found.
+ *
+ * @param privateKey If provided a reference and the function
+ * returns nopoll_true, it will contain the privateKey found.
+ *
+ * @param optionalChainFile If provided a reference and the function
+ * returns nopoll_true, it will contain the optionalChainFile found.
+ *
+ * @return nopoll_true in the case the certificate was found,
+ * otherwise nopoll_false is returned.
+ */
+nopoll_bool    nopoll_ctx_find_certificate (noPollCtx   * ctx, 
+					    const char  * serverName, 
+					    const char ** certificateFile, 
+					    const char ** privateKey, 
+					    const char ** optionalChainFile)
+{
+	noPollCertificate * cert;
+
+	int iterator = 0;
+	nopoll_return_val_if_fail (ctx, ctx, nopoll_false);
+
+	while (iterator < ctx->certificates_length) {
+		/* get cert */
+		cert = &(ctx->certificates[iterator]);
+		if (cert) {
+			/* found a certificate */
+			if ((serverName == NULL && serverName == cert->serverName)  ||
+			    (nopoll_cmp (serverName, cert->serverName))) {
+				if (certificateFile)
+					(*certificateFile)   = cert->certificateFile;
+				if (privateKey)
+					(*privateKey)        = cert->privateKey;
+				if (optionalChainFile)
+					(*optionalChainFile) = cert->optionalChainFile;
+				return nopoll_true;
+			} /* end if */
+		} /* end if */
+
+		/* next position */
+		iterator++;
+	}
+
+	return nopoll_false;
+}
+
+/** 
+ * @brief Allows to install a certificate to be used in general by all
+ * listener connections working under the provided context.
+ *
+ * @param ctx The context where the certificate will be installed.
+ *
+ * @param serverName The optional server name to to limit the use of
+ * this certificate to the value provided here. Provide a NULL value
+ * to make the certificate provide to work under any server notified
+ * (Host: header) or via SNI (server name identification associated to
+ * the TLS transport).
+ *
+ * @param certificateFile The certificate file to be installed. 
+ *
+ * @param privateKey The private key file to use used.
+ *
+ * @param optionalChainFile Optional chain file with additional
+ * material to complete the certificate definition.
+ *
+ * @return nopoll_true if the certificate was installed otherwise
+ * nopoll_false. The function returns nopoll_false when ctx, certificateFile or privateKey are NULL.
+ */ 
+nopoll_bool           nopoll_ctx_set_certificate (noPollCtx  * ctx, 
+						  const char * serverName, 
+						  const char * certificateFile, 
+						  const char * privateKey, 
+						  const char * optionalChainFile)
+{
+	int length;
+	noPollCertificate * cert;
+
+	/* check values before proceed */
+	nopoll_return_val_if_fail (ctx, ctx && certificateFile && privateKey, nopoll_false);
+
+	/* check if the certificate is already installed */
+	if (nopoll_ctx_find_certificate (ctx, serverName, NULL, NULL, NULL))
+		return nopoll_true;
+
+	/* update certificate storage to hold all values */
+	ctx->certificates_length++;
+	length = ctx->certificates_length;
+	if (length == 1)
+		ctx->certificates = nopoll_new (noPollCertificate, 1);
+	else
+		ctx->certificates = nopoll_realloc (ctx->certificates, sizeof (noPollCertificate) * (length));
+
+	/* hold certificate */
+	cert = &(ctx->certificates[length - 1]);
+
+	cert->serverName = NULL;
+	if (serverName)
+		cert->serverName         = strdup (serverName);
+
+	cert->certificateFile = NULL;
+	if (certificateFile)
+		cert->certificateFile    = strdup (certificateFile);
+
+	cert->privateKey = NULL;
+	if (privateKey)
+		cert->privateKey         = strdup (privateKey);
+
+	cert->optionalChainFile = NULL;
+	if (optionalChainFile)
+		cert->optionalChainFile  = strdup (optionalChainFile);
+
+	return nopoll_true;
 }
 
 /** 

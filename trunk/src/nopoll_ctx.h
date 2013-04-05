@@ -58,6 +58,18 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 
 int            nopoll_ctx_conns (noPollCtx * ctx);
 
+nopoll_bool    nopoll_ctx_set_certificate (noPollCtx  * ctx, 
+					   const char * serverName, 
+					   const char * certificateFile, 
+					   const char * privateKey, 
+					   const char * optionalChainFile);
+
+nopoll_bool    nopoll_ctx_find_certificate (noPollCtx   * ctx, 
+					    const char  * serverName, 
+					    const char ** certificateFile, 
+					    const char ** privateKey, 
+					    const char ** optionalChainFile);
+
 void           nopoll_ctx_set_on_open (noPollCtx            * ctx,
 				       noPollActionHandler    on_open,
 				       noPollPtr              user_data);

@@ -48,6 +48,15 @@
 
 #include <nopoll_handlers.h>
 
+typedef struct _noPollCertificate {
+
+	char * serverName;
+	char * certificateFile;
+	char * privateKey;
+	char * optionalChainFile;
+
+} noPollCertificate;
+
 struct _noPollCtx {
 	/**
 	 * @internal Controls logs output..
@@ -114,6 +123,12 @@ struct _noPollCtx {
 	 * default: 13, due to RFC6455 standard
 	 */
 	int protocol_version;
+
+	/** 
+	 * @internal Certificates added..
+	 */ 
+	noPollCertificate *  certificates;
+	int                  certificates_length;
 };
 
 struct _noPollConn {

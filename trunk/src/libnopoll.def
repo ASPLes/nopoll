@@ -65,11 +65,13 @@ nopoll_conn_tls_send
 nopoll_conn_unref
 nopoll_conn_wait_until_connection_ready
 nopoll_ctx_conns
+nopoll_ctx_find_certificate
 nopoll_ctx_foreach_conn
 nopoll_ctx_new
 nopoll_ctx_ref
 nopoll_ctx_ref_count
 nopoll_ctx_register_conn
+nopoll_ctx_set_certificate
 nopoll_ctx_set_on_accept
 nopoll_ctx_set_on_msg
 nopoll_ctx_set_on_open

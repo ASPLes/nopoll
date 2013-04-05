@@ -2526,6 +2526,10 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
  * @return nopoll_true if the listener was accepted otherwise nopoll_false is returned.
  */
 nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session) {
+	const char * certificateFile = NULL;
+	const char * privateKey      = NULL;
+	const char * serverName      = NULL;
+
 	/* check input parameters */
 	if (! (ctx && listener && conn && session >= 0)) {
 		nopoll_conn_shutdown (conn);
@@ -2552,10 +2556,21 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 		    listener->host, listener->port, listener->refs, ctx->refs);
 
 	if (listener->tls_on) {
+
+		/* get here SNI to query about the serverName */
+
+		/* get references to currently configured certificate file */
+		certificateFile = listener->certificate_file;
+		privateKey      = listener->private_file;
+		if (certificateFile == NULL || privateKey == NULL) {
+			/* check if the certificate is already installed */
+			nopoll_ctx_find_certificate (ctx, serverName, &certificateFile, &privateKey, NULL);
+		} /* end if */
+
 		/* check certificates and private key */
-		if (listener->certificate_file == NULL || listener->private_file == NULL) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept secure web socket connection, certificate file %p and/or key file isn't defined %p",
-				    listener->certificate_file, listener->private_file);
+		if (certificateFile == NULL || privateKey == NULL) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept secure web socket connection, certificate file %p and/or key file %p isn't defined",
+				    certificateFile, privateKey);
 			nopoll_conn_shutdown (conn);
 			nopoll_ctx_unregister_conn (ctx, conn);
 			return nopoll_false;
@@ -2569,20 +2584,22 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 		/* accept TLS connection */
 		conn->ssl_ctx  = SSL_CTX_new (TLSv1_server_method ());
 
-		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate file: %s", conn->certificate_file);
-		if (SSL_CTX_use_certificate_file (conn->ssl_ctx, listener->certificate_file, SSL_FILETYPE_PEM) <= 0) {
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate file: %s", certificateFile);
+		if (SSL_CTX_use_certificate_file (conn->ssl_ctx, certificateFile, SSL_FILETYPE_PEM) <= 0) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
-				    "there was an error while setting certificate file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_certificate_file function. Tried certificate file: %s", conn->certificate_file);
+				    "there was an error while setting certificate file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_certificate_file function. Tried certificate file: %s", 
+				    certificateFile);
 			/* dump error stack */
 			nopoll_conn_shutdown (conn);
 			nopoll_ctx_unregister_conn (ctx, conn);
 			return nopoll_false;
 		} /* end if */
 
-		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate key: %s", listener->private_file);
-		if (SSL_CTX_use_PrivateKey_file (conn->ssl_ctx, listener->private_file, SSL_FILETYPE_PEM) <= 0) {
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate key: %s", privateKey);
+		if (SSL_CTX_use_PrivateKey_file (conn->ssl_ctx, privateKey, SSL_FILETYPE_PEM) <= 0) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
-				    "there was an error while setting private file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_PrivateKey_file function. Tried private file: %s", listener->private_file);
+				    "there was an error while setting private file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_PrivateKey_file function. Tried private file: %s", 
+				    privateKey);
 			/* dump error stack */
 			nopoll_conn_shutdown (conn);
 			nopoll_ctx_unregister_conn (ctx, conn);
@@ -2593,7 +2610,7 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 		if (! SSL_CTX_check_private_key (conn->ssl_ctx)) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
 				    "seems that certificate file and private key doesn't match!, unable to start TLS profile. Failure found at SSL_CTX_check_private_key function. Used certificate %s, and key: %s",
-				    listener->certificate_file, listener->private_file);
+				    certificateFile, privateKey);
 			/* dump error stack */
 			nopoll_conn_shutdown (conn);
 			return nopoll_false;
