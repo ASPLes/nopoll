@@ -63,7 +63,8 @@ noPollConn   * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener);
 nopoll_bool    nopoll_conn_accept_complete (noPollCtx      * ctx, 
 					    noPollConn     * listener, 
 					    noPollConn     * conn, 
-					    NOPOLL_SOCKET    session);
+					    NOPOLL_SOCKET    session,
+					    nopoll_bool      tls_on);
 
 nopoll_bool    nopoll_conn_ref (noPollConn * conn);
 

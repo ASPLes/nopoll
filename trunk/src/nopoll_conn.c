@@ -2487,6 +2487,11 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
 	NOPOLL_SOCKET   session;
 	noPollConn    * conn;
 
+	nopoll_return_val_if_fail (ctx, ctx && listener, NULL);
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Calling to accept web socket connection over master id=%d, socket=%d",
+		    listener->id, listener->session);
+
 	/* recevied a new connection: accept the
 	 * connection and ask the app level to accept
 	 * or not */
@@ -2504,11 +2509,14 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
 		return NULL;
 	} /* end if */
 
-	if (! nopoll_conn_accept_complete (ctx, listener, conn, session))
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Accepted new WebSocket conn-id=%d, socket=%d, over master id=%d, socket=%d",
+		    conn->id, conn->session, listener->id, listener->session);
+
+	if (! nopoll_conn_accept_complete (ctx, listener, conn, session, listener->tls_on))
 		return NULL;
 
 	/* report listener created */
-	return listener;
+	return conn;
 }
 
 /** 
@@ -2523,9 +2531,12 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
  *
  * @param session The socket associated to the listener accepted.
  *
+ * @param tls_on A boolean indication if the TLS interface should be
+ * enabled or not.
+ *
  * @return nopoll_true if the listener was accepted otherwise nopoll_false is returned.
  */
-nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session) {
+nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session, nopoll_bool tls_on) {
 	const char * certificateFile = NULL;
 	const char * privateKey      = NULL;
 	const char * serverName      = NULL;
@@ -2555,7 +2566,10 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Connection received and accepted from %s:%s (conn refs: %d, ctx refs: %d)", 
 		    listener->host, listener->port, listener->refs, ctx->refs);
 
-	if (listener->tls_on) {
+	if (listener->tls_on || tls_on) {
+		/* reached this point, ensure tls is enabled on this
+		 * session */
+		conn->tls_on = nopoll_true;
 
 		/* get here SNI to query about the serverName */
 
