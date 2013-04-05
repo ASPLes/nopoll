@@ -158,6 +158,12 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+	/* register certificates at context level */
+	if (! nopoll_ctx_set_certificate (ctx, NULL, "test-certificate.crt", "test-private.key", NULL)) {
+		printf ("ERROR: unable to setup certificates at context level..\n");
+		return -1;
+	}
+
 	/* set on message received */
 	nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);
 

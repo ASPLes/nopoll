@@ -814,6 +814,87 @@ nopoll_bool test_12 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_13_test (noPollCtx * ctx, const char * serverName, const char * _certificateFile, const char * _privateKey)
+{
+	const char * certificateFile;
+	const char * privateKey;
+
+	if (! nopoll_ctx_find_certificate (ctx, serverName, NULL, NULL, NULL)) {
+		printf ("Test 13: it SHOULD find something about found.server.com but function reported failure status..\n");
+		return nopoll_false;
+	}
+
+	if (! nopoll_ctx_find_certificate (ctx, serverName, &certificateFile, &privateKey, NULL)) {
+		printf ("Test 13: it SHOULD find something about found.server.com but function reported failure status..\n");
+		return nopoll_false;
+	}
+
+	if (! nopoll_cmp (certificateFile, _certificateFile)) {
+		printf ("Test 13: expected to find certificate %s, but found %s\n", _certificateFile, certificateFile);
+		return nopoll_false;
+	}
+	if (! nopoll_cmp (privateKey, _privateKey)) {
+		printf ("Test 13: expected to find certificate %s, but found %s\n", _privateKey, privateKey);
+		return nopoll_false;
+	}
+	return nopoll_true;
+}
+
+nopoll_bool test_13 (void)
+{
+	noPollCtx * ctx;
+
+	/* create ctx */
+	ctx = nopoll_ctx_new ();
+
+	if (nopoll_ctx_find_certificate (ctx, "not-found", NULL, NULL, NULL)) {
+		printf ("Test 13: it shouldn't find anything but function reported ok status..\n");
+		return nopoll_false;
+	}
+
+	/* register */
+	if (! nopoll_ctx_set_certificate (ctx, "found.server.com", "test.crt", "test.key", NULL)) {
+		printf ("Test 13: unable to install certificate...\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! test_13_test (ctx, "found.server.com", "test.crt", "test.key")) 
+		return nopoll_false;
+
+	/* register */
+	if (! nopoll_ctx_set_certificate (ctx, "another.server.com", "another.test.crt", "another.test.key", NULL)) {
+		printf ("Test 13: unable to install certificate (another.server.com)...\n");
+		return nopoll_false;
+	} /* end if */
+
+
+	if (! test_13_test (ctx, "found.server.com", "test.crt", "test.key")) 
+		return nopoll_false;
+
+	if (! test_13_test (ctx, "another.server.com", "another.test.crt", "another.test.key")) 
+		return nopoll_false;
+
+	/* register */
+	if (! nopoll_ctx_set_certificate (ctx, "other.server.com", "other.test.crt", "other.test.key", NULL)) {
+		printf ("Test 13: unable to install certificate (another.server.com)...\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! test_13_test (ctx, "found.server.com", "test.crt", "test.key")) 
+		return nopoll_false;
+
+	if (! test_13_test (ctx, "another.server.com", "another.test.crt", "another.test.key")) 
+		return nopoll_false;
+
+	if (! test_13_test (ctx, "other.server.com", "other.test.crt", "other.test.key")) 
+		return nopoll_false;
+
+	/* release ctx */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -978,6 +1059,13 @@ int main (int argc, char ** argv)
 		printf ("Test 12: create huge amount of connections in a short time [   OK   ]\n");
 	} else {
 		printf ("Test 12: create huge amount of connections in a short time [ FAILED ]\n");
+		return -1;
+	}
+	
+	if (test_13 ()) {
+		printf ("Test 13: testing certificate storege [   OK    ]\n");
+	} else {
+		printf ("Test 13: testing certificate storege [ FAILED  ]\n");
 		return -1;
 	}
 
