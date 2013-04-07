@@ -69,6 +69,19 @@ void        nopoll_trim  (char * chunk, int * trimmed);
 
 void        nopoll_sleep (long microseconds);
 
+void        nopoll_thread_handlers (noPollMutexCreate  mutex_create,
+				    noPollMutexDestroy mutex_destroy,
+				    noPollMutexLock    mutex_lock,
+				    noPollMutexUnlock  mutex_unlock);
+
+noPollPtr   nopoll_mutex_create (void);
+
+void        nopoll_mutex_lock    (noPollPtr mutex);
+
+void        nopoll_mutex_unlock  (noPollPtr mutex);
+
+void        nopoll_mutex_destroy (noPollPtr mutex);
+
 nopoll_bool nopoll_base64_encode (const char * content, 
 				  int          length, 
 				  char       * output, 

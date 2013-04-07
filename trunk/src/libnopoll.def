@@ -4,6 +4,10 @@ __nopoll_conn_new_common
 __nopoll_conn_tls_handle_error
 __nopoll_ctx_sigpipe_do_nothing
 __nopoll_log
+__nopoll_mutex_create
+__nopoll_mutex_destroy
+__nopoll_mutex_lock
+__nopoll_mutex_unlock
 __nopoll_nonce_init
 __nopoll_pack_content
 __nopoll_tls_was_init
@@ -114,6 +118,10 @@ nopoll_msg_get_payload
 nopoll_msg_get_payload_size
 nopoll_msg_ref
 nopoll_msg_unref
+nopoll_mutex_create
+nopoll_mutex_destroy
+nopoll_mutex_lock
+nopoll_mutex_unlock
 nopoll_ncmp
 nopoll_nonce
 nopoll_realloc
@@ -124,5 +132,6 @@ nopoll_show_byte
 nopoll_sleep
 nopoll_strdup_printf
 nopoll_strdup_printfv
+nopoll_thread_handlers
 nopoll_timeval_substract
 nopoll_trim
