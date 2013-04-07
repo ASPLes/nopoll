@@ -1939,16 +1939,13 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	nopoll_show_byte (conn->ctx, buffer[1], "header[1]");
 
 	/* build next message */
-	msg = nopoll_new (noPollMsg, 1);
+	msg = nopoll_msg_new ();
 	if (msg == NULL) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to allocate memory for received message, closing session id: %d", 
 			    conn->id);
 		nopoll_conn_shutdown (conn);
 		return NULL;
 	} /* end if */
-
-	/* set initial ref count */
-	msg->refs = 1;
 
 	/* get fin bytes */
 	msg->has_fin      = nopoll_get_bit (buffer[0], 7);
