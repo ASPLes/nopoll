@@ -939,9 +939,14 @@ void nopoll_cleanup_library (void)
  *
  * noPoll is designed as a thread agnostic stateless library so it can
  * fit in any project configuration (no matter if it uses threads or
- * event notifications).
+ * event notification).
  *
- * In any case, before workign with noPoll API you must create a
+ * In the case you are planning to use noPoll in a project that uses
+ * threads and you expect to make calls to the noPoll API from
+ * different threads you must setup four callbacks that will help
+ * noPoll to create, destroy, lock and unlock mutexes. For that, check documentation about \ref nopoll_thread_handlers
+ *
+ * In any case, before working with noPoll API you must create a
  * noPollCtx object, which represents a single library instance
  * state. You can create as much noPollCtx inside the process as you
  * want. To create it you must do something like:
@@ -959,6 +964,8 @@ void nopoll_cleanup_library (void)
  * // following:
  * nopoll_ctx_unref (ctx);
  * \endcode
+ *
+ * 
  *
  *
  * \section creating_basic_web_socket_server Creating a basic WebSocket server with noPoll (using noPoll own loop)
