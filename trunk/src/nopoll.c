@@ -935,7 +935,7 @@ void nopoll_cleanup_library (void)
  * AM_CONDITIONAL(ENABLE_WEBSOCKET_SUPPORT, test "x$enable_websocket_support" = "xyes")
  * \endcode
  *
- * \section before_begin 3. Some concepts before begin
+ * \section thread_safety 3. noPoll thread safety considerations
  *
  * noPoll is designed as a thread agnostic stateless library so it can
  * fit in any project configuration (no matter if it uses threads or
@@ -943,24 +943,28 @@ void nopoll_cleanup_library (void)
  *
  * In the case you are planning to use noPoll in a project that uses
  * threads and you expect to make calls to the noPoll API from
- * different threads you must setup four callbacks that will help
- * noPoll to create, destroy, lock and unlock mutexes. For that, check documentation about \ref nopoll_thread_handlers
+ * different threads at the same time, then you must setup four
+ * callbacks that will help noPoll to create, destroy, lock and unlock
+ * mutexes. For that, check documentation about \ref
+ * nopoll_thread_handlers
  *
- * In any case, before working with noPoll API you must create a
- * noPollCtx object, which represents a single library instance
- * state. You can create as much noPollCtx inside the process as you
+ * \section creating_a_nopoll_ctx 4. Creating a noPoll context
+ *
+ * Before working with noPoll API you must create a
+ * \ref noPollCtx object, which represents a single library instance
+ * state. You can create as much \ref noPollCtx objects inside the process as you
  * want. To create it you must do something like:
  *
  * \code
  * noPollCtx * ctx = nopoll_ctx_new ();
  * if (! ctx) {
- *     // some handling code here
+ *     // error some handling code here
  * }
  *
- * // do some WebSocket operations (as client or listener)
+ * // do some WebSocket operations (as client or listener)...
  *
- * // and once you are done and after terminating all messages and
- * // connections created you release the context by doing the
+ * // ...and once you are done and after terminating all messages and
+ * // connections created you have to release the context by doing the
  * // following:
  * nopoll_ctx_unref (ctx);
  * \endcode
@@ -968,7 +972,7 @@ void nopoll_cleanup_library (void)
  * 
  *
  *
- * \section creating_basic_web_socket_server Creating a basic WebSocket server with noPoll (using noPoll own loop)
+ * \section creating_basic_web_socket_server 5. Creating a basic WebSocket server with noPoll (using noPoll own loop)
  *
  * Now let's see how to create a simple WebSocket server using noPoll own loop:
  *
