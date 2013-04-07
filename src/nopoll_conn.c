@@ -2477,7 +2477,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
  *
  * @param ctx The context where the operation will take place.
  *
- * @param conn The WebSocket listener that is receiving a new incoming connection.
+ * @param listener The WebSocket listener that is receiving a new incoming connection.
  *
  * @return A newly created \ref noPollConn reference or NULL if it
  * fails.

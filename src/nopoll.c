@@ -684,6 +684,8 @@ void nopoll_cleanup_library (void)
 	return;
 } /* end if */
 
+/* @} */
+
 /** 
  * \mainpage noPoll: a toolkit to add WebSocket support to your project.
  *
@@ -694,13 +696,18 @@ void nopoll_cleanup_library (void)
  * Some of its features are:
  *
  * - Context based API design making the library stateless. Support to run several execution contexts in the same process.
- * - Support for stream based API and message based API
+ * - Support for stream based API and message based API (handler notified)
  * - Robust and well tested implementation checked by a strong regression test to ensure the library keeps on working as new features are added.
  * - Flexible design that allows its integration into a external loop or to use its own waiting loop
+ * - Support for port share which allows running native protocol and WebSocket protocol on the same port.
  *
  * noPoll is been developed by <b>Advanced Software Production Line,
  * S.L.</b> (http://www.aspl.es). It is licensed under the LGPL 2.1
  * which allows open source and commercial usage.
+ *
+ * noPoll manual is available in the following link: 
+ *
+ * - \ref nopoll_core_library_manual
  *
  * Check out <b>noPoll API documentation</b> in the following links:
  *
@@ -731,4 +738,14 @@ void nopoll_cleanup_library (void)
  * contact us at: info@aspl.es.
  */
 
-/* @} */
+/** 
+ * \page nopoll_core_library_manual noPoll core library manual
+ *
+ * \section installing_nopoll How to install noPoll 
+ *
+ * \section creating a basic WebSocket server with noPoll (using noPoll own loop)
+ *
+ * 
+ */
+
+
