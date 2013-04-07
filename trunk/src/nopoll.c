@@ -741,9 +741,103 @@ void nopoll_cleanup_library (void)
 /** 
  * \page nopoll_core_library_manual noPoll core library manual
  *
- * \section installing_nopoll How to install noPoll 
+ * \section installing_nopoll 1. How to install noPoll 
  *
- * \section creating a basic WebSocket server with noPoll (using noPoll own loop)
+ * Currently, noPoll has only one dependency, which is OpenSSL
+ * (libssl) for all those crypto operations required by the protocol
+ * itself. 
+ *
+ * After having that library installed in your system (check your OS
+ * documentation), download lastest tar.gz noPoll library from: http://code.google.com/p/no-poll
+ *
+ * Then, to compile the library follow the standard autoconf voodoo:
+ *
+ * \code
+ * >> tar xzvf nopoll-{version}.tar.gz
+ * >> cd nopoll-{version}
+ * >> ./configure 
+ * >> make
+ * \endcode
+ *
+ * At this point, if everything went ok, you can check the library by running in one terminal:
+ *
+ * \code
+ * >> cd test/
+ * >> ./nopoll-regression-listener
+ * \endcode
+ *
+ * And then in another terminal the client regression test:
+ *
+ * \code
+ * >> cd test/
+ * >> ./nopoll-regression-client
+ * \endcode
+ *
+ * If everything looks fine, you can install nopoll into your system with the standard:
+ * \code
+ * >> make install
+ * \endcode
+ *
+ * \section using_nopoll 2. How to use noPoll library into your application
+ *
+ * After a successful noPoll installation, you should be able to
+ * include noPoll API functions by including the following header:
+ *
+ * \code
+ * #include <nopoll.h>
+ * \endcode
+ *
+ * Then you can use the following to get nopoll compilation flags:
+ *
+ * \code
+ * >> pkg-config nopoll --cflags
+ * >> pkg-config nopoll --libs
+ * \endcode
+ *
+ * Or if your project uses autoconf for the building process, just include the following into your configure.ac file:
+ *
+ * \code
+ * dnl check for websocket support (through noPoll)
+ * AC_ARG_ENABLE(websocket-support, [  --disable-websocket-support  Makes the built with WebSocket extension library], 
+ *	      enable_websocket_support="$enableval", 
+ *	      enable_websocket_support=yes)
+ * if test "$enable_websocket_support" != "no" ; then
+ *    PKG_CHECK_MODULES(NOPOLL, nopoll,	[enable_websocket_support=yes], [enable_websocket_support=no])
+ *    AC_SUBST(NOPOLL_CFLAGS)
+ *    AC_SUBST(NOPOLL_LIBS)
+ * fi
+ * AM_CONDITIONAL(ENABLE_WEBSOCKET_SUPPORT, test "x$enable_websocket_support" = "xyes")
+ * \endcode
+ *
+ * \section before_begin 3. Some concepts before begin
+ *
+ * noPoll is designed as a thread agnostic stateless library so it can
+ * fit in any project configuration (no matter if it uses threads or
+ * event notifications).
+ *
+ * In any case, before workign with noPoll API you must create a
+ * noPollCtx object, which represents a single library instance
+ * state. You can create as much noPollCtx inside the process as you
+ * want. To create it you must do something like:
+ *
+ * \code
+ * noPollCtx * ctx = nopoll_ctx_new ();
+ * if (! ctx) {
+ *     // some handling code here
+ * }
+ *
+ * // do some WebSocket operations (as client or listener)
+ *
+ * // and once you are done and after terminating all messages and
+ * // connections created you release the context by doing the
+ * // following:
+ * nopoll_ctx_unref (ctx);
+ * \endcode
+ *
+ *
+ * \section creating_basic_web_socket_server Creating a basic WebSocket server with noPoll (using noPoll own loop)
+ *
+ * Now let's see how to create a simple WebSocket server using noPoll own loop:
  *
  * 
  */
