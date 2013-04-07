@@ -45,6 +45,8 @@ const noPollPtr  nopoll_msg_get_payload (noPollMsg * msg);
 
 int          nopoll_msg_get_payload_size (noPollMsg * msg);
 
+noPollMsg  * nopoll_msg_new (void);
+
 nopoll_bool  nopoll_msg_ref (noPollMsg * msg);
 
 void         nopoll_msg_unref (noPollMsg * msg);

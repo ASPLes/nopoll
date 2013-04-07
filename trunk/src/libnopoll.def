@@ -116,6 +116,7 @@ nopoll_loop_stop
 nopoll_loop_wait
 nopoll_msg_get_payload
 nopoll_msg_get_payload_size
+nopoll_msg_new
 nopoll_msg_ref
 nopoll_msg_unref
 nopoll_mutex_create

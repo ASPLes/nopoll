@@ -279,7 +279,9 @@ struct _noPollMsg {
 
 	noPollPtr      payload;
 	long int       payload_size;
+
 	int            refs;
+	noPollPtr      ref_mutex;
 
 	char           mask[4];
 	int            remain_bytes;
