@@ -129,6 +129,9 @@ struct _noPollCtx {
 	 */ 
 	noPollCertificate *  certificates;
 	int                  certificates_length;
+
+	/* mutex */
+	noPollPtr            ref_mutex;
 };
 
 struct _noPollConn {
@@ -251,6 +254,11 @@ struct _noPollConn {
 	 * @internal Support for an user defined pointer.
 	 */
 	noPollPtr             hook;
+
+	/** 
+	 * @internal Mutex 
+	 */
+	noPollPtr             ref_mutex;
 };
 
 struct _noPollIoEngine {

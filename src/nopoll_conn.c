@@ -427,6 +427,9 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 		return NULL;
 	conn->refs = 1;
 
+	/* create mutex */
+	conn->ref_mutex = nopoll_mutex_create ();
+
 	/* register connection into context */
 	if (! nopoll_ctx_register_conn (ctx, conn)) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to register connection into the context, unable to create connection");
@@ -668,15 +671,18 @@ nopoll_bool    nopoll_conn_ref (noPollConn * conn)
 	if (conn == NULL)
 		return nopoll_false;
 
-	/* acquire here the mutex */
+	/* lock the mutex */
+	nopoll_mutex_lock (conn->ref_mutex);
 	if (conn->refs <= 0) {
-		/* release here the mutex */
+		/* unlock the mutex */
+		nopoll_mutex_unlock (conn->ref_mutex);
 		return nopoll_false;
 	}
 	
 	conn->refs++;
 
 	/* release here the mutex */
+	nopoll_mutex_unlock (conn->ref_mutex);
 
 	return nopoll_true;
 }
@@ -734,11 +740,13 @@ nopoll_bool    nopoll_conn_is_ready (noPollConn * conn)
 		return nopoll_false;
 	if (! conn->handshake_ok) {
 		/* acquire here handshake mutex */
+		nopoll_mutex_lock (conn->ref_mutex);
 
 		/* complete handshake */
 		nopoll_conn_complete_handshake (conn);
 
 		/* release here handshake mutex */
+		nopoll_mutex_unlock (conn->ref_mutex);
 	}
 	return conn->handshake_ok;
 }
@@ -1006,14 +1014,18 @@ void nopoll_conn_unref (noPollConn * conn)
 		return;
 
 	/* acquire here the mutex */
+	nopoll_mutex_lock (conn->ref_mutex);
+
 	conn->refs--;
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Releasing connection id %d reference, current ref count status is: %d", 
 		    conn->id, conn->refs);
 	if (conn->refs != 0) {
 		/* release here the mutex */
+		nopoll_mutex_unlock (conn->ref_mutex);
 		return;
 	}
 	/* release here the mutex */
+	nopoll_mutex_unlock (conn->ref_mutex);
 
 	/* release message */
 	if (conn->pending_msg)
@@ -1051,6 +1063,9 @@ void nopoll_conn_unref (noPollConn * conn)
 		nopoll_free (conn->handshake->expected_accept);
 		nopoll_free (conn->handshake);
 	} /* end if */
+
+	/* release mutex */
+	nopoll_mutex_destroy (conn->ref_mutex);
 
 	nopoll_free (conn);	
 
@@ -1862,11 +1877,14 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	if (! conn->handshake_ok) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Connection id %d handshake is not complete, running..", conn->id);
 		/* acquire here handshake mutex */
+		nopoll_mutex_lock (conn->ref_mutex);
 
 		/* complete handshake */
 		nopoll_conn_complete_handshake (conn);
 
 		/* release here handshake mutex */
+		nopoll_mutex_unlock (conn->ref_mutex);
+
 		if (! conn->handshake_ok) 
 			return NULL;
 	} /* end if */
