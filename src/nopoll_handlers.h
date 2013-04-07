@@ -197,6 +197,35 @@ typedef void (*noPollOnMessageHandler) (noPollCtx  * ctx,
 					noPollMsg  * msg,
 					noPollPtr  * user_data);
 
+/** 
+ * @brief Mutex creation handler used by the library.
+ *
+ * @return A reference to the mutex created (already initialized).
+ */
+typedef noPollPtr (*noPollMutexCreate) (void);
+
+/** 
+ * @brief Mutex destroy handler used by the library.
+ *
+ * @param The mutex to destroy.
+ */
+typedef void (*noPollMutexDestroy) (noPollPtr mutex);
+
+/** 
+ * @brief Mutex lock handler used by the library.
+ *
+ * @param The mutex where to implement the lock operation.
+ */
+typedef void (*noPollMutexLock) (noPollPtr mutex);
+
+/** 
+ * @brief Mutex unlock handler used by the library.
+ *
+ * @param The mutex where to implement the unlock operation.
+ */
+typedef void (*noPollMutexUnlock) (noPollPtr mutex);
+
+
 #endif
 
 /* @} */

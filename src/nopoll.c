@@ -321,6 +321,132 @@ void        nopoll_sleep (long microseconds)
 #endif
 }
 
+noPollMutexCreate   __nopoll_mutex_create  = NULL;
+noPollMutexDestroy  __nopoll_mutex_destroy = NULL;
+noPollMutexLock     __nopoll_mutex_lock    = NULL;
+noPollMutexUnlock   __nopoll_mutex_unlock  = NULL;
+
+/** 
+ * @brief Creates a mutex with the defined create mutex handler.
+ *
+ * See \ref nopoll_thread_handlers for more information.
+ *
+ * @return A mutex reference or NULL if it fails.
+ */
+noPollPtr   nopoll_mutex_create (void)
+{
+	if (__nopoll_mutex_create)
+		return NULL;
+
+	/* call defined handler */
+	return __nopoll_mutex_create ();
+}
+
+/** 
+ * @brief Implements a mutex lock operation on the provided
+ * reference. The function just skip when no mutex reference is
+ * received o no lock handler was defined.
+ *
+ * See \ref nopoll_thread_handlers for more information.
+ *
+ * @param mutex The mutex where do the lock operation. 
+ *
+ * The function will just return if the reference isn't defined or the
+ * lock handler wasn't installed.
+ */
+void        nopoll_mutex_lock    (noPollPtr mutex)
+{
+	if (__nopoll_mutex_lock)
+		return;
+
+	/* call defined handler */
+	__nopoll_mutex_lock (mutex);
+	return;
+}
+
+/** 
+ * @brief Implements a mutex unlock operation on the provided
+ * reference. The function just skip when no mutex reference is
+ * received o no unlock handler was defined.
+ *
+ * See \ref nopoll_thread_handlers for more information.
+ *
+ * @param mutex The mutex where do the unlock operation. 
+ *
+ */
+void        nopoll_mutex_unlock  (noPollPtr mutex)
+{
+	if (__nopoll_mutex_unlock)
+		return;
+
+	/* call defined handler */
+	__nopoll_mutex_unlock (mutex);
+	return;
+}
+
+/** 
+ * @brief Implements a mutex destroy operation on the provided
+ * reference. The function just skip when no mutex reference is
+ * received o no destroy handler was defined.
+ *
+ * See \ref nopoll_thread_handlers for more information.
+ *
+ * @param mutex The mutex to destroy operation. 
+ *
+ */
+void        nopoll_mutex_destroy (noPollPtr mutex)
+{
+	if (__nopoll_mutex_destroy)
+		return;
+
+	/* call defined handler */
+	__nopoll_mutex_lock (mutex);
+	return;
+}
+
+/** 
+ * @brief Global optional mutex handlers used by noPoll library to
+ * create, destroy, lock and unlock mutex.
+ *
+ * If you set this handlers, the library will use these functions to
+ * secure sensitive code paths that mustn't be protected while working
+ * with threads.
+ *
+ * If you don't provide these, the library will work as usual without
+ * doing any locking.
+ *
+ * @param mutex_create The handler used to create mutexes.
+ *
+ * @param mutex_destroy The handler used to destroy mutexes.
+ *
+ * @param mutex_lock The handler used to lock a particular mutex.
+ *
+ * @param mutex_unlock The handler used to unlock a particular mutex.
+ *
+ * The function must receive all handlers defined, otherwise no
+ * configuration will be done.
+ */
+void        nopoll_thread_handlers (noPollMutexCreate  mutex_create,
+				    noPollMutexDestroy mutex_destroy,
+				    noPollMutexLock    mutex_lock,
+				    noPollMutexUnlock  mutex_unlock)
+{
+	/* check handlers before configuring anything */
+	if (! __nopoll_mutex_create ||
+	    ! __nopoll_mutex_destroy ||
+	    ! __nopoll_mutex_lock ||
+	    ! __nopoll_mutex_unlock)
+		return;
+
+	/* configured received handlers */
+	__nopoll_mutex_create  = mutex_create;
+	__nopoll_mutex_destroy = mutex_destroy;
+	__nopoll_mutex_lock    = mutex_lock;
+	__nopoll_mutex_unlock  = mutex_unlock;
+
+	return;
+}
+
 /** 
  * @brief Allows to encode the provided content, leaving the output on
  * the buffer allocated by the caller.
