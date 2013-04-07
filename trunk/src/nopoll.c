@@ -335,7 +335,7 @@ noPollMutexUnlock   __nopoll_mutex_unlock  = NULL;
  */
 noPollPtr   nopoll_mutex_create (void)
 {
-	if (__nopoll_mutex_create)
+	if (! __nopoll_mutex_create)
 		return NULL;
 
 	/* call defined handler */
@@ -356,7 +356,7 @@ noPollPtr   nopoll_mutex_create (void)
  */
 void        nopoll_mutex_lock    (noPollPtr mutex)
 {
-	if (__nopoll_mutex_lock)
+	if (! __nopoll_mutex_lock)
 		return;
 
 	/* call defined handler */
@@ -376,7 +376,7 @@ void        nopoll_mutex_lock    (noPollPtr mutex)
  */
 void        nopoll_mutex_unlock  (noPollPtr mutex)
 {
-	if (__nopoll_mutex_unlock)
+	if (! __nopoll_mutex_unlock)
 		return;
 
 	/* call defined handler */
@@ -396,7 +396,7 @@ void        nopoll_mutex_unlock  (noPollPtr mutex)
  */
 void        nopoll_mutex_destroy (noPollPtr mutex)
 {
-	if (__nopoll_mutex_destroy)
+	if (! __nopoll_mutex_destroy)
 		return;
 
 	/* call defined handler */

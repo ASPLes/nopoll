@@ -100,6 +100,9 @@ noPollCtx * nopoll_ctx_new (void) {
 	/* setup default protocol version */
 	result->protocol_version = 13;
 
+	/* create mutexes */
+	result->ref_mutex = nopoll_mutex_create ();
+
 	return result;
 }
 
@@ -118,8 +121,12 @@ nopoll_bool    nopoll_ctx_ref (noPollCtx * ctx)
 	nopoll_return_val_if_fail (ctx, ctx, nopoll_false);
 
 	/* acquire mutex here */
+	nopoll_mutex_lock (ctx->ref_mutex);
+
 	ctx->refs++;
+
 	/* release mutex here */
+	nopoll_mutex_unlock (ctx->ref_mutex);
 
 	return nopoll_true;
 }
@@ -139,12 +146,17 @@ void           nopoll_ctx_unref (noPollCtx * ctx)
 	nopoll_return_if_fail (ctx, ctx);
 
 	/* acquire mutex here */
+	nopoll_mutex_lock (ctx->ref_mutex);
+
 	ctx->refs--;
 	if (ctx->refs != 0) {
 		/* release mutex here */
+		nopoll_mutex_unlock (ctx->ref_mutex);
 		return;
 	}
 	/* release mutex here */
+	nopoll_mutex_unlock (ctx->ref_mutex);
+
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Releasing no poll context %p (%d, conns: %d)", ctx, ctx->refs);
 
 	iterator = 0;
@@ -182,10 +194,19 @@ void           nopoll_ctx_unref (noPollCtx * ctx)
  */
 int            nopoll_ctx_ref_count (noPollCtx * ctx)
 {
+	int result;
 	if (! ctx)
 		return -1;
 
-	return ctx->refs;
+	/* lock */
+	nopoll_mutex_lock (ctx->ref_mutex);
+
+	result = ctx->refs;
+
+	/* unlock */
+	nopoll_mutex_unlock (ctx->ref_mutex);
+
+	return result;
 }
 
 int conn_id = 1;
@@ -209,6 +230,7 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 	nopoll_return_val_if_fail (ctx, ctx && conn, nopoll_false);
 
 	/* acquire mutex here */
+	nopoll_mutex_lock (ctx->ref_mutex);
 
 	/* get connection */
 	conn->id = conn_id;
@@ -226,6 +248,9 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 			ctx->conn_num++;
 
 			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "registered connection id %d, role: %d", conn->id, conn->role);
+
+			/* release */
+			nopoll_mutex_unlock (ctx->ref_mutex);
 
 			/* acquire reference */
 			nopoll_ctx_ref (ctx);
@@ -245,6 +270,9 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 	ctx->conn_length += 10;
 	ctx->conn_list = nopoll_realloc (ctx->conn_list, sizeof (noPollConn *) * (ctx->conn_length));
 	if (ctx->conn_list == NULL) {
+		/* release mutex */
+		nopoll_mutex_unlock (ctx->ref_mutex);
+
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "General connection registration error, memory acquisition failed..");
 		return nopoll_false;
 	} /* end if */
@@ -258,6 +286,7 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 	} /* end while */
 
 	/* release mutex here */
+	nopoll_mutex_unlock (ctx->ref_mutex);
 
 	/* ok, now register connection because we have memory */
 	return nopoll_ctx_register_conn (ctx, conn);
@@ -279,6 +308,7 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 	nopoll_return_if_fail (ctx, ctx && conn);
 
 	/* acquire mutex here */
+	nopoll_mutex_lock (ctx->ref_mutex);
 
 	/* find the connection and remove it from the array */
 	iterator = 0;
@@ -292,6 +322,9 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 			/* update connection list number */
 			ctx->conn_num--;
 
+			/* release */
+			nopoll_mutex_unlock (ctx->ref_mutex);
+
 			/* acquire a reference to the conection */
 			nopoll_conn_unref (conn);
 
@@ -302,6 +335,7 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 	} /* end while */
 
 	/* release mutex here */
+	nopoll_mutex_unlock (ctx->ref_mutex);
 
 	return;
 }
@@ -560,6 +594,7 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
 	nopoll_return_val_if_fail (ctx, ctx && foreach, NULL);
 
 	/* acquire here the mutex to protect connection list */
+	nopoll_mutex_lock (ctx->ref_mutex);
 
 	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Doing foreach over conn_length array (%p): %d", ctx, ctx->conn_length); */
 	
@@ -575,6 +610,9 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
 				 * after releasing the mutex */
 				result = ctx->conn_list[iterator];
 
+				/* release */
+				nopoll_mutex_unlock (ctx->ref_mutex);
+
 				/* release here the mutex to protect connection list */
 				return result;
 			} /* end if */
@@ -584,6 +622,7 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
 	} /* end while */
 
 	/* release here the mutex to protect connection list */
+	nopoll_mutex_unlock (ctx->ref_mutex);
 
 	return NULL;
 }
