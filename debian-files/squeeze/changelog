@@ -1,0 +1,199 @@
+libvortex-1.1 (1.1.11-11) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 30 Jan 2012 11:12:23 +0100
+
+libvortex-1.1 (1.1.11-10) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Wed, 25 Jan 2012 14:02:49 +0100
+
+libvortex-1.1 (1.1.11-9) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Fri, 20 Jan 2012 16:05:48 +0100
+
+libvortex-1.1 (1.1.11-8) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Fri, 20 Jan 2012 14:18:17 +0100
+
+libvortex-1.1 (1.1.11-7) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan Blázquez <francis@aspl.es>  Thu, 19 Jan 2012 10:59:20 +0100
+
+libvortex-1.1 (1.1.11-6) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 19 Dec 2011 10:15:51 +0100
+
+libvortex-1.1 (1.1.11-5) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Tue, 13 Dec 2011 16:40:09 +0100
+
+libvortex-1.1 (1.1.11-4) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Tue, 13 Dec 2011 09:49:50 +0100
+
+libvortex-1.1 (1.1.11-3) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 12 Dec 2011 10:41:00 +0100
+
+libvortex-1.1 (1.1.11-2) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 12 Dec 2011 09:46:48 +0100
+
+libvortex-1.1 (1.1.11-1) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Tue, 22 Nov 2011 10:48:13 +0100
+
+libvortex-1.1 (1.1.9-1) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Tue, 20 Sep 2011 13:07:45 +0200
+
+libvortex-1.1 (1.1.9-0) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 22 Aug 2011 14:02:06 +0200
+
+libvortex-1.1 (1.1.8-squeeze3) unstable; urgency=low
+
+  * New upstream release..
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 11 Jul 2011 12:23:05 +0200
+
+libvortex-1.1 (1.1.8-squeeze2) unstable; urgency=low
+
+  * Making optional libpython2.6 and allow using python2.5.
+  * New upstream release.
+
+ -- Francis Brosnan <francis@aspl.es>  Tue, 28 Jun 2011 17:34:46 +0200
+
+libvortex-1.1 (1.1.8-squeeze1) unstable; urgency=low
+
+  * Adding missing python dependency.
+
+ -- Francis Brosnan <francis@aspl.es>  Sun, 15 May 2011 12:27:06 +0200
+
+libvortex-1.1 (1.1.8-squeeze0) unstable; urgency=low
+
+  * New upstream release (yet not published!)
+
+ -- Francis Brosnan <francis@aspl.es>  Sat, 14 May 2011 15:06:21 +0200
+
+libvortex-1.1 (1.1.7-lenny0) unstable; urgency=low
+
+  * New upstream release (exogenesys symphony part 1: overture)
+
+ -- Francis Brosnan <francis@aspl.es>  Thu, 27 Jan 2011 19:12:41 +0100
+
+libvortex-1.1 (1.1.6-lenny2) unstable; urgency=low
+
+  * New upstream release (break on through++)
+
+ -- Francis Brosnan <francis@aspl.es>  Fri, 12 Nov 2010 19:32:32 +0100
+
+libvortex-1.1 (1.1.6-lenny1) unstable; urgency=low
+
+  * New upstream release (break on through+)
+
+ -- Francis Brosnan <francis@aspl.es>  Thu, 11 Nov 2010 17:38:22 +0100
+
+libvortex-1.1 (1.1.6-lenny0) unstable; urgency=low
+
+  * New upstream release (break on through)
+
+ -- Francis Brosnan <francis@aspl.es>  Wed, 27 Oct 2010 09:53:17 +0200
+
+libvortex-1.1 (1.1.5-lenny1) unstable; urgency=low
+
+  * New upstream release (radical notion+)
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 04 Oct 2010 14:03:47 +0200
+
+libvortex-1.1 (1.1.5-lenny0) unstable; urgency=low
+
+  * New upstream release (radical notion)
+
+ -- Francis Brosnan <francis@aspl.es>  Fri, 10 Sep 2010 19:40:17 +0200
+
+libvortex-1.1 (1.1.4-lenny5) unstable; urgency=low
+
+  * New upstream release (Plug in baby+++++)
+
+ -- Francis Brosnan <francis@aspl.es>  Tue, 31 Aug 2010 14:27:37 +0200
+
+libvortex-1.1 (1.1.4-lenny4) unstable; urgency=low
+
+  * New upstream release (Plug in baby++++)
+
+ -- Francis Brosnan <francis@aspl.es>  Tue, 31 Aug 2010 12:53:22 +0200
+
+libvortex-1.1 (1.1.4-lenny3) unstable; urgency=low
+
+  * New upstream release (Plug in baby+++)
+
+ -- Francis Brosnan <francis@aspl.es>  Fri, 09 Jul 2010 18:25:14 +0200
+
+libvortex-1.1 (1.1.4-lenny2) unstable; urgency=low
+
+  * New upstream release (Plug in baby++)
+
+ -- Francis Brosnan <francis@aspl.es>  Wed, 26 May 2010 09:39:19 +0200
+
+libvortex-1.1 (1.1.4-lenny1) unstable; urgency=low
+
+  * New upstream release (Plug in baby+)
+
+ -- Francis Brosnan <francis@aspl.es>  Fri, 21 May 2010 17:09:25 +0200
+
+libvortex-1.1 (1.1.4-0) unstable; urgency=low
+
+  * New upstream release (Plug in baby)
+
+ -- Francis Brosnan <francis@aspl.es>  Thu, 20 May 2010 11:03:31 +0200
+
+libvortex-1.1 (1.1.2-0) unstable; urgency=low
+
+  * New upstream release (La sirena varada)
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 28 Sep 2009 15:13:14 +0200
+
+libvortex-1.1 (1.1.1-0) unstable; urgency=low
+
+  * New upstream release (Tesla is now my master).
+
+ -- Francis Brosnan Blázquez <francis@aspl.es>  Tue, 28 Apr 2009 20:14:10 +0200
+
+libvortex-1.1 (1.1.0-2) unstable; urgency=low
+
+  * New upstream release (Masters of war)
+
+ -- Francis Brosnan <francis@aspl.es>  Fri, 30 Jan 2009 16:14:55 +0100
+
+libvortex-1.1 (1.1.0-1) unstable; urgency=low
+
+  * First debian package version.
+
+ -- Francis Brosnan <francis@aspl.es>  Wed,  9 Sep 2007 18:20:35 +0200
+
