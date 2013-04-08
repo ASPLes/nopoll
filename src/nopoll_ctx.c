@@ -157,7 +157,7 @@ void           nopoll_ctx_unref (noPollCtx * ctx)
 	/* release mutex here */
 	nopoll_mutex_unlock (ctx->ref_mutex);
 
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Releasing no poll context %p (%d, conns: %d)", ctx, ctx->refs);
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Releasing no poll context %p (%d, conns: %d)", ctx, ctx->refs, ctx->conn_length);
 
 	iterator = 0;
 	while (iterator < ctx->certificates_length) {

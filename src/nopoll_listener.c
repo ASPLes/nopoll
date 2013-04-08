@@ -110,9 +110,8 @@ NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
 
 	/* call to bind */
 	bind_res = bind(fd, (struct sockaddr *)&saddr,  sizeof (struct sockaddr_in));
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "bind(2) call returned: %d", bind_res);
 	if (bind_res == NOPOLL_SOCKET_ERROR) {
-		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "unable to bind address (port:%u already in use or insufficient permissions). Closing socket: %d", int_port, fd);
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to bind address (port:%u already in use or insufficient permissions). Closing socket: %d", int_port, fd);
 		nopoll_close_socket (fd);
 		return -1;
 	}
