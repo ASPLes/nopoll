@@ -400,7 +400,7 @@ void        nopoll_mutex_destroy (noPollPtr mutex)
 		return;
 
 	/* call defined handler */
-	__nopoll_mutex_lock (mutex);
+	__nopoll_mutex_destroy (mutex);
 	return;
 }
 
@@ -432,10 +432,10 @@ void        nopoll_thread_handlers (noPollMutexCreate  mutex_create,
 				    noPollMutexUnlock  mutex_unlock)
 {
 	/* check handlers before configuring anything */
-	if (! __nopoll_mutex_create ||
-	    ! __nopoll_mutex_destroy ||
-	    ! __nopoll_mutex_lock ||
-	    ! __nopoll_mutex_unlock)
+	if (! mutex_create ||
+	    ! mutex_destroy ||
+	    ! mutex_lock ||
+	    ! mutex_unlock)
 		return;
 
 	/* configured received handlers */
