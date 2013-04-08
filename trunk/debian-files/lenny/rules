@@ -38,7 +38,7 @@ prepare:
 # Add here commands to compile the package.
 	$(MAKE)
 # check build
-# $(MAKE) check
+	$(MAKE) check
 
 	touch $@
 
