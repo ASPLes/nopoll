@@ -143,6 +143,7 @@ void         nopoll_msg_unref (noPollMsg * msg)
 	}
 	/* release mutex */
 	nopoll_mutex_unlock (msg->ref_mutex);
+	nopoll_mutex_destroy (msg->ref_mutex);
 
 	/* free websocket message */
 	nopoll_free (msg->payload);

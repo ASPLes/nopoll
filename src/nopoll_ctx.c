@@ -174,6 +174,9 @@ void           nopoll_ctx_unref (noPollCtx * ctx)
 		iterator++;
 	} /* end while */
 
+	/* release mutex */
+	nopoll_mutex_destroy (ctx->ref_mutex);
+
 	/* release all certificates buckets */
 	nopoll_free (ctx->certificates);
 
