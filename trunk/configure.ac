@@ -183,6 +183,8 @@ $nopoll_platform
 
 $vasprintf_status
 
+$have_64bit_support
+
 /* @} */
 
 #endif
@@ -200,9 +202,13 @@ _______EOF
 # Check size of void pointer against the size of a single
 # integer. This will allow us to know if we can cast directly a
 # integer to pointer and viceversa.
+have_64bit_support=""
 case $ac_cv_sizeof_void_p in
 $ac_cv_sizeof_int)  	pti_cast=''        ptui_cast=''                ;;
-$ac_cv_sizeof_long) 	pti_cast='(long)'  ptui_cast='(unsigned long)' ;;
+$ac_cv_sizeof_long) 	pti_cast='(long)'  ptui_cast='(unsigned long)'  have_64bit_support="/**
+ * @brief Indicates that this platform have support for 64bits.
+ */
+#define NOPOLL_64BIT_PLATFORM (1)" ;;
 *) 			pti_unknown_void_p=yes                         ;;
 esac
 
