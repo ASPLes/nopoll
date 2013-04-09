@@ -388,12 +388,15 @@ nopoll_bool    nopoll_ctx_find_certificate (noPollCtx   * ctx,
 	int iterator = 0;
 	nopoll_return_val_if_fail (ctx, ctx, nopoll_false);
 
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Finding a certificate for serverName=%s", serverName ? serverName : "<not defined>");
+
 	while (iterator < ctx->certificates_length) {
 		/* get cert */
 		cert = &(ctx->certificates[iterator]);
 		if (cert) {
 			/* found a certificate */
-			if ((serverName == NULL && serverName == cert->serverName)  ||
+		        nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "   certificate stored associated to serverName=%s", cert->serverName ? cert->serverName : "<not defined>");
+			if ((serverName == NULL && cert->serverName == NULL)  ||
 			    (nopoll_cmp (serverName, cert->serverName))) {
 				if (certificateFile)
 					(*certificateFile)   = cert->certificateFile;
@@ -408,6 +411,30 @@ nopoll_bool    nopoll_ctx_find_certificate (noPollCtx   * ctx,
 		/* next position */
 		iterator++;
 	}
+
+	/* check for default certificate when serverName isn't defined */
+	if (serverName == NULL) {
+	        /* requested a certificate for an undefined serverName */
+	        iterator = 0;
+		while (iterator < ctx->certificates_length) {
+		        /* get cert */
+		        cert = &(ctx->certificates[iterator]);
+			if (cert) {
+			      /* found a certificate */
+			      nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "   serverName not defined, selecting first certificate from the list");
+			      if (certificateFile)
+			              (*certificateFile)   = cert->certificateFile;
+			      if (privateKey)
+			              (*privateKey)        = cert->privateKey;
+			      if (optionalChainFile)
+			              (*optionalChainFile) = cert->optionalChainFile;
+			      return nopoll_true;
+			} /* end if */
+		} /* end if */
+
+		/* next position */
+		iterator++;
+	} /* end if */
 
 	return nopoll_false;
 }
