@@ -2611,8 +2611,9 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 
 		/* check certificates and private key */
 		if (certificateFile == NULL || privateKey == NULL) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept secure web socket connection, certificate file %p and/or key file %p isn't defined",
-				    certificateFile, privateKey);
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept secure web socket connection, certificate file %s and/or key file %s isn't defined",
+				    certificateFile ? certificateFile : "<not defined>", 
+				    privateKey ? privateKey : "<not defined>");
 			nopoll_conn_shutdown (conn);
 			nopoll_ctx_unregister_conn (ctx, conn);
 			return nopoll_false;
