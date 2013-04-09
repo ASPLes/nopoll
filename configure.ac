@@ -248,6 +248,16 @@ esac
 
 ])
 
+##########################
+# Check for doxygen tool #
+##########################
+dnl check for doxygen documentation
+AC_ARG_ENABLE(nopoll-doc, [  --enable-nopoll-doc     Enable building noPoll documentation (doxygen required) [default=yes]], enable_nopoll_doc="$enableval", enable_nopoll_doc=yes)
+if test x$enable_nopoll_doc = xyes ; then
+        AC_CHECK_PROG(DOXYGEN, doxygen, "yes", "no")
+fi
+AM_CONDITIONAL(ENABLE_NOPOLL_DOC, test "x$DOXYGEN" = "xyes")
+
 
 AC_OUTPUT([
 Makefile
