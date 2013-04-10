@@ -407,6 +407,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 	int              size;
 	int              ssl_error;
 	X509           * server_cert;
+	int              iterator;
 
 	nopoll_return_val_if_fail (ctx, ctx && host_ip, NULL);
 
@@ -500,6 +501,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 
 		/* do the initial connect connect */
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "connecting to remote TLS site");
+		iterator = 0;
 		while (SSL_connect (conn->ssl) <= 0) {
 		
 			/* get ssl error */
@@ -521,8 +523,21 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 			default:
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "there was an error with the TLS negotiation, ssl error (code:%d) : %s",
 					    ssl_error, ERR_error_string (ssl_error, NULL));
+				nopoll_conn_shutdown (conn);
 				return NULL;
 			} /* end switch */
+
+			/* try and limit max reconnect allowed */
+			iterator++;
+
+			if (iterator > 25) {
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Max retry calls=%d to SSL_connect reached, shutting down connection id=%d",
+					    iterator, conn->id);
+				return NULL;
+			} /* end if */
+
+			/* wait a bit before retry */
+			nopoll_sleep (10000);
 
 		} /* end while */
 
@@ -916,10 +931,22 @@ const char  * nopoll_conn_port   (noPollConn * conn)
  */
 void          nopoll_conn_shutdown (noPollConn * conn)
 {
+	const char * role = "unknown";
+
 	if (conn == NULL)
 		return;
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "shutting down connection id=%d (session %d)", conn->id, conn->session);
+	if (conn->role == NOPOLL_ROLE_LISTENER)
+		role = "listener";
+	else if (conn->role == NOPOLL_ROLE_MAIN_LISTENER)
+		role = "master-listener";
+	else if (conn->role == NOPOLL_ROLE_UNKNOWN)
+		role = "unknown";
+	else if (conn->role == NOPOLL_ROLE_CLIENT)
+		role = "client";
+
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "shutting down connection id=%d (session: %d, role: %s)", 
+		    conn->id, conn->session, role);
 
 	/* shutdown connection here */
 	nopoll_close_socket (conn->session);
@@ -937,13 +964,22 @@ void          nopoll_conn_shutdown (noPollConn * conn)
 void          nopoll_conn_close  (noPollConn  * conn)
 {
 	int refs;
+	const char * role = "unknown";
 
 	/* check input data */
 	if (conn == NULL)
 		return;
-
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling to close close id=%d (session %d, refs: %d)", 
-		    conn->id, conn->session, conn->refs);
+	if (conn->role == NOPOLL_ROLE_LISTENER)
+		role = "listener";
+	else if (conn->role == NOPOLL_ROLE_MAIN_LISTENER)
+		role = "master-listener";
+	else if (conn->role == NOPOLL_ROLE_UNKNOWN)
+		role = "unknown";
+	else if (conn->role == NOPOLL_ROLE_CLIENT)
+		role = "client";
+	
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling to close close id=%d (session %d, refs: %d, role: %s)", 
+		    conn->id, conn->session, conn->refs, role);
 	if (conn->session) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "requested proper connection close id=%d (session %d)", conn->id, conn->session);
 
