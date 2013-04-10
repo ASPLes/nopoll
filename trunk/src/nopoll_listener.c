@@ -60,6 +60,7 @@ NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
 	struct sockaddr_in   saddr;
 	struct sockaddr_in   sin;
 	NOPOLL_SOCKET        fd;
+	int                  tries;
 
 #if defined(NOPOLL_OS_WIN32)
 	int                  sin_size  = sizeof (sin);
@@ -109,12 +110,30 @@ NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
 	memcpy(&saddr.sin_addr, haddr, sizeof(struct in_addr));
 
 	/* call to bind */
-	bind_res = bind(fd, (struct sockaddr *)&saddr,  sizeof (struct sockaddr_in));
-	if (bind_res == NOPOLL_SOCKET_ERROR) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to bind address (port:%u already in use or insufficient permissions). Closing socket: %d", int_port, fd);
-		nopoll_close_socket (fd);
-		return -1;
-	}
+	tries    = 0;
+	while (1) {
+		bind_res = bind(fd, (struct sockaddr *)&saddr,  sizeof (struct sockaddr_in));
+		if (bind_res == NOPOLL_SOCKET_ERROR) {
+			/* check if we can retry */
+			tries++;
+			if (tries < 25) {
+				nopoll_log (ctx, NOPOLL_LEVEL_WARNING, 
+					    "unable to bind address (port:%u already in use or insufficient permissions, errno=%d : %s), retrying=%d on socket: %d", 
+					    int_port, errno, strerror (errno), tries, fd);
+				nopoll_sleep (100000);
+				continue;
+			} /* end if */
+
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
+				    "unable to bind address (port:%u already in use or insufficient permissions, errno=%d : %s). Closing socket: %d", 
+				    int_port, errno, strerror (errno), fd);
+			nopoll_close_socket (fd);
+			return -1;
+		} /* end if */
+
+		/* reached this point, bind was ok */
+		break;
+	} /* end while */
 	
 	if (listen(fd, ctx->backlog) == NOPOLL_SOCKET_ERROR) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "an error have occur while executing listen");
@@ -177,6 +196,8 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 	/* configure default handlers */
 	listener->receive = nopoll_conn_default_receive;
 	listener->send    = nopoll_conn_default_send;
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Listener created, started: %s:%s (socket: %d)", listener->host, listener->port, listener->session);
 
 	return listener;
 }
@@ -321,6 +342,8 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 		nopoll_conn_ref (listener);
 		return NULL;
 	} /* end if */
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Listener created, started: %s:%s (socket: %d)", listener->host, listener->port, listener->session);
 
 	/* reduce reference counting here because ctx_register_conn
 	 * already acquired a reference */
