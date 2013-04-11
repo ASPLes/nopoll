@@ -108,6 +108,7 @@ nopoll_log_color_enable
 nopoll_log_color_is_enabled
 nopoll_log_enable
 nopoll_log_is_enabled
+nopoll_log_set_handler
 nopoll_loop_init
 nopoll_loop_process
 nopoll_loop_process_data

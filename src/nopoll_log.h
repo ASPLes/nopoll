@@ -40,6 +40,7 @@
 #define __NOPOLL_LOG_H__
 
 #include <nopoll_decl.h>
+#include <nopoll_handlers.h>
 
 BEGIN_C_DECLS
 
@@ -55,6 +56,8 @@ nopoll_bool     nopoll_log_color_is_enabled (noPollCtx * ctx);
 void            nopoll_log_enable (noPollCtx * ctx, nopoll_bool value);
  
 void            nopoll_log_color_enable (noPollCtx * ctx, nopoll_bool value);
+
+void            nopoll_log_set_handler (noPollCtx * ctx, noPollLogHandler handler, noPollPtr user_data);
 
 /* include this at this place to load GNU extensions */
 #if defined(__GNUC__)

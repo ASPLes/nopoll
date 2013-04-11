@@ -132,6 +132,10 @@ struct _noPollCtx {
 
 	/* mutex */
 	noPollPtr            ref_mutex;
+
+	/* log handling */
+	noPollLogHandler     log_handler;
+	noPollPtr            log_user_data;
 };
 
 struct _noPollConn {
