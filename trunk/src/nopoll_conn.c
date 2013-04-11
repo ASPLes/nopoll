@@ -255,7 +255,7 @@ NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
 			shutdown (session, SHUT_RDWR);
 			nopoll_close_socket (session);
 			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to connect to remote host %s:%s errno=%d",
-				    host, port);
+				    host, port, errno);
 			return -1;
 		} /* end if */
 	} /* end if */
@@ -1147,7 +1147,9 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 	int         n, rc;
 	int         desp;
 	char        c, *ptr;
+#if ! defined(SHOW_FORMAT_BUGS)
 	noPollCtx * ctx = conn->ctx;
+#endif
 
 	/* clear the buffer received */
 	/* memset (buffer, 0, maxlen * sizeof (char ));  */
@@ -1304,7 +1306,9 @@ nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, in
 {
 	int          iterator;
 	int          iterator2;
+#if ! defined(SHOW_FORMAT_BUGS)
 	noPollCtx  * ctx = conn->ctx;
+#endif
 
 	/* check if we already received method */
 	if (conn->get_url) {
@@ -1811,7 +1815,8 @@ void nopoll_conn_complete_handshake (noPollConn * conn)
 			if (nopoll_conn_complete_handshake_client (ctx, conn, buffer, buffer_size) == 1)
 				continue;
 		} else {
-			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Called to handle connection handshake on a connection with an unexpected role: %d, closing session");
+			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Called to handle connection handshake on a connection with an unexpected role: %d, closing session",
+				    conn->role);
 			nopoll_conn_shutdown (conn);
 			return;
 		}
@@ -1965,7 +1970,8 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		memcpy (conn->pending_buf + conn->pending_buf_bytes, buffer, bytes);
 		conn->pending_buf_bytes += bytes;
 		
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Expected to receive complete websocket frame header but found only %d bytes, saving to reuse later",
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, 
+			    "Expected to receive complete websocket frame header but found only %d bytes over conn-id=%d, saving to reuse later",
 			    bytes, conn->id);
 		return NULL;
 	} /* end if */
@@ -2007,7 +2013,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		return NULL;
 	} /* end if */
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "interim payload size received: %d", msg->payload_size);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "interim payload size received: %d", (int) msg->payload_size);
 
 	/* read the rest */
 	if (msg->payload_size < 126) {
@@ -2128,7 +2134,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		msg->remain_bytes = msg->payload_size - bytes;
 
 		/* set connection in remaining data to read */
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Received fewer bytes than expected (%d < %d)", bytes, msg->payload_size);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Received fewer bytes than expected (%d < %d)", bytes, (int) msg->payload_size);
 		msg->payload_size = bytes;
 	} /* end if */
 
@@ -2171,7 +2177,7 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 
 	if (length == -1)
 		length = strlen (content);
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_send_text: Attempting to send %d bytes", length);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_send_text: Attempting to send %d bytes", (int) length);
 
 	/* sending content as client */
 	if (conn->role == NOPOLL_ROLE_CLIENT) {
@@ -2500,7 +2506,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	
 	/* copy content to be sent */
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Copying into the buffer %d bytes of header (total memory allocated: %d)", 
-		    header_size, length + header_size + 1);
+		    header_size, (int) length + header_size + 1);
 	memcpy (send_buffer, header, header_size);
 	if (length > 0) {
 		memcpy (send_buffer + header_size, content, length);
@@ -2514,14 +2520,15 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	
 	/* send content */
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Mask used for this delivery: %d (about to send %d bytes)",
-		    nopoll_get_32bit (send_buffer + header_size - 2), length + header_size);
+		    nopoll_get_32bit (send_buffer + header_size - 2), (int) length + header_size);
 	bytes_written = conn->send (conn, send_buffer, length + header_size);
 	if (bytes_written != (length + header_size)) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Requested to write %d bytes but found %d written (masked? %d, mask: %d, header size: %d, length: %d), errno = %d : %s", 
-			    bytes_written, length + header_size, masked, mask_value, header_size, length, errno, strerror (errno));
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, 
+			    "Requested to write %d bytes but found %d written (masked? %d, mask: %d, header size: %d, length: %d), errno = %d : %s", 
+			    bytes_written, (int) length + header_size, masked, mask_value, header_size, (int) length, errno, strerror (errno));
 	} else {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Bytes written to the wire %d (masked? %d, mask: %d, header size: %d, length: %d)", 
-			    bytes_written, masked, mask_value, header_size, length);
+			    bytes_written, masked, mask_value, header_size, (int) length);
 	} /* end if */
 
 	/* release memory */

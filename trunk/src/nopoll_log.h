@@ -88,6 +88,18 @@ void            nopoll_log_color_enable (noPollCtx * ctx, nopoll_bool value);
 # endif
 #endif
 
+/** 
+ * @internal The following definition allows to find printf like wrong
+ * argument passing to nopoll_log function. To activate the depuration
+ * just add the following to local nopoll_config.h file:
+ *
+ * #define SHOW_FORMAT_BUGS (1)
+ */
+#if defined(SHOW_FORMAT_BUGS)
+# undef  nopoll_log
+# define nopoll_log(ctx,level,message, ...) do{printf (message, ##__VA_ARGS__);}while(0)
+#endif
+
 void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * file, int line, noPollDebugLevel level, const char * message, ...);
 
 /* @} */
