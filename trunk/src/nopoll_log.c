@@ -36,7 +36,7 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#include <nopoll_log.h>
+#include <nopoll.h>
 #include <nopoll_private.h>
 
 /** 
@@ -118,6 +118,29 @@ void     nopoll_log_color_enable (noPollCtx * ctx, nopoll_bool value)
 }
 
 /** 
+ * @brief Allows to define a log handler that will receive all logs
+ * produced under the provided content.
+ *
+ * @param ctx The context that is going to be configured.
+ *
+ * @param handler The handler to be called for each log to be
+ * notified. Passing in NULL is allowed to remove any previously
+ * configured handler.
+ *
+ * @param user_data User defined pointer to be passed in into the
+ * handler configured along with the log notified.
+ */
+void            nopoll_log_set_handler (noPollCtx * ctx, noPollLogHandler handler, noPollPtr user_data)
+{
+	nopoll_return_if_fail (ctx, ctx);
+
+	ctx->log_handler   = handler;
+	ctx->log_user_data = user_data;
+
+	return;
+}
+
+/** 
  * @internal Allows to drop a log to the console.
  *
  * This function allow to drop a log to the console using the given
@@ -145,11 +168,28 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 {
 
 #ifdef SHOW_DEBUG_LOG
-	va_list    args;
+	va_list      args;
+	char       * log_msg;
+	char       * log_msg2;
 
 	/* check if the log is enabled */
 	if (! nopoll_log_is_enabled (ctx))
 		return;
+
+	if (ctx->log_handler) {
+		/* print the message */
+		va_start (args, message);
+		log_msg = nopoll_strdup_printfv (message, args);
+		va_end (args);
+
+		log_msg2 = log_msg;
+		log_msg = nopoll_strdup_printf ("%s:%d (%s) %s ", file, line, function_name, log_msg);
+		nopoll_free (log_msg2);
+
+		ctx->log_handler (ctx, level, log_msg, ctx->log_user_data);
+		nopoll_free (log_msg);
+		return;
+	}
 
 	/* printout the process pid */
 	if (nopoll_log_color_is_enabled (ctx)) 

@@ -225,6 +225,20 @@ typedef void (*noPollMutexLock) (noPollPtr mutex);
  */
 typedef void (*noPollMutexUnlock) (noPollPtr mutex);
 
+/** 
+ * @brief Handler used by nopoll_log_set_handler to receive all log
+ * notifications produced by the library on this function.
+ *
+ * @param ctx The context where the operation is happening.
+ *
+ * @param level The log level 
+ *
+ * @param log_msg The actual log message reported.
+ *
+ * @param user_data A reference to user defined pointer passed in into  the function.
+ */
+typedef void (*noPollLogHandler) (noPollCtx * ctx, noPollDebugLevel level, const char * log_msg, noPollPtr user_data);
+
 
 #endif
 
