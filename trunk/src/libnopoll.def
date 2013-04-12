@@ -42,6 +42,7 @@ nopoll_conn_host
 nopoll_conn_is_ok
 nopoll_conn_is_ready
 nopoll_conn_is_tls_on
+nopoll_conn_log_ssl
 nopoll_conn_mask_content
 nopoll_conn_new
 nopoll_conn_port
