@@ -311,6 +311,40 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 				     conn->ctx->protocol_version);
 }
 
+/**
+ * @internal Function that dumps all errors found on current ssl context.
+ */
+int nopoll_conn_log_ssl (noPollCtx * ctx)
+{
+	char          log_buffer [512];
+	unsigned long err;
+	int           error_position;
+	int           aux_position;
+	
+	
+	while ((err = ERR_get_error()) != 0) {
+		ERR_error_string_n (err, log_buffer, sizeof (log_buffer));
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "tls stack: %s (find reason(code) at openssl/ssl.h)", log_buffer);
+
+		/* find error code position */
+		error_position = 0;
+		while (log_buffer[error_position] != ':')
+			error_position++;
+		error_position++;
+		aux_position = error_position;
+		while (log_buffer[aux_position] != 0) {
+			if (log_buffer[aux_position] == ':') {
+				log_buffer[aux_position] = 0;
+				break;
+			}
+			aux_position++;
+		} /* end while */
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "    details, run: openssl errstr %s", log_buffer + error_position);
+	}
+	
+	return (0);
+}
+
 int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * label)
 {
 	int ssl_err;
@@ -338,13 +372,16 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * lab
 		}
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "SSL socket closed on %s (res=%d, ssl_err=%d, errno=%d)",
 			    label, res, ssl_err, errno);
+		nopoll_conn_log_ssl (conn->ctx);
+
 		return res;
 	case SSL_ERROR_ZERO_RETURN: /* close_notify received */
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL closed on %s", label);
 		return res;
 	case SSL_ERROR_SSL:
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "%s function error (res=%d, ssl_err=%d, errno=%d)",
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "%s function error (received SSL_ERROR_SSL) (res=%d, ssl_err=%d, errno=%d)",
 			    label, res, ssl_err, errno);
+		nopoll_conn_log_ssl (conn->ctx);
 		return -1;
 	default:
 		/* nothing to handle */
@@ -1199,15 +1236,18 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 						conn->pending_line = strdup (buffer);
 					} /* end if */
 				} /* end if */
-				return (-2);
+				return -2;
+			}
+
+			if (nopoll_conn_is_ok (conn) && errno == 0 && rc == 0) {
+				nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to read line, but errno is 0, and connection is ok, return to keep on trying..");
+				return -2;
 			}
 			
 			/* if the conn is closed, just return
 			 * without logging a message */
-			if (nopoll_conn_is_ok (conn)) {
-				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to read a line, error code errno: %d (%s)", 
-					    errno, strerror (errno));
-			}
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to read line, error code errno: %d, rc: %d (%s)", 
+				    errno, rc, strerror (errno));
 			return (-1);
 		}
 	}
