@@ -49,6 +49,8 @@ noPollMsg  * nopoll_msg_new (void);
 
 nopoll_bool  nopoll_msg_ref (noPollMsg * msg);
 
+int          nopoll_msg_ref_count (noPollMsg * msg);
+
 nopoll_bool  nopoll_msg_is_final (noPollMsg * msg);
 
 nopoll_bool  nopoll_msg_is_fragment (noPollMsg * msg);

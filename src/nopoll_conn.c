@@ -1275,7 +1275,10 @@ void __nopoll_pack_content (char * buffer, int start, int bytes)
 }
 
 /** 
- * @internal Function used to read bytes from the wire..
+ * @internal Function used to read bytes from the wire. 
+ *
+ * @return The function returns the number of bytes read, 0 when no
+ * bytes were available and -1 when it fails.
  */
 int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen)
 {
@@ -1330,12 +1333,13 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 	if (nread == 0) {
 		/* check for blocking operations */
 		if (errno == NOPOLL_EAGAIN || errno == NOPOLL_EWOULDBLOCK) {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "unable to read from conn-id=%d, connections is not ready (errno: %d)",
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "unable to read from conn-id=%d, connection is not ready (errno: %d)",
 				    conn->id, errno);
+			errno = 0;
 			return 0;
 		} /* end if */
 
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "received connection close while reading from conn id %d (errno=%d : %s) (%d, %d, %d), shutting down connection..", 
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "received connection close while reading from conn id %d (errno=%d : %s) (%d, %d, %d), shutting down connection..", 
 			    conn->id, errno, strerror (errno),
 			    NOPOLL_EAGAIN, NOPOLL_EWOULDBLOCK, NOPOLL_EINTR);
 		nopoll_conn_shutdown (conn);
@@ -1982,32 +1986,43 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			    conn->previous_msg->remain_bytes, conn->id);
 		
 		/* build next message holder to continue with this content */
-		msg = nopoll_msg_new ();
-		if (msg == NULL) {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to allocate memory for received message, closing session id: %d", 
-				    conn->id);
-			nopoll_conn_shutdown (conn);
-			return NULL;
-		} /* end if */
+		if (conn->previous_msg->payload_size > 0) {
+			msg = nopoll_msg_new ();
+			if (msg == NULL) {
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to allocate memory for received message, closing session id: %d", 
+					    conn->id);
+				nopoll_conn_shutdown (conn);
+				return NULL;
+			} /* end if */
 
-		/* flag this message as a fragment */
-		msg->is_fragment = nopoll_true;
+			/* flag this message as a fragment */
+			msg->is_fragment = nopoll_true;
 
-		/* get fin bytes */
-		msg->has_fin      = 1; /* for now final message */
-		msg->op_code      = 0; /* continuation frame */
-		/* copy initial mask indication */
-		msg->is_masked    = conn->previous_msg->is_masked;
-		msg->payload_size = conn->previous_msg->remain_bytes;
+			/* get fin bytes */
+			msg->has_fin      = 1; /* for now final message */
+			msg->op_code      = 0; /* continuation frame */
+			/* copy initial mask indication */
+			msg->is_masked    = conn->previous_msg->is_masked;
+			msg->payload_size = conn->previous_msg->remain_bytes;
 
-		/* copy mask */
-		memcpy (msg->mask, conn->previous_msg->mask, 4);
+			/* copy mask */
+			memcpy (msg->mask, conn->previous_msg->mask, 4);
+			
+			if (msg->is_masked)
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reusing mask value = %d from previous frame (%d)", nopoll_get_32bit (msg->mask));
 
-		if (msg->is_masked)
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reusing mask value = %d from previous frame", nopoll_get_32bit (msg->mask));
+			/* release previous reference because de don't need it anymore */
+			nopoll_msg_unref (conn->previous_msg);
+		} else {
+			/* reuse reference */
+			msg = conn->previous_msg;
 
-		/* release previous reference because de don't need it anymore */
-		nopoll_msg_unref (conn->previous_msg);
+			/* update remaining bytes */
+			msg->payload_size = msg->remain_bytes;
+			nopoll_free (msg->payload);
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "reusing noPollMsg reference (%p) since last payload read was 0, remaining: %d", msg,
+				    msg->payload_size);
+		}
 
 		/* nullify references */
 		conn->previous_msg      = NULL;
@@ -2042,6 +2057,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	bytes = __nopoll_conn_receive (conn, buffer, 2);
 	if (bytes == 0) {
 		/* connection not ready */
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Connection id=%d without data, returning no message", conn->id);
 		return NULL;
 	}
 
@@ -2210,7 +2226,7 @@ read_payload:
 
 	
 	bytes = __nopoll_conn_receive (conn, msg->payload, msg->payload_size);
-	if (bytes <= 0) {
+	if (bytes < 0) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Connection lost during message reception, dropping connection id=%d, bytes=%d, errno=%d : %s", 
 			    conn->id, bytes, errno, strerror (errno));
 		nopoll_msg_unref (msg);
@@ -2226,8 +2242,12 @@ read_payload:
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Received fewer bytes than expected (%d < %d)", bytes, (int) msg->payload_size);
 		msg->payload_size = bytes;
 
-		/* grab a reference to previous message to reuse its data */
-		nopoll_msg_ref (msg);
+		/* grab a reference to previous message to reuse its
+		   data but only when bytes > 0 because when bytes ==
+		   0, the reference is reused since it is not returned
+		   to the caller (see next lines) */
+		if (bytes > 0)
+			nopoll_msg_ref (msg);
 		conn->previous_msg = msg;
 
 		/* flag this message as a fragment */
@@ -2244,8 +2264,16 @@ read_payload:
 	/* update was a fragment */
 	conn->previous_was_fragment = msg->is_fragment && msg->has_fin == 0;
 
+	/* do not notify any frame since no content was found */
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "bytes == %d, msg (%p) == conn->previous_msg (%p)",
+		    bytes, msg, conn->previous_msg);
+	if (bytes == 0 && msg == conn->previous_msg)
+		return NULL;
+
 	/* now unmask content (if required) */
 	if (msg->is_masked) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Unmasking (payload size %d, mask: %d, msg: %p)", 
+			    msg->payload_size, nopoll_get_32bit (msg->mask), msg);
 		nopoll_conn_mask_content (conn->ctx, msg->payload, msg->payload_size, msg->mask);
 	} /* end if */
 
@@ -2254,9 +2282,22 @@ read_payload:
 
 /** 
  * @internal Implementation to send Frames according to various
- * parameters passed in into the function.
+ * parameters passed in into the function. This is the core function
+ * used to send frames in noPoll.
+ *
+ * @param conn The connection where the content will be sent.
+ *
+ * @param content The content that will be sent (user level content)
+ *
+ * @param length The length of such content to be sent.
+ *
+ * @param has_fin nopoll_true/nopoll_false to signal FIN header flag 
+ *
+ * @param sleep_in_header Optional hacking option that allows to
+ * include a pause between sending the header and the rest of the
+ * content.
  */
-int           __nopoll_conn_send_common (noPollConn * conn, const char * content, long length, nopoll_bool has_fin)
+int           __nopoll_conn_send_common (noPollConn * conn, const char * content, long length, nopoll_bool has_fin, long sleep_in_header)
 {
 	if (conn == NULL || content == NULL || length == 0 || length < -1)
 		return -1;
@@ -2273,12 +2314,12 @@ int           __nopoll_conn_send_common (noPollConn * conn, const char * content
 	/* sending content as client */
 	if (conn->role == NOPOLL_ROLE_CLIENT) {
 		return nopoll_conn_send_frame (conn, /* fin */ has_fin, /* masked */ nopoll_true, 
-					       NOPOLL_TEXT_FRAME, length, (noPollPtr) content);
+					       NOPOLL_TEXT_FRAME, length, (noPollPtr) content, sleep_in_header);
 	} /* end if */
 
 	/* sending content as listener */
 	return nopoll_conn_send_frame (conn, /* fin */ has_fin, /* masked */ nopoll_false, 
-				       NOPOLL_TEXT_FRAME, length, (noPollPtr) content);	
+				       NOPOLL_TEXT_FRAME, length, (noPollPtr) content, sleep_in_header);	
 }
 
 /** 
@@ -2301,7 +2342,7 @@ int           __nopoll_conn_send_common (noPollConn * conn, const char * content
 int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length)
 {
 	/* do a send common operation with FIN = 1 */
-	return __nopoll_conn_send_common (conn, content, length, nopoll_true);
+	return __nopoll_conn_send_common (conn, content, length, nopoll_true, 0);
 }
 
 /** 
@@ -2325,7 +2366,7 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * content, long length)
 {
 	/* do a send common operation with FIN = 0 */
-	return __nopoll_conn_send_common (conn, content, length, nopoll_false);
+	return __nopoll_conn_send_common (conn, content, length, nopoll_false, 0);
 }
 
 /** 
@@ -2540,7 +2581,7 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
  */
 nopoll_bool      nopoll_conn_send_ping (noPollConn * conn)
 {
-	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PING_FRAME, 0, NULL);
+	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PING_FRAME, 0, NULL, 0);
 }
 
 /** 
@@ -2555,7 +2596,7 @@ nopoll_bool      nopoll_conn_send_ping (noPollConn * conn)
  */
 nopoll_bool      nopoll_conn_send_pong (noPollConn * conn)
 {
-	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PONG_FRAME, 0, NULL);
+	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PONG_FRAME, 0, NULL, 0);
 }
 
 /** 
@@ -2575,13 +2616,13 @@ nopoll_bool      nopoll_conn_send_pong (noPollConn * conn)
  * @param content Pointer to the data to be sent in the frame.
  */
 int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool masked,
-			    noPollOpCode op_code, long length, noPollPtr content)
+			    noPollOpCode op_code, long length, noPollPtr content, long sleep_in_header)
 
 {
 	char   header[14];
 	int    header_size;
 	char * send_buffer;
-	int    bytes_written;
+	int    bytes_written = 0;
 	char   mask[4];
 	int    mask_value = 0;
 
@@ -2659,7 +2700,28 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	/* send content */
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Mask used for this delivery: %d (about to send %d bytes)",
 		    nopoll_get_32bit (send_buffer + header_size - 2), (int) length + header_size);
-	bytes_written = conn->send (conn, send_buffer, length + header_size);
+	if (sleep_in_header == 0)
+		bytes_written = conn->send (conn, send_buffer, length + header_size);
+	else {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Found sleep in header indication, sending header: %d bytes (waiting %ld)", header_size, sleep_in_header);
+		bytes_written = conn->send (conn, send_buffer, header_size);
+		if (bytes_written == header_size) {
+			/* sleep after header ... */
+			nopoll_sleep (sleep_in_header);
+
+			/* now send the rest of the content (without the header) */
+			bytes_written = conn->send (conn, send_buffer + header_size, length);
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Rest of content written %d (header size: %d, length: %d)", 
+				    bytes_written, header_size, length);
+			bytes_written = length + header_size;
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "final bytes_written %d", bytes_written);
+		} else {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Requested to write %d bytes for the header but %d were written",
+				    header_size, bytes_written);
+			return -1;
+		} /* end if */
+	} /* end if */
+
 	if (bytes_written != (length + header_size)) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, 
 			    "Requested to write %d bytes but found %d written (masked? %d, mask: %d, header size: %d, length: %d), errno = %d : %s", 

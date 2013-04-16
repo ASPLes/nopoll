@@ -967,6 +967,143 @@ nopoll_bool test_14 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_15 (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
+
+	/* create context */
+	ctx = create_ctx ();
+
+	/* check connections registered */
+	if (nopoll_ctx_conns (ctx) != 0) {
+		printf ("ERROR: expected to find 0 registered connections but found: %d\n", nopoll_ctx_conns (ctx));
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* wait for the reply */
+	while (nopoll_true) {
+		if (nopoll_conn_is_ready (conn))
+			break;
+		printf ("Test 15: not ready yet..\n");
+		nopoll_sleep (10000);
+	} /* end if */
+
+	printf ("Test 15: setting non-blocking state..\n");
+
+	if (! nopoll_conn_set_sock_block (nopoll_conn_socket (conn), nopoll_false)) {
+		printf ("ERROR: failed to configure non-blocking state to connection..\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 15: attempting to read content..\n");
+
+	/* wait for the reply */
+	if (nopoll_conn_get_msg (conn)) {
+		printf ("ERROR (1): expected to not be able to find a message..\n");
+		return nopoll_false;
+	}
+	if (nopoll_conn_get_msg (conn)) {
+		printf ("ERROR (2): expected to not be able to find a message..\n");
+		return nopoll_false;
+	}
+	if (nopoll_conn_get_msg (conn)) {
+		printf ("ERROR (3): expected to not be able to find a message..\n");
+		return nopoll_false;
+	}
+
+	printf ("Test 15: reads finished..\n");
+
+	/* check connection state */
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: expected to find connection state ok, but failure found..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+nopoll_bool test_16 (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	int          iterator;
+
+	/* create context */
+	ctx = create_ctx ();
+
+	/* check connections registered */
+	if (nopoll_ctx_conns (ctx) != 0) {
+		printf ("ERROR: expected to find 0 registered connections but found: %d\n", nopoll_ctx_conns (ctx));
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* wait for the reply */
+	while (nopoll_true) {
+		if (nopoll_conn_is_ready (conn))
+			break;
+		printf ("Test 16: not ready yet..\n");
+		nopoll_sleep (10000);
+	} /* end if */
+
+	iterator = 0;
+	while (iterator < 10) {
+		printf ("Test 16: send sleep in header content (waiting 1000 ms, iterator=%d)..\n", iterator);
+		if (__nopoll_conn_send_common (conn, "This is a test", 14, nopoll_true, 400000) != 14) {
+			printf ("ERROR: failed to send content..\n");
+			return nopoll_false;
+		} /* end if */
+
+		iterator++;
+	} /* end while */
+
+	printf ("Test 16: sends finished, now checking connection ..\n");
+
+	nopoll_sleep (100000);
+
+	/* check connection state */
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: expected to find connection state ok, but failure found..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -1077,6 +1214,7 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+
 	if (test_05 ()) {
 		printf ("Test 05: sending utf-8 content [   OK   ]\n");
 	} else {
@@ -1144,6 +1282,20 @@ int main (int argc, char ** argv)
 		printf ("Test 14: testing sending frame with few content as indicated by header [   OK    ]\n");
 	} else {
 		printf ("Test 14: testing sending frame with few content as indicated by header [ FAILED  ]\n");
+		return -1;
+	}
+
+	if (test_15 ()) {
+		printf ("Test 15: checking non-blocking calls to get messages when no content is available [   OK    ]\n");
+	} else {
+		printf ("Test 15: checking non-blocking calls to get messages when no content is available [ FAILED  ]\n");
+		return -1;
+	}
+
+	if (test_16 ()) {
+		printf ("Test 16: check sending frames with sleep in header [   OK    ]\n");
+	} else {
+		printf ("Test 16: check sending frames with sleep in header [ FAILED  ]\n");
 		return -1;
 	}
 

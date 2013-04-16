@@ -42,6 +42,11 @@
 
 nopoll_bool on_connection_opened (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
 {
+	if (! nopoll_conn_set_sock_block (nopoll_conn_socket (conn), nopoll_false)) {
+		printf ("ERROR: failed to configure non-blocking state to connection..\n");
+		return nopoll_false;
+	} /* end if */
+
 	/* check to reject */
 	if (nopoll_cmp (nopoll_conn_get_origin (conn), "http://deny.aspl.es"))  {
 		printf ("INFO: rejected connection from %s, with Host: %s and Origin: %s\n",
@@ -74,7 +79,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 	shown = bytes > 100 ? 99 : bytes;
 
 	memset (example, 0, 100);
-	if (! nopoll_msg_is_fragment (msg))
+	/*	if (! nopoll_msg_is_fragment (msg)) */
 		memcpy (example, (const char *) nopoll_msg_get_payload (msg), shown);
 
 	printf ("Listener received (size: %d, ctx refs: %d): (first %d bytes, fragment: %d) '%s'\n", 
@@ -118,8 +123,9 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 			return;
 		} /* end if */
 
-		printf ("Found final fragment, replying with complete content: %s..\n",
-			(const char *) nopoll_msg_get_payload (previous_msg));
+		printf ("Found final fragment, replying with complete content: %s (refs: %d)..\n",
+			(const char *) nopoll_msg_get_payload (previous_msg), 
+			nopoll_msg_ref_count (previous_msg));
 
 		/* ok, now found final piece, replying */
 		nopoll_conn_send_text (conn, (const char *) nopoll_msg_get_payload (previous_msg), 
@@ -216,6 +222,11 @@ int main (int argc, char ** argv)
 
 	/* finish */
 	printf ("Listener: finishing references: %d\n", nopoll_ctx_ref_count (ctx));
+	if (previous_msg) {
+		printf ("..reference counting for previous msg: %d\n", nopoll_msg_ref_count (previous_msg));
+		nopoll_msg_unref (previous_msg);
+	} /* end if */
+
 	nopoll_ctx_unref (ctx);
 
 	/* call to release all pending memory allocated as a

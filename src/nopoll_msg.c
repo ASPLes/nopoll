@@ -122,6 +122,35 @@ nopoll_bool  nopoll_msg_ref (noPollMsg * msg)
 }
 
 /** 
+ * @brief Allows to get current reference counting for the provided
+ * message.
+ *
+ * @param msg The message for which we are requesting for the
+ * reference counting.
+ *
+ * @return Reference counting or -1 if it fails (returned when msg
+ * reference received is NULL).
+ */
+int          nopoll_msg_ref_count (noPollMsg * msg)
+{
+	int result;
+
+	/* check recieved reference */
+	if (msg == NULL)
+		return -1;
+
+	/* acquire mutex here */
+	nopoll_mutex_lock (msg->ref_mutex);
+
+	result = msg->refs;
+
+	/* release mutex here */
+	nopoll_mutex_unlock (msg->ref_mutex);
+
+	return result;
+}
+
+/** 
  * @brief Allows to get if the provided message reference has FIN flag
  * on (or off) to indicate if it is a final frame.
  *

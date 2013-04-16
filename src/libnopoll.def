@@ -126,6 +126,7 @@ nopoll_msg_join
 nopoll_msg_new
 nopoll_msg_opcode
 nopoll_msg_ref
+nopoll_msg_ref_count
 nopoll_msg_unref
 nopoll_mutex_create
 nopoll_mutex_destroy
