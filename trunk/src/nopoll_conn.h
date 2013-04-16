@@ -120,7 +120,14 @@ nopoll_bool      nopoll_conn_send_ping (noPollConn * conn);
 nopoll_bool      nopoll_conn_send_pong (noPollConn * conn);
 
 int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool masked,
-			    noPollOpCode op_code, long length, noPollPtr content);
+			    noPollOpCode op_code, long length, noPollPtr content,
+			    long sleep_in_header);
+
+int           __nopoll_conn_send_common (noPollConn * conn, 
+					 const char * content, 
+					 long         length, 
+					 nopoll_bool  has_fin, 
+					 long         sleep_in_header);
 
 nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
 							  int          timeout);
