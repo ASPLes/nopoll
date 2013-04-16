@@ -2211,8 +2211,8 @@ read_payload:
 	
 	bytes = __nopoll_conn_receive (conn, msg->payload, msg->payload_size);
 	if (bytes <= 0) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Connection lost during message reception, dropping connection id=%d, bytes=%d, errno=%d", 
-			    conn->id, bytes, errno);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Connection lost during message reception, dropping connection id=%d, bytes=%d, errno=%d : %s", 
+			    conn->id, bytes, errno, strerror (errno));
 		nopoll_msg_unref (msg);
 		nopoll_conn_shutdown (conn);
 		return NULL;		
