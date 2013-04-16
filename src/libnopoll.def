@@ -1,6 +1,8 @@
 EXPORTS
 __nopoll_conn_get_client_init
 __nopoll_conn_new_common
+__nopoll_conn_receive
+__nopoll_conn_send_common
 __nopoll_conn_tls_handle_error
 __nopoll_ctx_sigpipe_do_nothing
 __nopoll_log
@@ -49,7 +51,6 @@ nopoll_conn_port
 nopoll_conn_produce_accept_key
 nopoll_conn_read
 nopoll_conn_readline
-nopoll_conn_receive
 nopoll_conn_ref
 nopoll_conn_ref_count
 nopoll_conn_role
@@ -57,6 +58,7 @@ nopoll_conn_send_frame
 nopoll_conn_send_ping
 nopoll_conn_send_pong
 nopoll_conn_send_text
+nopoll_conn_send_text_fragment
 nopoll_conn_set_hook
 nopoll_conn_set_sock_block
 nopoll_conn_set_sock_tcp_nodelay
@@ -118,7 +120,11 @@ nopoll_loop_stop
 nopoll_loop_wait
 nopoll_msg_get_payload
 nopoll_msg_get_payload_size
+nopoll_msg_is_final
+nopoll_msg_is_fragment
+nopoll_msg_join
 nopoll_msg_new
+nopoll_msg_opcode
 nopoll_msg_ref
 nopoll_msg_unref
 nopoll_mutex_create
