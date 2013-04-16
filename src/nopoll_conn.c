@@ -1329,8 +1329,11 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning bytes read = %d", nread); */
 	if (nread == 0) {
 		/* check for blocking operations */
-		if (errno == NOPOLL_EAGAIN || errno == NOPOLL_EWOULDBLOCK)
+		if (errno == NOPOLL_EAGAIN || errno == NOPOLL_EWOULDBLOCK) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "unable to read from conn-id=%d, connections is not ready (errno: %d)",
+				    conn->id, errno);
 			return 0;
+		} /* end if */
 
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "received connection close while reading from conn id %d (errno=%d : %s) (%d, %d, %d), shutting down connection..", 
 			    conn->id, errno, strerror (errno),
@@ -2208,7 +2211,8 @@ read_payload:
 	
 	bytes = __nopoll_conn_receive (conn, msg->payload, msg->payload_size);
 	if (bytes <= 0) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Connection lost during message reception, dropping connection id=%d", conn->id);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Connection lost during message reception, dropping connection id=%d, bytes=%d, errno=%d", 
+			    conn->id, bytes, errno);
 		nopoll_msg_unref (msg);
 		nopoll_conn_shutdown (conn);
 		return NULL;		
