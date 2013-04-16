@@ -567,7 +567,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 			/* try and limit max reconnect allowed */
 			iterator++;
 
-			if (iterator > 25) {
+			if (iterator > 100) {
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Max retry calls=%d to SSL_connect reached, shutting down connection id=%d",
 					    iterator, conn->id);
 				return NULL;
@@ -1123,6 +1123,10 @@ void nopoll_conn_unref (noPollConn * conn)
 	nopoll_free (conn->certificate_file);
 	nopoll_free (conn->private_file);
 
+	/* release uncomplete message */
+	if (conn->previous_msg) 
+		nopoll_msg_unref (conn->previous_msg);
+
 	if (conn->ssl)
 		SSL_free (conn->ssl);
 	if (conn->ssl_ctx)
@@ -1273,7 +1277,7 @@ void __nopoll_pack_content (char * buffer, int start, int bytes)
 /** 
  * @internal Function used to read bytes from the wire..
  */
-int         nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen)
+int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen)
 {
 	int         nread;
 
@@ -1301,7 +1305,7 @@ int         nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen
 
 		/* call again to get bytes reducing the request in the
 		 * amount of bytes served */
-		return nopoll_conn_receive (conn, buffer + nread, maxlen - nread) + nread;
+		return __nopoll_conn_receive (conn, buffer + nread, maxlen - nread) + nread;
 		
 	} /* end if */
 
@@ -1970,6 +1974,45 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			return NULL;
 	} /* end if */
 
+	if (conn->previous_msg) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Reading bytes from a previous unfinished frame (%d) over conn-id=%d",
+			    conn->previous_msg->remain_bytes, conn->id);
+		
+		/* build next message holder to continue with this content */
+		msg = nopoll_msg_new ();
+		if (msg == NULL) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to allocate memory for received message, closing session id: %d", 
+				    conn->id);
+			nopoll_conn_shutdown (conn);
+			return NULL;
+		} /* end if */
+
+		/* flag this message as a fragment */
+		msg->is_fragment = nopoll_true;
+
+		/* get fin bytes */
+		msg->has_fin      = 1; /* for now final message */
+		msg->op_code      = 0; /* continuation frame */
+		/* copy initial mask indication */
+		msg->is_masked    = conn->previous_msg->is_masked;
+		msg->payload_size = conn->previous_msg->remain_bytes;
+
+		/* copy mask */
+		memcpy (msg->mask, conn->previous_msg->mask, 4);
+
+		if (msg->is_masked)
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reusing mask value = %d from previous frame", nopoll_get_32bit (msg->mask));
+
+		/* release previous reference because de don't need it anymore */
+		nopoll_msg_unref (conn->previous_msg);
+
+		/* nullify references */
+		conn->previous_msg      = NULL;
+
+		goto read_payload;
+		
+	} /* end if */
+
 	/*
 	  0                   1                   2                   3
 	  0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -1993,7 +2036,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Found data in opened connection id %d..", conn->id);*/ 
 
 	/* get the first 4 bytes from the websocket header */
-	bytes = nopoll_conn_receive (conn, buffer, 2);
+	bytes = __nopoll_conn_receive (conn, buffer, 2);
 	if (bytes == 0) {
 		/* connection not ready */
 		return NULL;
@@ -2062,7 +2105,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	} else if (msg->payload_size == 126) {
 		/* get extended 2 bytes length as unsigned 16 bit
 		   unsigned integer */
-		bytes = nopoll_conn_receive (conn, buffer + 2, 2);
+		bytes = __nopoll_conn_receive (conn, buffer + 2, 2);
 		if (bytes != 2) {
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Failed to get next 2 bytes to read header from the wire, failed to received content, shutting down id=%d the connection", conn->id);
 			nopoll_msg_unref (msg);
@@ -2081,7 +2124,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		msg->payload_size |= ((long)(buffer[3]) << 48);
 
 		/* read more content (next 6 bytes) */
-		if ((bytes = nopoll_conn_receive (conn, buffer, 6)) != 6) {
+		if ((bytes = __nopoll_conn_receive (conn, buffer, 6)) != 6) {
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, 
 				    "Expected to receive next 6 bytes for websocket frame header but found only %d bytes, closing session: %d",
 				    bytes, conn->id);
@@ -2127,7 +2170,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 
 	/* get more bytes */
 	if (msg->is_masked) {
-		bytes = nopoll_conn_receive (conn, (noPollPtr) msg->mask, 4);
+		bytes = __nopoll_conn_receive (conn, (noPollPtr) msg->mask, 4);
 		if (bytes != 4) {
 			nopoll_msg_unref (msg);
 			nopoll_conn_shutdown (conn);
@@ -2151,6 +2194,8 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	/* check here for the limit of message we are willing to accept */
 	/* FIX SECURITY ISSUE */
 
+read_payload:
+
 	/* copy payload received */
 	msg->payload = nopoll_new (char, msg->payload_size + 1);
 	if (msg->payload == NULL) {
@@ -2161,7 +2206,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	} /* end if */
 
 	
-	bytes = nopoll_conn_receive (conn, msg->payload, msg->payload_size);
+	bytes = __nopoll_conn_receive (conn, msg->payload, msg->payload_size);
 	if (bytes <= 0) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Connection lost during message reception, dropping connection id=%d", conn->id);
 		nopoll_msg_unref (msg);
@@ -2176,16 +2221,60 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		/* set connection in remaining data to read */
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Received fewer bytes than expected (%d < %d)", bytes, (int) msg->payload_size);
 		msg->payload_size = bytes;
+
+		/* grab a reference to previous message to reuse its data */
+		nopoll_msg_ref (msg);
+		conn->previous_msg = msg;
+
+		/* flag this message as a fragment */
+		msg->is_fragment = nopoll_true;
+
+		/* flag that this message doesn't have FIN = 0 because
+		 * we wasn't able to read it entirely */
+		msg->has_fin = 0;
 	} /* end if */
+
+	/* flag the message was being a fragment according to previous flag */
+	msg->is_fragment = msg->is_fragment || conn->previous_was_fragment || msg->has_fin == 0;
+
+	/* update was a fragment */
+	conn->previous_was_fragment = msg->is_fragment && msg->has_fin == 0;
 
 	/* now unmask content (if required) */
 	if (msg->is_masked) {
 		nopoll_conn_mask_content (conn->ctx, msg->payload, msg->payload_size, msg->mask);
 	} /* end if */
 
-	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Message received: %s", (const char *) msg->payload); */
-
 	return msg;
+}
+
+/** 
+ * @internal Implementation to send Frames according to various
+ * parameters passed in into the function.
+ */
+int           __nopoll_conn_send_common (noPollConn * conn, const char * content, long length, nopoll_bool has_fin)
+{
+	if (conn == NULL || content == NULL || length == 0 || length < -1)
+		return -1;
+
+	if (conn->role == NOPOLL_ROLE_MAIN_LISTENER) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Trying to send content over a master listener connection");
+		return -1;
+	} /* end if */
+
+	if (length == -1)
+		length = strlen (content);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_send_text: Attempting to send %d bytes", (int) length);
+
+	/* sending content as client */
+	if (conn->role == NOPOLL_ROLE_CLIENT) {
+		return nopoll_conn_send_frame (conn, /* fin */ has_fin, /* masked */ nopoll_true, 
+					       NOPOLL_TEXT_FRAME, length, (noPollPtr) content);
+	} /* end if */
+
+	/* sending content as listener */
+	return nopoll_conn_send_frame (conn, /* fin */ has_fin, /* masked */ nopoll_false, 
+				       NOPOLL_TEXT_FRAME, length, (noPollPtr) content);	
 }
 
 /** 
@@ -2207,27 +2296,32 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
  */
 int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length)
 {
-	if (conn == NULL || content == NULL || length == 0 || length < -1)
-		return -1;
+	/* do a send common operation with FIN = 1 */
+	return __nopoll_conn_send_common (conn, content, length, nopoll_true);
+}
 
-	if (conn->role == NOPOLL_ROLE_MAIN_LISTENER) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Trying to send content over a master listener connection");
-		return -1;
-	} /* end if */
-
-	if (length == -1)
-		length = strlen (content);
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_send_text: Attempting to send %d bytes", (int) length);
-
-	/* sending content as client */
-	if (conn->role == NOPOLL_ROLE_CLIENT) {
-		return nopoll_conn_send_frame (conn, /* fin */ nopoll_true, /* masked */ nopoll_true, 
-					       NOPOLL_TEXT_FRAME, length, (noPollPtr) content);
-	} /* end if */
-
-	/* sending content as listener */
-	return nopoll_conn_send_frame (conn, /* fin */ nopoll_true, /* masked */ nopoll_false, 
-				       NOPOLL_TEXT_FRAME, length, (noPollPtr) content);
+/** 
+ * @brief Allows to send an UTF-8 text (op code 1) message over the
+ * provided connection with the provided length but flagging the frame
+ * sent as not complete (more frames to come, that is, FIN = 0).
+ *
+ * @param conn The connection where the message will be sent.
+ *
+ * @param content The content to be sent (it should be utf-8 content
+ * or the function will fail).
+ *
+ * @param length Amount of bytes to take from the content to be
+ * sent. If provided -1, it is assumed you are passing in a C-like
+ * string nul terminated, so, that's the content to be sent.
+ *
+ * @return The number of bytes written otherwise -1 is returned in
+ * case of failure. The function will fail if some parameter is NULL
+ * or undefined, or the content provided is not UTF-8.
+ */
+int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * content, long length)
+{
+	/* do a send common operation with FIN = 0 */
+	return __nopoll_conn_send_common (conn, content, length, nopoll_false);
 }
 
 /** 
@@ -2538,7 +2632,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	} /* end if */
 
 	/* allocate enough memory to send content */
-	send_buffer = nopoll_new (char, length + header_size + 1);
+	send_buffer = nopoll_new (char, length + header_size + 2);
 	if (send_buffer == NULL) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to allocate memory to implement send operation");
 		return -1;

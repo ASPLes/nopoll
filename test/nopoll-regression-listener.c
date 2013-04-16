@@ -55,6 +55,8 @@ nopoll_bool on_connection_opened (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 	return nopoll_true;
 }
 
+noPollMsg * previous_msg = NULL;
+
 void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr * user_data)
 {
 	const char * content = (const char *) nopoll_msg_get_payload (msg);
@@ -62,11 +64,22 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 	char         buffer[1024];
 	int          bytes;
 	int          sent;
+	char         example[100];
+	int          shown;
+	noPollMsg  * aux;
 
-	printf ("Listener received (size: %d, ctx refs: %d): '%s'\n", 
+
+	/* get initial bytes */
+	bytes = nopoll_msg_get_payload_size (msg);
+	shown = bytes > 100 ? 99 : bytes;
+
+	memset (example, 0, 100);
+	if (! nopoll_msg_is_fragment (msg))
+		memcpy (example, (const char *) nopoll_msg_get_payload (msg), shown);
+
+	printf ("Listener received (size: %d, ctx refs: %d): (first %d bytes, fragment: %d) '%s'\n", 
 		nopoll_msg_get_payload_size (msg),
-		nopoll_ctx_ref_count (ctx),
-		(const char *) nopoll_msg_get_payload (msg));
+		nopoll_ctx_ref_count (ctx), shown, nopoll_msg_is_fragment (msg), example);
 
 	if (nopoll_cmp (content, "ping")) {
 		/* send a ping */
@@ -93,10 +106,34 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 		return;
 	} /* end if */
 
+	if (nopoll_msg_is_fragment (msg)) {
+		printf ("Found fragment, FIN = %d (%p)?..\n", nopoll_msg_is_final (msg), msg);
+		/* call to join this message */
+		aux          = previous_msg;
+		previous_msg = nopoll_msg_join (previous_msg, msg);
+		nopoll_msg_unref (aux);
+		if (! nopoll_msg_is_final (msg)) {
+			printf ("Found fragment that is not final..\n");
+			printf ("Not replying because frame fragment received..\n");
+			return;
+		} /* end if */
+
+		printf ("Found final fragment, replying with complete content: %s..\n",
+			(const char *) nopoll_msg_get_payload (previous_msg));
+
+		/* ok, now found final piece, replying */
+		nopoll_conn_send_text (conn, (const char *) nopoll_msg_get_payload (previous_msg), 
+				       nopoll_msg_get_payload_size (previous_msg));
+		/* release reference */
+		nopoll_msg_unref (previous_msg);
+		previous_msg = NULL;
+
+		return;
+	}
+
 	/* send reply as received */
 	nopoll_conn_send_text (conn, (const char *) nopoll_msg_get_payload (msg), 
 			       nopoll_msg_get_payload_size (msg));
-
 	return;
 }
 
@@ -137,7 +174,7 @@ int main (int argc, char ** argv)
 	}
 
 	/* call to create a listener */
-	listener = nopoll_listener_new (ctx, "localhost", "1234");
+	listener = nopoll_listener_new (ctx, "0.0.0.0", "1234");
 	if (! nopoll_conn_is_ok (listener)) {
 		printf ("ERROR: Expected to find proper listener connection status, but found..\n");
 		return -1;
@@ -146,7 +183,7 @@ int main (int argc, char ** argv)
 	printf ("noPoll listener started at: %s:%s (refs: %d)..\n", nopoll_conn_host (listener), nopoll_conn_port (listener), nopoll_conn_ref_count (listener));
 
 	/* now start a TLS version */
-	listener2 = nopoll_listener_tls_new (ctx, "localhost", "1235");
+	listener2 = nopoll_listener_tls_new (ctx, "0.0.0.0", "1235");
 	if (! nopoll_conn_is_ok (listener)) {
 		printf ("ERROR: Expected to find proper listener TLS connection status, but found..\n");
 		return -1;

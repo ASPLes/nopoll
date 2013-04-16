@@ -263,6 +263,15 @@ struct _noPollConn {
 	 * @internal Mutex 
 	 */
 	noPollPtr             ref_mutex;
+
+	/** 
+	 * @internal Variable to track pending bytes from previous
+	 * read that must be completed.
+	 */
+	noPollMsg           * previous_msg;
+	/* allows to track if previous message was a fragment to flag
+	 * next message, even having FIN enabled as a fragment. */
+	nopoll_bool           previous_was_fragment;
 };
 
 struct _noPollIoEngine {
@@ -289,6 +298,8 @@ struct _noPollMsg {
 
 	char           mask[4];
 	int            remain_bytes;
+
+	nopoll_bool    is_fragment;
 };
 
 struct _noPollHandshake {

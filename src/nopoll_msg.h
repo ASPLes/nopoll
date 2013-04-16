@@ -49,6 +49,14 @@ noPollMsg  * nopoll_msg_new (void);
 
 nopoll_bool  nopoll_msg_ref (noPollMsg * msg);
 
+nopoll_bool  nopoll_msg_is_final (noPollMsg * msg);
+
+nopoll_bool  nopoll_msg_is_fragment (noPollMsg * msg);
+
+noPollOpCode nopoll_msg_opcode (noPollMsg * msg);
+
+noPollMsg  * nopoll_msg_join (noPollMsg * msg, noPollMsg * msg2);
+
 void         nopoll_msg_unref (noPollMsg * msg);
 
 #endif

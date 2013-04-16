@@ -895,6 +895,78 @@ nopoll_bool test_13 (void)
 	return nopoll_true;
 }
 
+nopoll_bool test_14 (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	noPollMsg  * msg;
+	int          iter;
+
+	/* create context */
+	ctx = create_ctx ();
+
+	/* check connections registered */
+	if (nopoll_ctx_conns (ctx) != 0) {
+		printf ("ERROR: expected to find 0 registered connections but found: %d\n", nopoll_ctx_conns (ctx));
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	printf ("Test 14: sending partial frames (Hel..)..\n");
+	if (nopoll_conn_send_text_fragment (conn, "Hel", 3) != 3) {
+		printf ("ERROR: expected to be able to send Hel frame..\n");
+		return nopoll_false;
+	}
+	printf ("Test 14: sending completing frame (..lo)..\n");
+	if (nopoll_conn_send_text (conn, "lo", 2) != 2) {
+		printf ("ERROR: expected to be able to send lo completion frame..\n");
+		return nopoll_false;
+	}
+
+	/* wait for the reply */
+	iter = 0;
+	while ((msg = nopoll_conn_get_msg (conn)) == NULL) {
+
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR: received websocket connection close during wait reply..\n");
+			return nopoll_false;
+		}
+
+		nopoll_sleep (10000);
+
+		if (iter > 10)
+			break;
+	} /* end if */
+
+	/* check content received */
+	if (! nopoll_cmp (nopoll_msg_get_payload (msg), "Hello")) {
+		printf ("ERROR: expected to find message 'This is a test' but something different was received: '%s'..\n",
+			(const char *) nopoll_msg_get_payload (msg));
+		return nopoll_false;
+	} /* end if */
+
+	/* unref message */
+	nopoll_msg_unref (msg);
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -927,7 +999,6 @@ int main (int argc, char ** argv)
 	}
 
 	printf ("INFO: starting tests with pid: %d\n", getpid ());
-
 	if (test_01_strings ()) {
 		printf ("Test 01-strings: Library strings support [   OK   ]\n");
 	}else {
@@ -1063,14 +1134,18 @@ int main (int argc, char ** argv)
 	}
 	
 	if (test_13 ()) {
-		printf ("Test 13: testing certificate storege [   OK    ]\n");
+		printf ("Test 13: testing certificate storage [   OK    ]\n");
 	} else {
-		printf ("Test 13: testing certificate storege [ FAILED  ]\n");
+		printf ("Test 13: testing certificate storage [ FAILED  ]\n");
 		return -1;
 	}
 
-	/* send a frame with few content as indicated by the payload
-	 * header (fragmented and unfragmented) */
+	if (test_14 ()) {
+		printf ("Test 14: testing sending frame with few content as indicated by header [   OK    ]\n");
+	} else {
+		printf ("Test 14: testing sending frame with few content as indicated by header [ FAILED  ]\n");
+		return -1;
+	}
 
 	/* add support to reply with redirect 301 to an opening
 	 * request: page 19 and 22 */
