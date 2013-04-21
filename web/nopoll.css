@@ -321,6 +321,9 @@ ul.menu li {
   text-align: left;
   border-bottom: 1px dotted #3465a4;
   margin-bottom: 10px;
+  border-left: 1px dotted #729fcf;
+  border-right: 1px dotted #729fcf;
+  
 }
 
 .sponsored-content .dotted { 
