@@ -188,7 +188,7 @@ ul.images img {
   padding: 0px;
   width: 100%;
   float: left;
-  padding-top: 20px;
+  /* padding-top: 20px; */
   padding-bottom: 10px;
 }
 
@@ -313,4 +313,45 @@ ul.menu li {
 .right-ads { 
   padding-top: 30px;
   text-align: center;
+}
+
+.sponsored-content { 
+  background: #3465a4;
+  color: white; 
+  text-align: left;
+  border-bottom: 1px dotted #3465a4;
+  margin-bottom: 10px;
+}
+
+.sponsored-content .dotted { 
+  border-right: 1px dotted #729fcf;
+}
+
+.sponsored-content a { 
+   background: #3465a4;
+   color: white; 
+}
+
+.sponsored-content table { 
+  padding: 10px;
+}
+
+.sponsored-content h1 { 
+  padding-top: 0px;
+  margin-top: 0px;
+  background: #3465a4;
+  color: white; 
+}
+
+.sponsored-content td { 
+  vertical-align: top;
+}
+
+.sponsored-content ul { 
+  padding: 6px;
+  margin: 6px;
+}
+
+.sponsored-content li { 
+  list-style: none;
 }
