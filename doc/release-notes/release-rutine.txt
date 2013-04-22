@@ -1,0 +1,26 @@
+* actualizar documentación (doc center) del producto en la web.
+
+* hacer release note.
+
+* subir producto a code.google.com/p/no-poll
+
+* publicar en listas de correo de aspl.
+
+* publicar en freshmeat.net
+
+* actualizar web de nopoll (actualizar sección de noticias y a la gestión
+  de releases notes).
+  - index.html
+  - es/index.html
+  - news.html
+  - es/news.html
+  - downloads.html
+  - es/downloas.html
+
+* publicar noticia en aspl.es.
+
+* Generar paquetes debian
+
+
+
+

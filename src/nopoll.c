@@ -974,8 +974,85 @@ void nopoll_cleanup_library (void)
  *
  * \section creating_basic_web_socket_server 5. Creating a basic WebSocket server with noPoll (using noPoll own loop)
  *
- * Now let's see how to create a simple WebSocket server using noPoll own loop:
+ * \note Remember you can see many of the code already supported by noPoll by checking the nopoll regression listener at: https://dolphin.aspl.es/svn/publico/nopoll/trunk/test/nopoll-regression-listener.c
  *
+ * Now let's see how to create a simple WebSocket server using noPoll own loop:
+ * \code
+ * // create a listener to receive connections on port 1234
+ * noPollConn * listener = nopoll_listener_new (ctx, "0.0.0.0", "1234");
+ * if (! nopoll_conn_is_ok (listener)) {
+ *      // some error handling here
+ * }
+ * 
+ * // now set a handler that will be called when a message (fragment or not) is received
+ * nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);
+ *
+ * // now call to wait for the loop to notify events 
+ * nopoll_loop_wait (ctx, 0);
+ * \endcode
+ *
+ * Now, every time a frame is received, the handler
+ * <b>listener_on_message</b> will be called. Here is an example about
+ * that handler:
+ *
+ * \code
+ * void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr * user_data) {
+ *         // print the message (for debugging purposes) and reply
+ *         printf ("Listener received (size: %d, ctx refs: %d): (first %d bytes, fragment: %d) '%s'\n", 
+ *                 nopoll_msg_get_payload_size (msg),
+ *                 nopoll_ctx_ref_count (ctx), shown, nopoll_msg_is_fragment (msg), example);
+ *     
+ *         // reply to the message
+ *         nopoll_conn_send_text (conn, "Message received", 16);
+ *   
+ *         return;
+ * }
+ * \endcode
+ * 
+ * \section creating_basic_web_socket_client 6. Creating a basic WebSocket client with noPoll
+ *
+ * \note Remember you can see many of the code already supported by noPoll by checking the nopoll regression client at: https://dolphin.aspl.es/svn/publico/nopoll/trunk/test/nopoll-regression-client.c
+ *
+ * The process of creating a WebSocket connection is really
+ * simple. After creating a context (\ref noPollCtx) you connect to
+ * the listener by using:
+ *
+ * \code
+ * // call to create a connection 
+ * noPollConn * conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+ * if (! nopoll_conn_is_ok (conn)) {
+ *     // some error handling here
+ * }
+ *
+ * \endcode
+ *
+ * After that, you can call to \ref nopoll_conn_is_ready to check if
+ * the connection is ready to send and receive content. If you don't
+ * have a loop to wait on, you can use the following function to wait
+ * for the connection to be ready:
+ *
+ * \code
+ * if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
+ *         // some error handling
+ * }
+ * \endcode
+ *
+ * In any case, once the connection is ready, either because \ref
+ * nopoll_conn_is_ready returned \ref nopoll_true or because you used
+ * \ref nopoll_conn_wait_until_connection_ready, you can send a
+ * message by using the following:
+ *
+ * \code
+ * // send a message 
+ * if (nopoll_conn_send_text (conn, "Hello there! this is a test", 27) != 27) {
+ *         // send a message
+ * }
+ * \endcode
+ *
+ * Now, to receive the content from this connection you can use the following methods:
+ *
+ * -# Set an 
+ * 
  * 
  */
 

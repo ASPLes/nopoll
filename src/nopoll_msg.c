@@ -212,7 +212,7 @@ nopoll_bool  nopoll_msg_is_fragment (noPollMsg * msg)
  *
  * @param msg The message that is being checked for its OpCode
  *
- * @param The op code or -1 in the case NULL reference is received.
+ * @return The op code or -1 in the case NULL reference is received.
  */
 noPollOpCode nopoll_msg_opcode (noPollMsg * msg)
 {
