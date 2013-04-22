@@ -2700,6 +2700,8 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	/* send content */
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Mask used for this delivery: %d (about to send %d bytes)",
 		    nopoll_get_32bit (send_buffer + header_size - 2), (int) length + header_size);
+	/* clear errno status before writting */
+	errno = 0;
 	if (sleep_in_header == 0)
 		bytes_written = conn->send (conn, send_buffer, length + header_size);
 	else {
@@ -2725,7 +2727,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	if (bytes_written != (length + header_size)) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, 
 			    "Requested to write %d bytes but found %d written (masked? %d, mask: %d, header size: %d, length: %d), errno = %d : %s", 
-			    bytes_written, (int) length + header_size, masked, mask_value, header_size, (int) length, errno, strerror (errno));
+			    (int) length + header_size, bytes_written, masked, mask_value, header_size, (int) length, errno, strerror (errno));
 	} else {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Bytes written to the wire %d (masked? %d, mask: %d, header size: %d, length: %d)", 
 			    bytes_written, masked, mask_value, header_size, (int) length);

@@ -208,7 +208,9 @@ typedef void * noPollPtr;
 typedef struct _noPollCtx noPollCtx;
 
 /** 
- * @brief Abstraction that represents a connection.
+ * @brief Abstraction that represents a connection that maybe be a listener created by \ref nopoll_listener_new or because the connection was received as a consequence of that call, or because it is a client connection created by \ref nopoll_conn_new 
+ *
+ * See noPoll API because there are other methods to create connections (not only previous mentioned functions).
  */
 typedef struct _noPollConn noPollConn;
 
