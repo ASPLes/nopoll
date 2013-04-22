@@ -2335,9 +2335,10 @@ int           __nopoll_conn_send_common (noPollConn * conn, const char * content
  * sent. If provided -1, it is assumed you are passing in a C-like
  * string nul terminated, so, that's the content to be sent.
  *
- * @return The number of bytes written otherwise -1 is returned in
+ * @return The number of bytes written otherwise < 0 is returned in
  * case of failure. The function will fail if some parameter is NULL
- * or undefined, or the content provided is not UTF-8.
+ * or undefined, or the content provided is not UTF-8. In the case of
+ * failure, also check errno variable to know more what went wrong.
  */
 int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length)
 {
@@ -2359,9 +2360,10 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
  * sent. If provided -1, it is assumed you are passing in a C-like
  * string nul terminated, so, that's the content to be sent.
  *
- * @return The number of bytes written otherwise -1 is returned in
+ * @return The number of bytes written otherwise < 0 is returned in
  * case of failure. The function will fail if some parameter is NULL
- * or undefined, or the content provided is not UTF-8.
+ * or undefined, or the content provided is not UTF-8. In the case of
+ * failure, also check errno variable to know more what went wrong.
  */
 int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * content, long length)
 {
