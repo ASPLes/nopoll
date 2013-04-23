@@ -698,7 +698,7 @@ nopoll_bool test_04c (void) {
 				flush_required = nopoll_true;
 
 			/* call to flush writes */
-			bytes_written += nopoll_conn_flush_writes (conn, 10000000);
+			bytes_written = nopoll_conn_flush_writes (conn, 10000000, bytes_written);
 
 			if (bytes_written != length) {
 				printf ("ERROR: Failed to send bytes read from file %d, bytes written were=%d (errno=%d, pending bytes: %d, total bytes: %d)..\n",
