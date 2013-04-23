@@ -62,7 +62,30 @@ nopoll_bool on_connection_opened (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 
 noPollMsg * previous_msg = NULL;
 
-void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr * user_data)
+void write_file_handler (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr user_data)
+{
+	FILE * open_file_cmd = user_data;
+	const char * content = (const char *) nopoll_msg_get_payload (msg);
+
+	/* check for close operation */
+	if (nopoll_ncmp (content, "close-file", 10)) {
+		printf ("CLOSING FILE: opened..\n");
+		fclose (open_file_cmd);
+		open_file_cmd = NULL;
+		return;
+	} /* end if */
+
+	if (open_file_cmd) {
+		/* write content */
+		fwrite (content, 1, nopoll_msg_get_payload_size (msg), open_file_cmd);
+		nopoll_sleep (1000000);
+
+		return;
+	} /* end if */
+	return;
+}
+
+void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr user_data)
 {
 	const char * content = (const char *) nopoll_msg_get_payload (msg);
 	FILE       * file;
@@ -72,7 +95,36 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 	char         example[100];
 	int          shown;
 	noPollMsg  * aux;
+	nopoll_bool  dont_reply = nopoll_false;
+	FILE      * open_file_cmd = NULL;
 
+	/* check for open file commands */
+	if (nopoll_ncmp (content, "open-file: ", 11)) {
+		open_file_cmd = fopen (content + 11, "a");
+		if (open_file_cmd == NULL) {
+			printf ("ERROR: unable to open file: %s\n", content + 11);
+			return;
+		} /* end if */
+
+		/* set handler */
+		nopoll_conn_set_on_msg (conn, write_file_handler, open_file_cmd);
+
+		return;
+	} /* end if */
+
+	printf ("Message received: %s\n", content);
+	if (nopoll_ncmp (content, "release-message", 15)) {
+		printf ("Listener: RELEASING previous message..\n");
+		nopoll_msg_unref (previous_msg);
+		previous_msg = NULL;
+		return;
+	} /* end if */
+
+	if (nopoll_ncmp (content, "1234-1) ", 8)) {
+		printf ("Listener: waiting a second to force buffer flooding..\n");
+		nopoll_sleep (100000);
+		dont_reply = nopoll_true;
+	} /* end if */
 
 	/* get initial bytes */
 	bytes = nopoll_msg_get_payload_size (msg);
@@ -110,6 +162,10 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 		fclose (file);
 		return;
 	} /* end if */
+
+	/* check if we have to reply */
+	if (dont_reply)
+		return;
 
 	if (nopoll_msg_is_fragment (msg)) {
 		printf ("Found fragment, FIN = %d (%p)?..\n", nopoll_msg_is_final (msg), msg);
