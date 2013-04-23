@@ -637,6 +637,10 @@ nopoll_bool test_04c (void) {
 	FILE       * handle;
 	struct stat  file_info;
 	int          iterator;
+	char       * cmd;
+	const char * file_checked;
+	int          total_bytes = 0;
+	nopoll_bool  flush_required = nopoll_false;
 
 	/* reinit again */
 	ctx = create_ctx ();
@@ -667,11 +671,18 @@ nopoll_bool test_04c (void) {
 	} /* end if */	
 
 	/* open the handle to send the content */
-	handle = fopen ("nopoll-regression-client.c", "r");
+	file_checked = "/boot/vmlinuz-2.6.32-5-amd64";
+	handle = fopen (file_checked, "r");
 	if (handle == NULL) {
-		printf ("Test 04-c: failed to open file to be sent to the server..\n");
-		return nopoll_false;
-	}
+		/* checking file */
+		file_checked = "nopoll-regression-client.c";
+		handle = fopen (file_checked, "r");
+		if (handle == NULL) {
+			printf ("Test 04-c: failed to open file to be sent to the server..\n");
+			return nopoll_false;
+		} /* end if */
+	} /* end if */
+	printf ("Test 04-c: running test with file: %s\n", file_checked);
 
 	/* send content */
 	while (nopoll_true) {
@@ -681,12 +692,23 @@ nopoll_bool test_04c (void) {
 		/* write content */
 		if (length > 0) {
 			bytes_written = nopoll_conn_send_text (conn, buffer, length);
+
+			/* check for flush required */
+			if (nopoll_conn_pending_write_bytes (conn) > 0)
+				flush_required = nopoll_true;
+
+			/* call to flush writes */
+			bytes_written += nopoll_conn_flush_writes (conn, 10000000);
+
 			if (bytes_written != length) {
-				printf ("ERROR: Failed to send bytes read from file %d, bytes writen were=%d..\n",
-					length, bytes_written);
+				printf ("ERROR: Failed to send bytes read from file %d, bytes written were=%d (errno=%d, pending bytes: %d, total bytes: %d)..\n",
+					length, bytes_written, errno, nopoll_conn_pending_write_bytes (conn), total_bytes);
 				return nopoll_false;
 			} /* end if */
 		} /* end if */
+
+		if (bytes_written > 0)
+			total_bytes += bytes_written;
 
 		if (length < 4096) {
 			printf ("Test 04-c: last read operation found length=%d\n", length);
@@ -705,23 +727,48 @@ nopoll_bool test_04c (void) {
 		return nopoll_false;
 	} /* end if */	
 
+	cmd = nopoll_strdup_printf ("diff copy-test-04c.txt %s > /dev/null 2>&1", file_checked);
+
 	iterator = 0;
 	while (iterator < 50) {
 		/* checking file transferred */
 		printf ("Test 04-c: checking file transfered, iterator=%d..\n", iterator);
-		if (system ("diff copy-test-04c.txt nopoll-regression-client.c > /dev/null 2>&1") == 0) 
+		if (system (cmd) == 0) 
 			break;
 
 		iterator++;
 		nopoll_sleep (500000);
 	} /* end if */
 
-	if (system ("diff copy-test-04c.txt nopoll-regression-client.c > /dev/null 2>&1") != 0) {
-		printf ("Test 04-c: file differs, test failing, run: diff copy-test-04c.txt nopoll-regression-client.c\n");
+	if (system (cmd) != 0) {
+		printf ("Test 04-c: file differs, test failing, run: diff copy-test-04c.txt %s\n", file_checked);
 		return nopoll_false;
 	} /* end if */
 
-	printf ("Test 04-c: file ok..\n");
+	/* check total size */
+	if (stat ("copy-test-04c.txt", &file_info) == 0 && file_info.st_size != total_bytes) {
+		printf ("Test 04-c: expected to find same total bytes written %d != %d\n",
+			(int) file_info.st_size, (int) total_bytes);
+		return nopoll_false;
+	} /* end if */
+
+	if (stat (file_checked, &file_info) == 0 && file_info.st_size != total_bytes) {
+		printf ("Test 04-c: expected to find same total bytes written %d != %d\n",
+			(int) file_info.st_size, (int) total_bytes);
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 04-c: file ok (%d bytes written)..\n", total_bytes);
+	nopoll_free (cmd);
+
+	if (! flush_required) {
+		printf (" *** \n");
+		printf (" *** \n");
+		printf (" *** ATTENTION: !! Flush operations weren't required so this test didn't check everything (file used to check transfers was: %s)  \n",
+			file_checked);
+		printf (" *** \n");
+		printf (" *** \n");
+	}
 
 	/* sleep half a second */
 	nopoll_sleep (500000);

@@ -115,7 +115,9 @@ int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * co
 
 int           nopoll_conn_complete_pending_write (noPollConn * conn);
 
-int           nopoll_conn_pending_write_bytes (noPollConn * conn);
+int           nopoll_conn_pending_write_bytes    (noPollConn * conn);
+
+int           nopoll_conn_flush_writes           (noPollConn * conn, long timeout);
 
 int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nopoll_bool block, long int timeout);
 
