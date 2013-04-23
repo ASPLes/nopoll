@@ -2719,9 +2719,16 @@ int           nopoll_conn_pending_write_bytes (noPollConn * conn)
  *
  * @param timeout Timeout in milliseconds to limit the flush operation.
  *
+ * @param previous_result Optional parameter that can receive the
+ * number of bytes optionally read before this call. The value
+ * received on this function will be added to the result, checking
+ * first it contains a value higher than 0. This is an option to
+ * clarify the interface. If you don't have the value to be passed to
+ * this function at the time needed, just pass 0.
+ *
  * @return Bytes that were written. If no pending bytes must be written, the function returns 0.
  */
-int nopoll_conn_flush_writes (noPollConn * conn, long timeout)
+int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_result)
 {
 	int iterator = 0;
 	int bytes_written;
@@ -2731,7 +2738,7 @@ int nopoll_conn_flush_writes (noPollConn * conn, long timeout)
 
 	/* check for errno and pending write operations */
 	if (errno != NOPOLL_EWOULDBLOCK || nopoll_conn_pending_write_bytes (conn) == 0)
-		return 0;
+		return previous_result > 0 ? previous_result : 0;
 		
 	while (iterator < 100 && nopoll_conn_pending_write_bytes (conn) > 0) {
 
@@ -2753,8 +2760,11 @@ int nopoll_conn_flush_writes (noPollConn * conn, long timeout)
 		multiplier++;
 	} /* end while */
 
-	printf ("Test ..: bytes flushed for pending writes=%d\n", total);
+	/* add value received */
+	if (previous_result > 0)
+		return total + previous_result;
 
+	/* just bytes written */
 	return total;
 }
 

@@ -1152,13 +1152,9 @@ void nopoll_cleanup_library (void)
  * bytes_written = nopoll_conn_send_text (conn, content, length);
  *
  * // complete pending write by flushing and limitting operation for 2 seconds
- * bytes_pending = nopoll_conn_flush_writes (conn, 2000000);
+ * // pass to the function bytes_written as returned by nopoll_conn_send_text
+ * bytes_written = nopoll_conn_flush_writes (conn, 2000000, bytes_written);
  *
- * if (bytes_written >= 0 && bytes_pending >= 0)
- *       return bytes_written + bytes_pending;
- * if (bytes_written > 0)
- *       return bytes_written;
- * return bytes_pending;
  * \endcode
  * 
  * 
