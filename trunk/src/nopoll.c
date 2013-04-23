@@ -1139,6 +1139,21 @@ void nopoll_cleanup_library (void)
  * WebSocket to retry later, letting the overall application to keep
  * on doing other things meanwhile (like writing or handling I/O in other
  * connections) rather than locking the caller (as the example do).
+ *
+ * Knowing this, if you want a ready to use function that implements
+ * concept (for the second part), you can directly use:
+ *
+ * - \ref nopoll_conn_flush_writes
+ *
+ * With it, a fairly complete and efficient write operation would be:
+ *
+ * \code
+ * // do write operation 
+ * bytes_written = nopoll_conn_send_text (conn, content, length);
+ *
+ * // complete pending write by flushing and limitting operation for 2 seconds
+ * bytes_written += nopoll_conn_flush_writes (conn, 2000000);
+ * \endcode
  * 
  * 
  * 

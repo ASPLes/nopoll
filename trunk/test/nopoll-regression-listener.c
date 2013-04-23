@@ -78,7 +78,6 @@ void write_file_handler (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, no
 	if (open_file_cmd) {
 		/* write content */
 		fwrite (content, 1, nopoll_msg_get_payload_size (msg), open_file_cmd);
-		nopoll_sleep (1000000);
 
 		return;
 	} /* end if */

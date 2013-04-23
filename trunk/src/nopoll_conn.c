@@ -2703,6 +2703,63 @@ int           nopoll_conn_pending_write_bytes (noPollConn * conn)
 }
 
 /** 
+ * @brief Ready to use function that checks for pending write
+ * operations and flush them waiting until they are done or until the
+ * timeout provided by the user is reached.
+ *
+ * This function uses \ref nopoll_conn_pending_write_bytes and \ref
+ * nopoll_conn_complete_pending_write to check and complete pending
+ * write operations. 
+ *
+ * Because writing pending bytes is a common operation, this function
+ * is provided as a ready to use function to call after a write operation (for
+ * example \ref nopoll_conn_send_text).
+ *
+ * @param conn The connection where pending bytes must be written. 
+ *
+ * @param timeout Timeout in milliseconds to limit the flush operation.
+ *
+ * @return Bytes that were written. If no pending bytes must be written, the function returns 0.
+ */
+int nopoll_conn_flush_writes (noPollConn * conn, long timeout)
+{
+	int iterator = 0;
+	int bytes_written;
+	int total = 0;
+	int multiplier = 1;
+	long wait_implemented = 0;
+
+	/* check for errno and pending write operations */
+	if (errno != NOPOLL_EWOULDBLOCK || nopoll_conn_pending_write_bytes (conn) == 0)
+		return 0;
+		
+	while (iterator < 100 && nopoll_conn_pending_write_bytes (conn) > 0) {
+
+		/* stop operation if timeout reached */
+		if (wait_implemented >= timeout)
+			break;
+
+		nopoll_sleep (100000 * multiplier);
+		wait_implemented += (100000 * multiplier);
+
+		/* write content pending */
+		bytes_written = nopoll_conn_complete_pending_write (conn);
+
+		if (bytes_written > 0)
+			total += bytes_written;
+
+		/* next position */
+		iterator++;
+		multiplier++;
+	} /* end while */
+
+	printf ("Test ..: bytes flushed for pending writes=%d\n", total);
+
+	return total;
+}
+
+
+/** 
  * @internal Function used to send a frame over the provided
  * connection.
  *
@@ -2722,14 +2779,15 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 			    noPollOpCode op_code, long length, noPollPtr content, long sleep_in_header)
 
 {
-	char   header[14];
-	int    header_size;
-	char * send_buffer;
-	int    bytes_written = 0;
-	char   mask[4];
-	int    mask_value = 0;
-	int    desp = 0;
-	int    tries;
+	char               header[14];
+	int                header_size;
+	char             * send_buffer;
+	int                bytes_written = 0;
+	char               mask[4];
+	int                mask_value = 0;
+	int                desp = 0;
+	int                tries;
+	noPollDebugLevel   level;
 
 	/* check for pending send operation */
 	if (nopoll_conn_complete_pending_write (conn) != 0)
@@ -2872,9 +2930,17 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	/* record pending write bytes */
 	conn->pending_write_bytes = length + header_size - desp;
 
-	nopoll_log (conn->ctx, desp == (length + header_size) ? NOPOLL_LEVEL_DEBUG : NOPOLL_LEVEL_CRITICAL, 
+	level = NOPOLL_LEVEL_DEBUG;
+	if (desp == (length + header_size))
+		level = NOPOLL_LEVEL_CRITICAL;
+	else if (errno == NOPOLL_EWOULDBLOCK)
+		level = NOPOLL_LEVEL_WARNING;
+
+	nopoll_log (conn->ctx, level, 
 		    "Write operation finished with with last result=%d, bytes_written=%d, requested=%d, remaining=%d (conn-id=%d)",
-		    bytes_written, desp - header_size, length, conn->pending_write_bytes, conn->id);
+		    /* report want we are going to report */
+		    bytes_written <= 0 ? bytes_written : desp - header_size,
+		    desp - header_size, length, conn->pending_write_bytes, conn->id);
 
 	/* check pending bytes for the next operation */
 	if (conn->pending_write_bytes > 0) {
@@ -2889,12 +2955,12 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	/* release memory */
 	nopoll_free (send_buffer);
 
-	/* report possitive values in case of failure */
-	if (bytes_written <= 0)
-		return bytes_written;
-	
-	/* return bytes written */
-	return desp - header_size;
+	/* report at least what was written */
+	if (desp - header_size > 0)
+		return desp - header_size;
+
+	/* report last operation */
+	return bytes_written;
 }
 
 /** 
