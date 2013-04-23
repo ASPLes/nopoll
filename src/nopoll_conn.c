@@ -2931,16 +2931,18 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	conn->pending_write_bytes = length + header_size - desp;
 
 	level = NOPOLL_LEVEL_DEBUG;
-	if (desp == (length + header_size))
+	if (desp != (length + header_size))
 		level = NOPOLL_LEVEL_CRITICAL;
 	else if (errno == NOPOLL_EWOULDBLOCK)
 		level = NOPOLL_LEVEL_WARNING;
 
 	nopoll_log (conn->ctx, level, 
 		    "Write operation finished with with last result=%d, bytes_written=%d, requested=%d, remaining=%d (conn-id=%d)",
-		    /* report want we are going to report */
+		    /* report want we are going to report: result */
 		    bytes_written <= 0 ? bytes_written : desp - header_size,
-		    desp - header_size, length, conn->pending_write_bytes, conn->id);
+		    /* bytes written */
+		    desp - header_size, 
+		    length, conn->pending_write_bytes, conn->id);
 
 	/* check pending bytes for the next operation */
 	if (conn->pending_write_bytes > 0) {
