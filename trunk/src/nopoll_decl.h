@@ -39,6 +39,15 @@
 #ifndef __NOPOLL_DECL_H__
 #define __NOPOLL_DECL_H__
 
+/** 
+ * \defgroup nopoll_decl_module Nopoll Declarations: Common Nopoll declarations, Types, macros, and support functions.
+ */
+
+/** 
+ * \addtogroup nopoll_decl_module
+ * @{
+ */
+
 /* include platform specific configuration */
 #include <nopoll_config.h>
 
@@ -82,6 +91,9 @@
 
 /* Portable definitions while using Vortex Library */
 #define NOPOLL_EINTR           EINTR
+/** 
+ * @brief Portable definition for EWOULDBLOCK errno code.
+ */
 #define NOPOLL_EWOULDBLOCK     EWOULDBLOCK
 #define NOPOLL_EINPROGRESS     EINPROGRESS
 #define NOPOLL_EAGAIN          EAGAIN
@@ -166,15 +178,6 @@
 #define errno (WSAGetLastError())
 #endif
 
-
-/** 
- * \defgroup nopoll_decl_module Nopoll Declarations: Common Nopoll declarations, Types, macros, and support functions.
- */
-
-/** 
- * \addtogroup nopoll_decl_module
- * @{
- */
 
 /** 
  * @brief Common definition to have false (\ref nopoll_false) value (which is defined to 0 integer value).

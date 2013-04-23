@@ -195,7 +195,7 @@ typedef int (*noPollRead) (noPollConn * conn,
 typedef void (*noPollOnMessageHandler) (noPollCtx  * ctx,
 					noPollConn * conn,
 					noPollMsg  * msg,
-					noPollPtr  * user_data);
+					noPollPtr    user_data);
 
 /** 
  * @brief Mutex creation handler used by the library.

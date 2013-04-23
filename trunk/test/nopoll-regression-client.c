@@ -520,6 +520,221 @@ nopoll_bool test_04a (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_04b (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	int          iterator;
+	int          length;
+	int          bytes_written;
+	const char * msg = "1234-1) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-2) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-3) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-4) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-5) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-6) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-7) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-8) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-9) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-10) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-11) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-12) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-13) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw 1234-14) klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw";
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	printf ("Test 04-b: waiting until connection is ok\n");
+	nopoll_conn_wait_until_connection_ready (conn, 5);
+
+	printf ("Test 04-b: sending was quick as possible to flood local buffers..\n");
+	
+	/* get message length */
+	length = strlen (msg);
+	iterator = 0;
+	while (iterator < 100) {
+		/* send a message */
+		if (nopoll_conn_send_text (conn, msg, length) != length) {
+			if (errno == 0) {
+				printf ("ERROR: expected to find errno value but found 0..\n");
+			}
+			printf ("Test 04-b: found expected error, checking errno=%d..\n", errno);
+			break;
+		} /* end if */
+
+		/* next iterator */
+		iterator ++;
+	}  /* end while */
+
+	if (errno != NOPOLL_EWOULDBLOCK) {
+		printf ("ERROR: expected to find errno=%d, but found errno=%d\n",
+			NOPOLL_EWOULDBLOCK, errno);
+		return nopoll_false;
+	} /* end if */
+
+	/* write pending content */
+	if (nopoll_conn_pending_write_bytes (conn) == 0) {
+		printf ("ERROR: expected to have pending bytes to be written.. but found 0..\n");
+		return nopoll_false;
+	} /* end if */
+
+	iterator = 0;
+	while (iterator < 3) {
+		printf ("Test 04-b: found pending write bytes=%d\n", nopoll_conn_pending_write_bytes (conn));
+
+		/* call to flush bytes */
+		nopoll_conn_complete_pending_write (conn);
+
+		if (nopoll_conn_pending_write_bytes (conn) == 0) {
+			printf ("Test 04-b: all bytes written..\n");
+			break;
+		} /* end if */
+
+		/* sleep a bit */
+		nopoll_sleep (1000000);
+
+		/* next iterator */
+		iterator++;
+	} 
+
+	if (nopoll_conn_pending_write_bytes (conn) != 0) {
+		printf ("Test 04-b: expected to find no pending bytes waiting to be written but found: %d\n", nopoll_conn_pending_write_bytes (conn));
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_conn_close (conn);
+
+	/* call to create a connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	printf ("Test 04-b: waiting until connection is ok\n");
+	nopoll_conn_wait_until_connection_ready (conn, 5);
+
+	/* send a cleanup message */
+	bytes_written = nopoll_conn_send_text (conn, "release-message", 15);
+	if (bytes_written != 15) {
+		printf ("Test 04-b: unable to send release message, bytes_written=%d, but expected=%d..\n",
+			bytes_written, 15);
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 04-b: waiting a second before finishing test..\n");
+	nopoll_sleep (1000000);
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+nopoll_bool test_04c (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	int          length;
+	int          bytes_written;
+	char         buffer[4096];
+	FILE       * handle;
+	struct stat  file_info;
+	int          iterator;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	printf ("Test 04-c: waiting until connection is ok\n");
+	nopoll_conn_wait_until_connection_ready (conn, 5);
+
+	/* remove local file */
+	if (stat ("copy-test-04c.txt", &file_info) == 0) {
+		printf ("Test 04-c: FILE exists, removing (copy-test-04c.txt)\n");
+		/* remove file */
+		unlink ("copy-test-04c.txt");
+	} /* end if */
+
+	/* open file descriptor */
+	bytes_written = nopoll_conn_send_text (conn, "open-file: copy-test-04c.txt", 28);
+	if (bytes_written != 28) {
+		printf ("Test 04-c: unable to send open file command, bytes_written=%d, but expected=%d..\n",
+			bytes_written, 15);
+		return nopoll_false;
+	} /* end if */	
+
+	/* open the handle to send the content */
+	handle = fopen ("nopoll-regression-client.c", "r");
+	if (handle == NULL) {
+		printf ("Test 04-c: failed to open file to be sent to the server..\n");
+		return nopoll_false;
+	}
+
+	/* send content */
+	while (nopoll_true) {
+		/* read content */
+		length = fread (buffer, 1, 4096, handle);
+
+		/* write content */
+		if (length > 0) {
+			bytes_written = nopoll_conn_send_text (conn, buffer, length);
+			if (bytes_written != length) {
+				printf ("ERROR: Failed to send bytes read from file %d, bytes writen were=%d..\n",
+					length, bytes_written);
+				return nopoll_false;
+			} /* end if */
+		} /* end if */
+
+		if (length < 4096) {
+			printf ("Test 04-c: last read operation found length=%d\n", length);
+			break;
+		} /* end if */
+	} /* end while */
+
+	fclose (handle);
+
+	printf ("Test 04-c: pending bytes to be written are=%d\n", nopoll_conn_pending_write_bytes (conn));
+
+	/* send command to close file */
+	bytes_written = nopoll_conn_send_text (conn, "close-file", 10);
+	if (bytes_written != 10) {
+		printf ("Test 04-c: unable to send close file command\n");
+		return nopoll_false;
+	} /* end if */	
+
+	iterator = 0;
+	while (iterator < 50) {
+		/* checking file transferred */
+		printf ("Test 04-c: checking file transfered, iterator=%d..\n", iterator);
+		if (system ("diff copy-test-04c.txt nopoll-regression-client.c > /dev/null 2>&1") == 0) 
+			break;
+
+		iterator++;
+		nopoll_sleep (500000);
+	} /* end if */
+
+	if (system ("diff copy-test-04c.txt nopoll-regression-client.c > /dev/null 2>&1") != 0) {
+		printf ("Test 04-c: file differs, test failing, run: diff copy-test-04c.txt nopoll-regression-client.c\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 04-c: file ok..\n");
+
+	/* sleep half a second */
+	nopoll_sleep (500000);
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 nopoll_bool test_05 (void) {
 
 	noPollCtx  * ctx;
@@ -1214,6 +1429,19 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+	if (test_04b ()) {
+		printf ("Test 04-b: try to overflow write access and recover from it  [   OK   ]\n");
+	} else {
+		printf ("Test 04-b: try to overflow write access and recover from it [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_04c ()) {
+		printf ("Test 04-c: send a file and try to overflow (but retry)  [   OK   ]\n");
+	} else {
+		printf ("Test 04-c: send a file and try to overflow (but retry) [ FAILED ]\n");
+		return -1;
+	}
 
 	if (test_05 ()) {
 		printf ("Test 05: sending utf-8 content [   OK   ]\n");

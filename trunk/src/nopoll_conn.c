@@ -1141,6 +1141,9 @@ void nopoll_conn_unref (noPollConn * conn)
 		nopoll_free (conn->handshake);
 	} /* end if */
 
+	/* release pending write buffer */
+	nopoll_free (conn->pending_write);
+
 	/* release mutex */
 	nopoll_mutex_destroy (conn->ref_mutex);
 
@@ -2339,6 +2342,8 @@ int           __nopoll_conn_send_common (noPollConn * conn, const char * content
  * case of failure. The function will fail if some parameter is NULL
  * or undefined, or the content provided is not UTF-8. In the case of
  * failure, also check errno variable to know more what went wrong.
+ *
+ * See \ref nopoll_manual_retrying_write_operations to know more about error codes and when it is possible to retry write operations.
  */
 int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length)
 {
@@ -2364,6 +2369,9 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
  * case of failure. The function will fail if some parameter is NULL
  * or undefined, or the content provided is not UTF-8. In the case of
  * failure, also check errno variable to know more what went wrong.
+ *
+ * See \ref nopoll_manual_retrying_write_operations to know more about
+ * error codes and when it is possible to retry write operations.
  */
 int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * content, long length)
 {
@@ -2587,6 +2595,31 @@ nopoll_bool      nopoll_conn_send_ping (noPollConn * conn)
 }
 
 /** 
+ * @brief Allows to configure an on message handler on the provided
+ * connection that overrides the one configured at \ref noPollCtx.
+ *
+ * @param conn The connection to be configured with a particular on message handler.
+ *
+ * @param on_msg The on message handler configured.
+ *
+ * @param user_data User defined pointer to be passed in into the on message handler when it is called.
+ * 
+ */
+void          nopoll_conn_set_on_msg (noPollConn              * conn,
+				      noPollOnMessageHandler    on_msg,
+				      noPollPtr                 user_data)
+{
+	if (conn == NULL)
+		return;
+
+	/* configure on message handler */
+	conn->on_msg      = on_msg;
+	conn->on_msg_data = user_data;
+
+	return;
+}
+
+/** 
  * @internal Allows to send a pong message over the Websocket
  * connection provided. The function will not block the caller. This
  * function is not intended to be used by normal API consumer.
@@ -2599,6 +2632,74 @@ nopoll_bool      nopoll_conn_send_ping (noPollConn * conn)
 nopoll_bool      nopoll_conn_send_pong (noPollConn * conn)
 {
 	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PONG_FRAME, 0, NULL, 0);
+}
+
+/** 
+ * @brief Allows to call to complete last pending write process that may be
+ * pending from a previous uncompleted write operation. The function
+ * returns the number of bytes that were written.
+ *
+ * @param conn The connection where the pending write operation
+ * operation will take place. In the case conn == NULL is received, 0
+ * is returned. Keep in mind this.
+ *
+ * @return In the case no pending write is in place, the function
+ * returns 0. Otherwise, the function returns the pending bytes that
+ * were written. The function returns -1 in the case of failure.
+ *
+ * You can call this function as many times as you want until you get
+ * a 0. You can view it as a flush operation.
+ */
+int nopoll_conn_complete_pending_write (noPollConn * conn)
+{
+	int    bytes_written = 0;
+	char * reference;
+	int    pending_bytes;
+
+	if (conn == NULL || conn->pending_write == NULL)
+		return 0;
+
+	/* simple implementation */
+	errno         = 0;
+	bytes_written = conn->send (conn, conn->pending_write, conn->pending_write_bytes);
+	if (bytes_written == conn->pending_write_bytes) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Completed pending write operation with bytes=%d", bytes_written);
+		nopoll_free (conn->pending_write);
+		conn->pending_write = NULL;
+		return bytes_written;
+	} /* end if */
+
+	if (bytes_written > 0) {
+		/* bytes written but not everything */
+		pending_bytes = conn->pending_write_bytes - bytes_written;
+		reference     = nopoll_new (char, pending_bytes);
+		memcpy (reference, conn->pending_write + bytes_written, pending_bytes);
+		nopoll_free (conn->pending_write);
+		conn->pending_write = reference;
+		return bytes_written;
+	}
+
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Found complete write operation didn't finish well, result=%d, errno=%d, conn-id=%d",
+		    bytes_written, errno, conn->id);
+	return bytes_written;
+}
+
+/** 
+ * @brief Allows to check if there are pending write bytes. The
+ * function returns the number of pending write bytes that are waiting
+ * to be flushed. To do so you must call \ref nopoll_conn_complete_pending_write.
+ *
+ * @param conn The connection to be checked to have pending bytes to be written.
+ *
+ * @return The number of bytes pending to be written. The function
+ * also returns 0 when conn reference received is NULL.
+ */
+int           nopoll_conn_pending_write_bytes (noPollConn * conn)
+{
+	if (conn == NULL || conn->pending_write == NULL)
+		return 0;
+
+	return conn->pending_write_bytes;
 }
 
 /** 
@@ -2627,6 +2728,12 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	int    bytes_written = 0;
 	char   mask[4];
 	int    mask_value = 0;
+	int    desp = 0;
+	int    tries;
+
+	/* check for pending send operation */
+	if (nopoll_conn_complete_pending_write (conn) != 0)
+		return -1;
 
 	/* clear header */
 	memset (header, 0, 14);
@@ -2704,37 +2811,81 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		    nopoll_get_32bit (send_buffer + header_size - 2), (int) length + header_size);
 	/* clear errno status before writting */
 	errno = 0;
-	if (sleep_in_header == 0)
-		bytes_written = conn->send (conn, send_buffer, length + header_size);
-	else {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Found sleep in header indication, sending header: %d bytes (waiting %ld)", header_size, sleep_in_header);
-		bytes_written = conn->send (conn, send_buffer, header_size);
-		if (bytes_written == header_size) {
-			/* sleep after header ... */
-			nopoll_sleep (sleep_in_header);
-
-			/* now send the rest of the content (without the header) */
-			bytes_written = conn->send (conn, send_buffer + header_size, length);
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Rest of content written %d (header size: %d, length: %d)", 
-				    bytes_written, header_size, length);
-			bytes_written = length + header_size;
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "final bytes_written %d", bytes_written);
+	desp  = 0;
+	tries = 0;
+	while (nopoll_true) {
+		/* try to write bytes */
+		if (sleep_in_header == 0) {
+			bytes_written = conn->send (conn, send_buffer + desp, length + header_size - desp);
 		} else {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Requested to write %d bytes for the header but %d were written",
-				    header_size, bytes_written);
-			return -1;
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Found sleep in header indication, sending header: %d bytes (waiting %ld)", header_size, sleep_in_header);
+			bytes_written = conn->send (conn, send_buffer, header_size);
+			if (bytes_written == header_size) {
+				/* sleep after header ... */
+				nopoll_sleep (sleep_in_header);
+				
+				/* now send the rest of the content (without the header) */
+				bytes_written = conn->send (conn, send_buffer + header_size, length);
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Rest of content written %d (header size: %d, length: %d)", 
+					    bytes_written, header_size, length);
+				bytes_written = length + header_size;
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "final bytes_written %d", bytes_written);
+			} else {
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Requested to write %d bytes for the header but %d were written",
+					    header_size, bytes_written);
+				return -1;
+			} /* end if */
 		} /* end if */
-	} /* end if */
+		
+		if ((bytes_written + desp) != (length + header_size)) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, 
+				    "Requested to write %d bytes but found %d written (masked? %d, mask: %d, header size: %d, length: %d), errno = %d : %s", 
+				    (int) length + header_size - desp, bytes_written, masked, mask_value, header_size, (int) length, errno, strerror (errno));
+		} else {
+			/* accomulate bytes written to continue */
+			if (bytes_written > 0)
+				desp += bytes_written;
 
-	if (bytes_written != (length + header_size)) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, 
-			    "Requested to write %d bytes but found %d written (masked? %d, mask: %d, header size: %d, length: %d), errno = %d : %s", 
-			    (int) length + header_size, bytes_written, masked, mask_value, header_size, (int) length, errno, strerror (errno));
-	} else {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Bytes written to the wire %d (masked? %d, mask: %d, header size: %d, length: %d)", 
-			    bytes_written, masked, mask_value, header_size, (int) length);
-	} /* end if */
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Bytes written to the wire %d (masked? %d, mask: %d, header size: %d, length: %d)", 
+				    bytes_written, masked, mask_value, header_size, (int) length);
+			break;
+		} /* end if */
 
+		/* accomulate bytes written to continue */
+		if (bytes_written > 0)
+			desp += bytes_written;
+
+		/* increase tries */
+		tries++;
+
+		if ((errno != 0) || tries > 50) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Found errno=%d (%s) value while trying to bytes to the WebSocket conn-id=%d or max tries reached=%d",
+				    errno, strerror (errno), conn->id, tries);
+			break;
+		} /* end if */
+
+		/* wait a bit */
+		nopoll_sleep (100000);
+
+	} /* end while */
+
+	/* record pending write bytes */
+	conn->pending_write_bytes = length + header_size - desp;
+
+	nopoll_log (conn->ctx, desp == (length + header_size) ? NOPOLL_LEVEL_DEBUG : NOPOLL_LEVEL_CRITICAL, 
+		    "Write operation finished with with last result=%d, bytes_written=%d, requested=%d, remaining=%d (conn-id=%d)",
+		    bytes_written, desp - header_size, length, conn->pending_write_bytes, conn->id);
+
+	/* check pending bytes for the next operation */
+	if (conn->pending_write_bytes > 0) {
+		conn->pending_write = nopoll_new (char, conn->pending_write_bytes);
+		memcpy (conn->pending_write, send_buffer + length + header_size - conn->pending_write_bytes, conn->pending_write_bytes);
+		
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Stored %d bytes starting from %d out of %d bytes (header size: %d)", 
+			    conn->pending_write_bytes, length + header_size - conn->pending_write_bytes, length + header_size, header_size);
+	} /* end if */
+	
+		    
 	/* release memory */
 	nopoll_free (send_buffer);
 
@@ -2743,7 +2894,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		return bytes_written;
 	
 	/* return bytes written */
-	return bytes_written - header_size;
+	return desp - header_size;
 }
 
 /** 
@@ -2935,7 +3086,8 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
  *
  * @param conn The connection that is being waited to be created.
  *
- * @param timeout The timeout operation to limit the wait operation. 
+ * @param timeout The timeout operation to limit the wait
+ * operation. Timeout is provided in seconds.
  *
  * @return The function returns when the timeout was reached or the
  * connection is ready. In the case the connection is ready when the

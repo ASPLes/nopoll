@@ -113,11 +113,19 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 
 int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * content, long length);
 
+int           nopoll_conn_complete_pending_write (noPollConn * conn);
+
+int           nopoll_conn_pending_write_bytes (noPollConn * conn);
+
 int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nopoll_bool block, long int timeout);
 
 nopoll_bool      nopoll_conn_send_ping (noPollConn * conn);
 
 nopoll_bool      nopoll_conn_send_pong (noPollConn * conn);
+
+void          nopoll_conn_set_on_msg (noPollConn              * conn,
+				      noPollOnMessageHandler    on_msg,
+				      noPollPtr                 user_data);
 
 int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool masked,
 			    noPollOpCode op_code, long length, noPollPtr content,

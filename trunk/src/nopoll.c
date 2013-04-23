@@ -867,6 +867,21 @@ void nopoll_cleanup_library (void)
 /** 
  * \page nopoll_core_library_manual noPoll core library manual
  *
+ * \section index Index
+ *
+ * <b>Section 1: Basic concepts to starting writing with or integrating noPoll:</b>
+ * 
+ * - \ref installing_nopoll
+ * - \ref using_nopoll
+ * - \ref thread_safety
+ * - \ref creating_a_nopoll_ctx
+ * - \ref creating_basic_web_socket_server
+ * - \ref creating_basic_web_socket_client
+ *
+ * <b>Section 2: Advanced concepts to consider: </b>
+ *
+ * - \ref nopoll_manual_retrying_write_operations
+ *
  * \section installing_nopoll 1. How to install noPoll 
  *
  * Currently, noPoll has only one dependency, which is OpenSSL
@@ -1052,6 +1067,80 @@ void nopoll_cleanup_library (void)
  * Now, to receive the content from this connection you can use the following methods:
  *
  * -# Set an 
+ *
+ * \section nopoll_manual_retrying_write_operations 7. Retrying failed write operations 
+ *
+ * Every time you do a write operation (using for example \ref
+ * nopoll_conn_send_text or \ref nopoll_conn_send_text_fragment) there
+ * is a possibility that the write operation <b>failes because the socket
+ * isn't capable to keep on accepting more data</b>.
+ *
+ * In that case, errno == 11 (or \ref NOPOLL_EWOULDBLOCK) is returned
+ * so you can check this to later retry the write operation.
+ *
+ * Because websocket involves sending headers that already includes
+ * the size of the message sent, <b>you can't just retry by calling again
+ * to the send operation used</b> (like \ref nopoll_conn_send_text),
+ * especially because you must "continue" the send operation where it
+ * was left instead of sending more content with additional
+ * headers. <b>In short, you must complete the operation.</b>
+ *
+ * To this end, you must use the following functions to check and
+ * complete pending write operations:
+ *
+ * - \ref nopoll_conn_pending_write_bytes
+ * - \ref nopoll_conn_complete_pending_write
+ * 
+ * Here is a posible complete function considering all points:
+ *
+ * \code
+ * int websocket_write (noPollConn * conn, const char * content, int length) {
+ *           // FIRST PART: normal send operation
+ *           int tries = 0;
+ *           int bytes_written;
+ * 
+ *           // do write operation and check
+ *           bytes_written = nopoll_conn_send_text (conn, content, length);
+ *           if (bytes_written == length) {
+ *                  // operation completed, just return bytes written
+ *                  return bytes_written;
+ *           } 
+ *
+ *           // SECOND PART: retry in the case of failure
+ *           // some failure found, check errno
+ *           while (tries < 5 && errno == NOPOLL_EWOULDBLOCK && nopoll_conn_pending_write_bytes (conn) > 0) {
+ *                  // ok, unable to write all data but that data is waiting to be flushed
+ *                  // you can return here and then make your application to retry again or
+ *                  // try it right now, but with a little pause before continue
+ *                  nopoll_sleep (10000); // lets wait 10ns
+ *
+ *                  // flush and check if write operation completed
+ *                  if (nopoll_conn_complete_pending_write (conn) == 0)
+ *                          return length;
+ *                   
+ *                  // limit loop
+ *                  tries++;
+ *           }
+ *         
+ *           // failure, return error code reported by the first call or the last retry
+ *           return  bytes_written;
+ * }
+ * \endcode
+ *
+ * As we can see, the example tries to first write the content and
+ * then check for errors, trying to complete write in the case of
+ * errno == NOPOLL_EWOULDBLOCK, but, before going ahead retrying, the
+ * function sleeps a bit.
+ *
+ * <b>A very important note to consider is that this</b> isn't by far
+ * the best way to do this. This example is just to demonstrate the
+ * concept. The "ideal" implementation would be not to do any retry
+ * here (second part) but let the engine looping and waiting for this
+ * WebSocket to retry later, letting the overall application to keep
+ * on doing other things meanwhile (like writing or handling I/O in other
+ * connections) rather than locking the caller (as the example do).
+ * 
+ * 
  * 
  * 
  */

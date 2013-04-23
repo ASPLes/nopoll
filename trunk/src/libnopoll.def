@@ -28,6 +28,7 @@ nopoll_conn_complete_handshake_check_client
 nopoll_conn_complete_handshake_check_listener
 nopoll_conn_complete_handshake_client
 nopoll_conn_complete_handshake_listener
+nopoll_conn_complete_pending_write
 nopoll_conn_connect_timeout
 nopoll_conn_ctx
 nopoll_conn_default_receive
@@ -47,6 +48,7 @@ nopoll_conn_is_tls_on
 nopoll_conn_log_ssl
 nopoll_conn_mask_content
 nopoll_conn_new
+nopoll_conn_pending_write_bytes
 nopoll_conn_port
 nopoll_conn_produce_accept_key
 nopoll_conn_read
@@ -60,6 +62,7 @@ nopoll_conn_send_pong
 nopoll_conn_send_text
 nopoll_conn_send_text_fragment
 nopoll_conn_set_hook
+nopoll_conn_set_on_msg
 nopoll_conn_set_sock_block
 nopoll_conn_set_sock_tcp_nodelay
 nopoll_conn_set_socket

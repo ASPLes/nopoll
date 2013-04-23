@@ -579,6 +579,8 @@ void              nopoll_ctx_set_on_accept (noPollCtx            * ctx,
  * @param user_data User defined pointer that is passed in into the
  * handler when called.
  *
+ * Note that the handler configured here will be overriden by the handler configured by \ref nopoll_conn_set_on_msg
+ *
  */
 void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
 					 noPollOnMessageHandler   on_msg,

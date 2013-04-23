@@ -272,6 +272,9 @@ struct _noPollConn {
 	/* allows to track if previous message was a fragment to flag
 	 * next message, even having FIN enabled as a fragment. */
 	nopoll_bool           previous_was_fragment;
+
+	char                * pending_write;
+	int                   pending_write_bytes;
 };
 
 struct _noPollIoEngine {
