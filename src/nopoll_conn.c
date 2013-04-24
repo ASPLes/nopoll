@@ -403,9 +403,10 @@ int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 {
 	int res;
 	nopoll_bool needs_retry;
+	int         tries = 0;
 
 	/* call to read content */
-	while (nopoll_true) {
+	while (tries < 50) {
 	        res = SSL_read (conn->ssl, buffer, buffer_size);
 		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: received %d bytes..", res); */
 
@@ -414,6 +415,9 @@ int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 		
 		if (! needs_retry)
 		        break;
+
+		/* next operation */
+		tries++;
 	}
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "  SSL: after procesing error %d bytes..", res); */
 	return res;
@@ -426,9 +430,10 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 {
 	int res;
 	nopoll_bool needs_retry;
+	int         tries = 0;
 
 	/* call to read content */
-	while (nopoll_true) {
+	while (tries < 50) {
 	        res = SSL_write (conn->ssl, buffer, buffer_size);
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: sent %d bytes (requested: %d)..", res, buffer_size); 
 
@@ -438,6 +443,9 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 
 		if (! needs_retry)
 		        break;
+
+		/* next operation */
+		tries++;
 	}
 	return res;
 }
@@ -563,20 +571,23 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
  
 			switch (ssl_error) {
 			case SSL_ERROR_WANT_READ:
-				/* nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because read wanted"); */
+			        nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because read wanted, conn-id=%d",
+					    conn->id);
 				break;
 			case SSL_ERROR_WANT_WRITE:
-				/* nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because write wanted"); */
+			        nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because write wanted, conn-id=%d",
+				      conn->id);
 				break;
 			case SSL_ERROR_SYSCALL:
-				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "syscall error while doing TLS handshake, ssl error (code:%d)",
-					    ssl_error);
-			
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "syscall error while doing TLS handshake, ssl error (code:%d), conn-id=%d",
+					    ssl_error, conn->id);
+				nopoll_conn_log_ssl (conn->ctx);
 				nopoll_conn_shutdown (conn);
 				return NULL;
 			default:
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "there was an error with the TLS negotiation, ssl error (code:%d) : %s",
 					    ssl_error, ERR_error_string (ssl_error, NULL));
+				nopoll_conn_log_ssl (conn->ctx);
 				nopoll_conn_shutdown (conn);
 				return NULL;
 			} /* end switch */
@@ -1843,7 +1854,7 @@ void nopoll_conn_complete_handshake (noPollConn * conn)
 	if (conn->handshake_ok)
 		return;
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Checking to complete connection id %d WebSocket handshake, role %d", conn->id, conn->role);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Checking to complete conn-id=%d WebSocket handshake, role %d", conn->id, conn->role);
 
 	/* ensure handshake object is created */
 	if (conn->handshake == NULL)
@@ -2523,7 +2534,8 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 		if (msg == NULL) {
 			
 			if (! nopoll_conn_is_ok (conn)) {
-				nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received websocket connection close during wait reply..");
+			        nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received websocket conn-id=%d close during wait reply..",
+					    conn->id);
 				if (total_read == 0 && ! block)
 					return -1;
 				return total_read;
