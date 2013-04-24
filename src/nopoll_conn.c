@@ -345,9 +345,11 @@ int nopoll_conn_log_ssl (noPollCtx * ctx)
 	return (0);
 }
 
-int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * label)
+int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * label, nopoll_bool * needs_retry)
 {
 	int ssl_err;
+
+	(*needs_retry) = nopoll_false;
 
 	/* get error returned */
 	ssl_err = SSL_get_error (conn->ssl, res);
@@ -358,7 +360,9 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * lab
 	case SSL_ERROR_WANT_WRITE:
 	case SSL_ERROR_WANT_READ:
 	case SSL_ERROR_WANT_X509_LOOKUP:
-		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL_read returned that isn't ready to read: retrying"); */
+	        nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "%s, ssl_err=%d returned that isn't ready to read/write: you should retry", 
+			    label, ssl_err);
+		(*needs_retry) = nopoll_true;
 		return -2;
 	case SSL_ERROR_SYSCALL:
 		if(res < 0) { /* not EOF */
@@ -398,12 +402,19 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * lab
 int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 {
 	int res;
-	/* call to read content */
-	res = SSL_read (conn->ssl, buffer, buffer_size);
-	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: received %d bytes..", res); */
+	nopoll_bool needs_retry;
 
-	/* call to handle error */
-	res = __nopoll_conn_tls_handle_error (conn, res, "SSL_read");
+	/* call to read content */
+	while (nopoll_true) {
+	        res = SSL_read (conn->ssl, buffer, buffer_size);
+		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: received %d bytes..", res); */
+
+		/* call to handle error */
+		res = __nopoll_conn_tls_handle_error (conn, res, "SSL_read", &needs_retry);
+		
+		if (! needs_retry)
+		        break;
+	}
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "  SSL: after procesing error %d bytes..", res); */
 	return res;
 }
@@ -414,14 +425,20 @@ int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 {
 	int res;
+	nopoll_bool needs_retry;
 
 	/* call to read content */
-	res = SSL_write (conn->ssl, buffer, buffer_size);
-	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: sent %d bytes (requested: %d)..", res, buffer_size); */
+	while (nopoll_true) {
+	        res = SSL_write (conn->ssl, buffer, buffer_size);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: sent %d bytes (requested: %d)..", res, buffer_size); 
 
-	/* call to handle error */
-	res = __nopoll_conn_tls_handle_error (conn, res, "SSL_write");
-	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "   SSL: after processing error, sent %d bytes (requested: %d)..",  res, buffer_size); */
+		/* call to handle error */
+		res = __nopoll_conn_tls_handle_error (conn, res, "SSL_write", &needs_retry);
+		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "   SSL: after processing error, sent %d bytes (requested: %d)..",  res, buffer_size); */
+
+		if (! needs_retry)
+		        break;
+	}
 	return res;
 }
 
@@ -2737,8 +2754,11 @@ int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_resu
 	long wait_implemented = 0;
 
 	/* check for errno and pending write operations */
-	if (errno != NOPOLL_EWOULDBLOCK || nopoll_conn_pending_write_bytes (conn) == 0)
+	if (errno != NOPOLL_EWOULDBLOCK || nopoll_conn_pending_write_bytes (conn) == 0) {
+	        nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "called flush but nothing is pending=%d or errno=%d isn't %d",
+		            nopoll_conn_pending_write_bytes (conn), errno, NOPOLL_EWOULDBLOCK);
 		return previous_result > 0 ? previous_result : 0;
+	}
 		
 	while (iterator < 100 && nopoll_conn_pending_write_bytes (conn) > 0) {
 
@@ -2760,8 +2780,11 @@ int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_resu
 		multiplier++;
 	} /* end while */
 
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "finishing flush operation, total written=%d, added to previous result=%d",
+		    total, previous_result);
+
 	/* add value received */
-	if (previous_result > 0)
+	if (previous_result > 0) 
 		return total + previous_result;
 
 	/* just bytes written */
