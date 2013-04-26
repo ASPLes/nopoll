@@ -57,7 +57,7 @@
 nopoll_bool      nopoll_log_is_enabled (noPollCtx * ctx) 
 {
 	if (ctx == NULL)
-		return nopoll_false;
+		return nopoll_true;
 
 	/* return current value */
 	return ctx->debug_enabled;
@@ -176,7 +176,7 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 	if (! nopoll_log_is_enabled (ctx))
 		return;
 
-	if (ctx->log_handler) {
+	if (ctx && ctx->log_handler) {
 		/* print the message */
 		va_start (args, message);
 		log_msg = nopoll_strdup_printfv (message, args);

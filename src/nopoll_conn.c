@@ -53,16 +53,6 @@
 # include <netinet/tcp.h>
 #endif
 
-#if defined(NOPOLL_OS_WIN32)
-int      __nopoll_win32_blocking_socket_set (NOPOLL_SOCKET socket,
-                                             int           status) 
-{
-        unsigned long enable = status;
-
-	return (ioctlsocket (socket, FIONBIO, &enable) == 0);
-}
-#endif
-
 /** 
  * @brief Allows to enable/disable non-blocking/blocking behavior on
  * the provided socket.
@@ -85,7 +75,7 @@ nopoll_bool                 nopoll_conn_set_sock_block         (NOPOLL_SOCKET so
 	if (enable) {
 		/* enable blocking mode */
 #if defined(NOPOLL_OS_WIN32)
-		if (!__nopoll_win32_blocking_enable (socket)) {
+		if (!nopoll_win32_blocking_enable (socket)) {
 			return nopoll_false;
 		}
 #else
@@ -102,7 +92,7 @@ nopoll_bool                 nopoll_conn_set_sock_block         (NOPOLL_SOCKET so
 		/* enable nonblocking mode */
 #if defined(NOPOLL_OS_WIN32)
 		/* win32 case */
-		if (!__nopoll_win32_nonblocking_enable (socket)) {
+		if (!nopoll_win32_nonblocking_enable (socket)) {
 			return nopoll_false;
 		}
 #else
@@ -1219,8 +1209,10 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 	int         n, rc;
 	int         desp;
 	char        c, *ptr;
-#if ! defined(SHOW_FORMAT_BUGS)
+#if defined(SHOW_DEBUG_LOG)
+# if !defined(SHOW_FORMAT_BUGS)
 	noPollCtx * ctx = conn->ctx;
+# endif
 #endif
 
 	/* clear the buffer received */
@@ -1366,7 +1358,6 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 		if (errno == NOPOLL_EAGAIN || errno == NOPOLL_EWOULDBLOCK) {
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "unable to read from conn-id=%d, connection is not ready (errno: %d)",
 				    conn->id, errno);
-			errno = 0;
 			return 0;
 		} /* end if */
 
@@ -1388,8 +1379,10 @@ nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, in
 {
 	int          iterator;
 	int          iterator2;
-#if ! defined(SHOW_FORMAT_BUGS)
+#if defined(SHOW_DEBUG_LOG)
+# if ! defined(SHOW_FORMAT_BUGS)
 	noPollCtx  * ctx = conn->ctx;
+# endif
 #endif
 
 	/* check if we already received method */
@@ -2471,7 +2464,11 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 		wait_slice = 10;
 
 	if (timeout > 0)
+#if defined(NOPOLL_OS_WIN32)
+		nopoll_win32_gettimeofday (&start, NULL);
+#else
 		gettimeofday (&start, NULL);
+#endif
 
 	/* clear the buffer */
 	memset (buffer, 0, bytes);
@@ -2589,7 +2586,11 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 
 		/* check to stop due to timeout */
 		if (timeout > 0) {
+#if defined(NOPOLL_OS_WIN32)
+			nopoll_win32_gettimeofday (&stop, NULL);
+#else
 			gettimeofday (&stop, NULL);
+#endif
 			nopoll_timeval_substract (&stop, &start, &diff);
 			
 			ellapsed = (diff.tv_sec * 1000) + (diff.tv_usec / 1000);
@@ -2689,7 +2690,6 @@ int nopoll_conn_complete_pending_write (noPollConn * conn)
 		return 0;
 
 	/* simple implementation */
-	errno         = 0;
 	bytes_written = conn->send (conn, conn->pending_write, conn->pending_write_bytes);
 	if (bytes_written == conn->pending_write_bytes) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Completed pending write operation with bytes=%d", bytes_written);
@@ -2849,7 +2849,11 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		nopoll_set_bit (header + 1, 7);
 		
 		/* define a random mask */
+#if defined(NOPOLL_OS_WIN32)
+		mask_value = (int) rand ();
+#else
 		mask_value = (int) random ();
+#endif
 		memset (mask, 0, 4);
 		nopoll_set_32bit (mask_value, mask);
 	} /* end if */
@@ -2913,7 +2917,6 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Mask used for this delivery: %d (about to send %d bytes)",
 		    nopoll_get_32bit (send_buffer + header_size - 2), (int) length + header_size);
 	/* clear errno status before writting */
-	errno = 0;
 	desp  = 0;
 	tries = 0;
 	while (nopoll_true) {

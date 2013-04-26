@@ -202,6 +202,9 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 {
 	/** IMPLEMENTATION NOTE: place update exarg_strdup_printfv
 	 * code in the case this code is updated **/
+#ifdef SHOW_DEBUG_LOG
+	noPollCtx * ctx = NULL;
+#endif
 
 #ifndef NOPOLL_HAVE_VASPRINTF
 	int       size;
@@ -360,7 +363,7 @@ void        nopoll_sleep (long microseconds)
 	usleep (microseconds);
 	return;
 #elif defined(NOPOLL_OS_WIN32)
-	Sleep (microseconds);
+	Sleep (microseconds / 1000);
 	return;
 #endif
 }
@@ -661,7 +664,12 @@ nopoll_bool nopoll_nonce (char * buffer, int nonce_size)
 	if (buffer == NULL || nonce_size <= 0)
 		return nopoll_false;
 	if (! __nopoll_nonce_init) {
+#if defined(NOPOLL_OS_WIN32)
+		nopoll_win32_gettimeofday (&tv, NULL);
+#else
 		gettimeofday (&tv, NULL);
+#endif
+
 		srand (time(0) * tv.tv_usec);
 		__nopoll_nonce_init = nopoll_true;
 	} /* end if */
@@ -670,7 +678,11 @@ nopoll_bool nopoll_nonce (char * buffer, int nonce_size)
 	iterator = 0;
 	while (iterator < nonce_size) {
 		/* gen random value */
+#if defined(NOPOLL_OS_WIN32)
+		random_value = rand ();
+#else
 		random_value = random ();
+#endif
 
 		/* copy into the buffer */
 		memcpy (buffer + iterator, &random_value, sizeof (random_value));

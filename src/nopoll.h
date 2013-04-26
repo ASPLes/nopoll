@@ -50,6 +50,10 @@
 #include <nopoll_io.h>
 #include <nopoll_loop.h>
 
+#if defined(NOPOLL_OS_WIN32)
+#include <nopoll_win32.h>
+#endif
+
 BEGIN_C_DECLS
 
 /** 

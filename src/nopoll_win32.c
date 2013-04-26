@@ -43,20 +43,27 @@
 
 #if defined(NOPOLL_OS_WIN32)
 
+nopoll_bool __nopoll_win32_was_init = nopoll_false;
+
 int  nopoll_win32_init (noPollCtx * ctx)
 {
 	WORD wVersionRequested; 
 	WSADATA wsaData; 
 	int error; 
+
+	if (__nopoll_win32_was_init)
+		return nopoll_true;
 	
 	wVersionRequested = MAKEWORD( 2, 2 ); 
 	
 	error = WSAStartup( wVersionRequested, &wsaData ); 
 	if (error != NO_ERROR) {
-		nopoll_log (NOPOLL_LEVEL_CRITICAL, "unable to init winsock api, exiting..");
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to init winsock api, exiting..");
 		return nopoll_false;
 	}
-	nopoll_log (NOPOLL_LEVEL_DEBUG, "winsock initialization ok");
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "winsock initialization ok");
+	/* flag the library as initialized */
+	__nopoll_win32_was_init = nopoll_true;
 	return nopoll_true;
 }
 

@@ -1,0 +1,55 @@
+# -*- makefile -*- Makefile for windows (mingw)
+OBJ  = nopoll.o \
+       nopoll_decl.o \
+	nopoll_win32.o \
+       nopoll_ctx.o \
+       nopoll_conn.o \
+       nopoll_log.o \
+       nopoll_listener.o \
+       nopoll_loop.o \
+       nopoll_io.o \
+       nopoll_msg.o 
+
+ifdef enable_nopoll_log
+   DLL = libnopoll-debug.dll
+else
+   DLL = libnopoll.dll
+endif
+IMPORT_DLL     = $(DLL).a
+STATIC_LIB     = $(nopoll_dll).a
+
+#LIBS = -Wall $(enable_gcc_debug) -L"$(BASE_DIR)/lib" \
+#	-L"$(BASE_DIR)/bin" \
+#	--add-stdcall-alias \
+#	-lws2_32 \
+#	-lintl  -liconv  -lm 
+LIBS = -Wall $(enable_gcc_debug) -lws2_32 $(OPENSSL_LIBS) $(search_lib_path) 
+
+#INCS       =  -I"$(BASE_DIR)/include" \
+
+# build vortex with log support
+INCS = -Wall $(enable_gcc_debug) -I"." -I"../src" $(enable_nopoll_log)
+
+CFLAGS = $(INCS) -DVERSION=\""$(NOPOLL_VERSION)"\"  \
+	-DPACKAGE_DTD_DIR=\""$(datadir)"\" -DPACKAGE_TOP_DIR=\""$(top_srcdir)"\" -Wall $(enable_gcc_debug) $(OPENSSL_FLAGS)
+RM = rm -f
+
+.PHONY: all clean
+
+all: $(DLL)
+
+clean: 
+	${RM} $(OBJ) $(DLL)
+	${RM} *.a *.dll.a *.lib *.dll
+
+$(DLL): $(OBJ)
+# add the following line to create an import library. At this point this step
+# is not requiered because gcc automatically get an import library from the dll.
+# -Wl,--out-implib,libvortex-1.1.lib
+	@echo "Creating library.."
+	$(CC) -m$(MODE) -shared -Wl,--out-implib,$(IMPORT_DLL) --export-all-symbols $(OBJ) -o $(DLL) $(LIBS)
+	@echo "Building libnopoll.lib file.."
+	lib.exe /def:libnopoll.def
+
+%.o: %.c
+	$(CC) -c $< -o $@ $(CFLAGS)

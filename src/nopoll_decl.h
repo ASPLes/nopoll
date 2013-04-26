@@ -178,7 +178,6 @@
 #define errno (WSAGetLastError())
 #endif
 
-
 /** 
  * @brief Common definition to have false (\ref nopoll_false) value (which is defined to 0 integer value).
  */
@@ -194,7 +193,7 @@
  * nopoll_true to model those API functions and attributes that
  * returns or receive a boolean state.
  */
-typedef short nopoll_bool;
+typedef int nopoll_bool;
 
 /** 
  * @brief Pointer to any structure definition. It should be required
