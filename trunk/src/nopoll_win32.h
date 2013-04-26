@@ -40,7 +40,7 @@
 #ifndef __NOPOLL_WIN32_H__
 #define __NOPOLL_WIN32_H__
 
-#include <nopoll.h>
+#include <nopoll_ctx.h>
 
 BEGIN_C_DECLS
 
@@ -50,16 +50,12 @@ int           nopoll_win32_nonblocking_enable (NOPOLL_SOCKET socket);
 
 int           nopoll_win32_blocking_enable    (NOPOLL_SOCKET socket);
 
-BOOL APIENTRY DllMain                         (HINSTANCE hInst,
-					       DWORD reason,
-					       LPVOID reserved);
-
 /* gettimeofday support on windows */
-#if ! defined(HAVE_GETTIMEOFDAY)
+int nopoll_win32_gettimeofday (struct timeval *tv, noPollPtr notUsed);
 
-int nopoll_win32_gettimeofday (struct timeval *tv, axlPointer notUsed);
-
-#endif /* end ! defined(HAVE_GETTIMEOFDAY) */
+BOOL APIENTRY DllMain                         (HINSTANCE hInst,
+					            DWORD reason,
+					            LPVOID reserved);
 
 END_C_DECLS
 

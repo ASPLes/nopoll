@@ -48,7 +48,7 @@
  * \addtogroup nopoll_ctx
  * @{
  */
-
+#if !defined(NOPOLL_OS_WIN32)
 void __nopoll_ctx_sigpipe_do_nothing (int _signal)
 {
 	/* do nothing sigpipe handler to be able to manage EPIPE error
@@ -64,15 +64,21 @@ void __nopoll_ctx_sigpipe_do_nothing (int _signal)
 	signal (SIGPIPE, __nopoll_ctx_sigpipe_do_nothing);
 	return;
 }
+#endif
 
 /** 
  * @brief Creates an empty Nopoll context. 
  */
 noPollCtx * nopoll_ctx_new (void) {
-
 	noPollCtx * result = nopoll_new (noPollCtx, 1);
 	if (result == NULL)
 		return NULL;
+
+#if defined(NOPOLL_OS_WIN32)
+	if (! nopoll_win32_init (result))
+		return NULL;
+#endif
+
 	/* set initial reference */
 	result->refs = 1;
 	result->conn_id = 1;
@@ -94,8 +100,10 @@ noPollCtx * nopoll_ctx_new (void) {
 	/* current list length */
 	result->conn_length = 0;
 
+#if !defined(NOPOLL_OS_WIN32)
 	/* install sigpipe handler */
 	signal (SIGPIPE, __nopoll_ctx_sigpipe_do_nothing);
+#endif
 
 	/* setup default protocol version */
 	result->protocol_version = 13;

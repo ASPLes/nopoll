@@ -156,7 +156,11 @@ nopoll_bool test_01_masking (void) {
 	/* create context */
 	ctx = create_ctx ();
 
+#if defined(NOPOLL_OS_WIN32)
+	mask_value = rand ();
+#else
 	mask_value = random ();
+#endif
 	printf ("Test-01 masking: using masking value %d\n", mask_value);
 	nopoll_set_32bit (mask_value, mask);
 
@@ -416,7 +420,11 @@ nopoll_bool test_04 (int chunk_size) {
 		return nopoll_false;
 	}
 
+#if defined(NOPOLL_OS_WIN32)
+	file = fopen ("tmp", "wb");
+#else
 	file = fopen ("tmp", "w");
+#endif
 	if (file == NULL) {
 		printf ("ERROR: unable to open file tmp for content comparision\n");
 		return nopoll_false; 
@@ -450,7 +458,8 @@ nopoll_bool test_04 (int chunk_size) {
 
 	/* now check both files */
 	printf ("Test 04: checking content download (chunk_size=%d)...\n", chunk_size);
-	if (system ("diff nopoll-regression-client.c tmp > /dev/null")) {
+	printf ("Test 04: about to run diff nopoll-regression-client.c tmp > /dev/null\n");
+	if (system ("diff -q nopoll-regression-client.c tmp")) {
 		printf ("ERROR: failed to download file from server, content differs. Check: diff nopoll-regression-client.c tmp\n");
 		return nopoll_false;
 	} /* end if */
@@ -672,11 +681,19 @@ nopoll_bool test_04c (void) {
 
 	/* open the handle to send the content */
 	file_checked = "/boot/vmlinuz-2.6.32-5-amd64";
+#if defined(NOPOLL_OS_WIN32)
+	handle = fopen (file_checked, "rb");
+#else
 	handle = fopen (file_checked, "r");
+#endif
 	if (handle == NULL) {
 		/* checking file */
 		file_checked = "nopoll-regression-client.c";
+#if defined(NOPOLL_OS_WIN32)
+		handle = fopen (file_checked, "rb");
+#else
 		handle = fopen (file_checked, "r");
+#endif
 		if (handle == NULL) {
 			printf ("Test 04-c: failed to open file to be sent to the server..\n");
 			return nopoll_false;
@@ -727,7 +744,7 @@ nopoll_bool test_04c (void) {
 		return nopoll_false;
 	} /* end if */	
 
-	cmd = nopoll_strdup_printf ("diff copy-test-04c.txt %s > /dev/null 2>&1", file_checked);
+	cmd = nopoll_strdup_printf ("diff -q copy-test-04c.txt %s", file_checked);
 
 	iterator = 0;
 	while (iterator < 50) {
@@ -1043,7 +1060,11 @@ nopoll_bool test_12 (void) {
 	ctx = create_ctx ();
 
 	/* start */
+#if defined(NOPOLL_OS_WIN32)
+	nopoll_win32_gettimeofday (&start, NULL);
+#else
 	gettimeofday (&start, NULL);
+#endif	
 
 	iterator = 0;
 	while (iterator < 1000) {
@@ -1065,7 +1086,11 @@ nopoll_bool test_12 (void) {
 	nopoll_ctx_unref (ctx);
 
 	/* stop */
+#if defined(NOPOLL_OS_UNIX)
 	gettimeofday (&stop, NULL);
+#else
+	nopoll_win32_gettimeofday (&stop, NULL);
+#endif
 
 	nopoll_timeval_substract (&stop, &start, &diff);
 

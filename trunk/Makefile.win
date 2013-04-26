@@ -1,0 +1,111 @@
+# Hey emacs this this -*- makefile -*- 
+# Makefile.win: compile the af-arch enviroment under the mingw
+# Advanced Software Prodution Line, S.L.
+
+# include versions file
+include versions.mk
+
+# directory were libraries and tools will be installed 
+export INSTALL_DIR = c:/msys/1.0/home/acinom/nopoll/trunk/install
+
+# cc compiler to use usually gcc.exe
+export CC          = gcc.exe
+
+# general configuration
+# export enable_gcc_debug = -g
+
+# nopoll configuration (enable log: uncomment)
+export enable_nopoll_log =-DSHOW_DEBUG_LOG
+
+# compilation mode to use: console, windows. If console is used the
+# output to the console will be allowed. Other wise, if windows
+# selected the console output will be disabled. On windows platforms
+# is prefered the windows mode. For debuging I recomend to use
+# console.
+export MODE        = console
+
+# optional nsis installation
+makensis              = c:/ARCHIV~1/NSIS/makensis.exe
+
+# Flags to compile OPENSSL
+# Uncomment the following lines, placing the libraries following the path
+# schema provided to get support OpenSSL
+export OPENSSL_FLAGS = -DENABLE_TLS_SUPPORT -Ic:/openssl-098k/include
+export OPENSSL_LIBS = c:/openssl-098k/bin/libeay32.dll c:/openssl-098k/bin/ssleay32.dll
+
+
+#############################################
+# after this line lines shouldn't be edited #
+#############################################
+top_srcdir               = ..
+version_prefix           = -MinGW32
+export search_lib_path   = 
+
+# nopoll configuration
+nopoll_lib                     = src
+nopoll_test                    = test
+export nopoll_dll              = libnopoll
+
+# strip command
+strip    = strip --strip-unneeded
+
+all: prepare_versions_mk build_nopoll
+
+prepare_nshs:
+	./prepare-nsh.sh
+
+prepare_versions_mk: prepare_nshs
+	test -f versions.mk && rm -f versions.mk
+       # af-arch version
+	echo -n "nopoll_version = " >> versions.mk
+	cat VERSION >> versions.mk
+
+build_nopoll: prepare_versions_mk
+	@echo
+	@echo "Building libnopoll 1.0.."
+	@echo "Building libnopoll 1.0 (PRODUCTION RELEASE).."
+	test -d release || mkdir release
+	rm -rf release/libnopoll0
+	mkdir release/libnopoll0
+	cp src/nopoll_config_win32.h src/nopoll_config.h
+	@cd $(nopoll_lib); NOPOLL_VERSION=$(nopoll_version) release_dir=../../release/libnopoll0 make -f Makefile.win; cd $(top_srcdir)
+	@cd $(nopoll_test); NOPOLL_VERSION=$(nopoll_version) make -f Makefile.win; cd $(top_srcdir)
+
+build_debug_nopoll: prepare_versions_mk
+	@echo
+	@echo "Building libnopoll 1.0 (DEBUG SUPPORT).."
+	@echo "Using following gcc version.."
+	gcc --version
+	test -d debug || mkdir debug
+	rm -rf debug/libnopoll0
+	mkdir debug/libnopoll0
+	@cd $(nopoll_lib);  enable_nopoll_log=-DENABLE_NOPOLL_LOG NOPOLL_VERSION=$(nopoll_version) release_dir=../../debug/libnopoll0 make -f Makefile.win; cd $(top_srcdir)
+	@cd $(nopoll_test); enable_nopoll_log=-DENABLE_NOPOLL_LOG NOPOLL_VERSION=$(nopoll_version) make -f Makefile.win; cd $(top_srcdir)
+
+# Uncomment the following line if you have support for the OpenSSL library. In the
+# case the variable OPENSSL_LIBS doesn't include a reference to the .dll files, 
+# modify the next step to copy into the final installation, the dll required.
+	cp $(OPENSSL_LIBS) 		       $(INSTALL_DIR)/bin
+
+nopoll_bundle_prepare: 
+	make -f Makefile.win clean_nopoll 
+	make -f Makefile.win build_debug_nopoll 
+	make -f Makefile.win clean_nopoll 
+	make -f Makefile.win build_nopoll 
+
+# NOTE: you must first run:
+# >> make -f Makefile.win nopoll_bundle_prepare
+# and then
+# >> make -f Makefile.win nopoll_bundle 
+# in order to run the create the installer
+nopoll_bundle: 
+	@echo "generando fichero de instalación"
+	$(makensis) nopoll.nsi 
+
+clean_nopoll: prepare_versions_mk
+	@echo "CLEANING noPoll"
+	cd $(nopoll_lib);             make -f Makefile.win clean; cd $(top_srcdir)
+	cd $(nopoll_test);            make -f Makefile.win clean; cd $(top_srcdir)
+
+clean: clean_nopoll
+

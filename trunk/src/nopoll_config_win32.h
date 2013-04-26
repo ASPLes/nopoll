@@ -40,7 +40,7 @@
  *
  * @return A \ref noPollPtr reference.
  */
-#define INT_TO_PTR(integer) ((nopollPointer) (integer))
+#define INT_TO_PTR(integer) ((noPollPtr) (integer))
 
 /**
  * @brief Allows to convert a pointer reference (\ref nopollPointer),
@@ -66,11 +66,7 @@
  */
 #define NOPOLL_OS_WIN32 (1)
 
-/**  
- * @brief If defined to 1, it means we are compiling in a windows
- * platform running 64 bit version.
- */
-#define NOPOLL_64BIT_PLATFORM (0)
+
 
 /* @} */
 

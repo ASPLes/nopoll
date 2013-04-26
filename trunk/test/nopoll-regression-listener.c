@@ -99,7 +99,11 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 
 	/* check for open file commands */
 	if (nopoll_ncmp (content, "open-file: ", 11)) {
+#if defined(NOPOLL_OS_WIN32)
+		open_file_cmd = fopen (content + 11, "ab");
+#else
 		open_file_cmd = fopen (content + 11, "a");
+#endif
 		if (open_file_cmd == NULL) {
 			printf ("ERROR: unable to open file: %s\n", content + 11);
 			return;
@@ -142,7 +146,11 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 		nopoll_conn_send_ping (conn);
 		return;
 	} else if (nopoll_cmp (content, "get-file")) {
+#if defined(NOPOLL_OS_WIN32)
 		file = fopen ("nopoll-regression-client.c", "rb");
+#else
+		file = fopen ("nopoll-regression-client.c", "r");
+#endif		
 		while (! feof (file)) {
 			/* read content */
 			bytes = fread (buffer, 1, 1024, file);
@@ -227,7 +235,9 @@ int main (int argc, char ** argv)
 		if (nopoll_cmp (argv[iterator], "--debug")) {
 			printf ("Activating debug..\n");
 			nopoll_log_enable (ctx, nopoll_true);
+#if !defined(NOPOLL_OS_WIN32)
 			nopoll_log_color_enable (ctx, nopoll_true);
+#endif
 		} /* end if */
 
 		/* next position */
