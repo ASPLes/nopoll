@@ -390,6 +390,7 @@ nopoll_bool test_04 (int chunk_size) {
 	FILE       * file;
 	struct stat  stat_buf;
 	int          total_read = 0;
+	const char * cmd;
 
 	/* create context */
 	ctx = create_ctx ();
@@ -459,7 +460,12 @@ nopoll_bool test_04 (int chunk_size) {
 	/* now check both files */
 	printf ("Test 04: checking content download (chunk_size=%d)...\n", chunk_size);
 	printf ("Test 04: about to run diff nopoll-regression-client.c tmp > /dev/null\n");
-	if (system ("diff -q nopoll-regression-client.c tmp")) {
+#if defined(NOPOLL_OS_WIN32)	
+	cmd = "diff -q nopoll-regression-client.c tmp";
+#else
+	cmd = "diff -q nopoll-regression-client.c tmp > /dev/null";
+#endif
+	if (system (cmd)) {
 		printf ("ERROR: failed to download file from server, content differs. Check: diff nopoll-regression-client.c tmp\n");
 		return nopoll_false;
 	} /* end if */
@@ -648,6 +654,7 @@ nopoll_bool test_04c (void) {
 	int          iterator;
 	char       * cmd;
 	const char * file_checked;
+	const char * cmd_format;
 	int          total_bytes = 0;
 	nopoll_bool  flush_required = nopoll_false;
 
@@ -744,7 +751,12 @@ nopoll_bool test_04c (void) {
 		return nopoll_false;
 	} /* end if */	
 
-	cmd = nopoll_strdup_printf ("diff -q copy-test-04c.txt %s", file_checked);
+#if defined(NOPOLL_OS_WIN32)	
+	cmd_format = "diff -q copy-test-04c.txt %s";
+#else
+	cmd_format = "diff -q copy-test-04c.txt %s > /dev/null";
+#endif
+	cmd = nopoll_strdup_printf (cmd_format, file_checked);
 
 	iterator = 0;
 	while (iterator < 50) {
