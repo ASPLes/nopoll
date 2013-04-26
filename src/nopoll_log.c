@@ -57,7 +57,7 @@
 nopoll_bool      nopoll_log_is_enabled (noPollCtx * ctx) 
 {
 	if (ctx == NULL)
-		return nopoll_true;
+		return nopoll_false;
 
 	/* return current value */
 	return ctx->debug_enabled;
