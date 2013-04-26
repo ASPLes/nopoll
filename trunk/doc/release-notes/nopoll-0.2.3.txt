@@ -1,0 +1,58 @@
+                 --== noPoll toolkit ==--
+                      The Passanger
+                          0.2.3
+
+Advanced Software Production Line is proud to announce the first
+public stable release of noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ansi C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+noPoll was written have a clean, easy to use and integrate library. It
+is released under the terms of LGPL 2.1 (so you can build OpenSource
+or commercial applications) and currently is being used by Vortex
+Library, Turbulence and Core-Admin to provide with WebSocket support
+to those projects (BEEP over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  First public release ready for production environment that provides
+  support for Websocket and TLS Websocket. This release has been
+  tested with IE 10, GC > 16.0, Firefox > 11.0, Safari >= 6.0,
+  Internet Explorer 10 and Opera >= 12.0.
+
+  This revision has been heavily tested on several servers that
+  receives connections from many customers at the same time (50 >)
+  with an application that uses BEEP on top of these WebSocket
+  connections (http://www.asplhosting.com/portal/core-admin, sorry
+  only spanish for now ;-)
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organization to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+24th Mar 2013, Madrid (Spain)
