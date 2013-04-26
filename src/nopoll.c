@@ -140,6 +140,50 @@ char      * nopoll_strdup_printf   (const char * chunk, ...)
 }
 
 /** 
+ * @internal Allows to calculate the amount of memory required to
+ * store the string that will representing the construction provided
+ * by the printf-like format received and its arguments.
+ * 
+ * @param format The printf-like format to be printed.
+ *
+ * @param args The set of arguments that the printf applies to.
+ *
+ * <i><b>NOTE:</b> not all printf specification is supported. Generally, the
+ * following is supported: %s, %d, %f, %g, %ld, %lg and all
+ * combinations that provides precision, number of items inside the
+ * integer part, etc: %6.2f, %+2d, etc. An especial case not supported
+ * is %lld, %llu and %llg.</i>
+ *
+ * @return Return the number of bytes that must be allocated to hold
+ * the string (including the string terminator \0). If the format is
+ * not correct or it is not properly formated according to the value
+ * found at the argument set, the function will return -1.
+ */
+int nopoll_vprintf_len (const char * format, va_list args)
+{
+	/** IMPLEMENTATION NOTE: in the case this code is update,
+	 * update exarg_vprintf_len **/
+
+#if defined (NOPOLL_OS_WIN32) && ! defined (__GNUC__)
+#   if HAVE_VSCPRINTF
+	if (format == NULL)
+		return 0;
+	return _vscprintf (format, args) + 1;
+#   else
+	char buffer[8192];
+	if (format == NULL)
+		return 0;
+	return _vsnprintf (buffer, 8191, format, args) + 1;
+#   endif
+#else
+	/* gnu gcc case */
+	if (format == NULL)
+		return 0;
+	return vsnprintf (NULL, 0, format, args) + 1;
+#endif
+}
+
+/** 
  * @brief DEPRECATED: Allows to produce an string representing the
  * message hold by chunk with the parameters provided.
  * 
