@@ -149,3 +149,4 @@ nopoll_strdup_printfv
 nopoll_thread_handlers
 nopoll_timeval_substract
 nopoll_trim
+nopoll_vprintf_len

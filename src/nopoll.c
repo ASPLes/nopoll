@@ -202,7 +202,7 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 {
 	/** IMPLEMENTATION NOTE: place update exarg_strdup_printfv
 	 * code in the case this code is updated **/
-#ifdef SHOW_DEBUG_LOG
+#if defined(SHOW_DEBUG_LOG) && ! defined(NOPOLL_HAVE_VASPRINTF)
 	noPollCtx * ctx = NULL;
 #endif
 
