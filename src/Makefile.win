@@ -11,12 +11,14 @@ OBJ  = nopoll.o \
        nopoll_msg.o 
 
 ifdef enable_nopoll_log
-   DLL = libnopoll-debug.dll
+   DLL = libnopoll-debug
+   MODE = console
 else
-   DLL = libnopoll.dll
+   DLL = libnopoll
+   MODE = windows
 endif
-IMPORT_DLL     = $(DLL).a
-STATIC_LIB     = $(nopoll_dll).a
+IMPORT_DLL     = $(DLL).dll.a
+STATIC_LIB     = $(DLL).a
 
 #LIBS = -Wall $(enable_gcc_debug) -L"$(BASE_DIR)/lib" \
 #	-L"$(BASE_DIR)/bin" \
@@ -36,20 +38,24 @@ RM = rm -f
 
 .PHONY: all clean
 
-all: $(DLL)
+all: $(DLL).dll
 
 clean: 
-	${RM} $(OBJ) $(DLL)
+	${RM} $(OBJ) $(DLL).dll
 	${RM} *.a *.dll.a *.lib *.dll
 
-$(DLL): $(OBJ)
+$(DLL).dll: $(OBJ)
 # add the following line to create an import library. At this point this step
 # is not requiered because gcc automatically get an import library from the dll.
 # -Wl,--out-implib,libvortex-1.1.lib
 	@echo "Creating library.."
-	$(CC) -m$(MODE) -shared -Wl,--out-implib,$(IMPORT_DLL) --export-all-symbols $(OBJ) -o $(DLL) $(LIBS)
+	$(CC) -m$(MODE) -shared -Wl,--out-implib,$(IMPORT_DLL) --export-all-symbols $(OBJ) -o $(DLL).dll $(LIBS)
 	@echo "Building libnopoll.lib file.."
 	lib.exe /def:libnopoll.def
+	cp $(DLL).dll $(release_dir)
+	cp libnopoll.exp $(release_dir)/$(DLL).exp
+	cp libnopoll.lib $(release_dir)/$(DLL).lib
+	cp $(IMPORT_DLL) $(release_dir)
 
 %.o: %.c
 	$(CC) -c $< -o $@ $(CFLAGS)

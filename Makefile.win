@@ -15,14 +15,14 @@ export CC          = gcc.exe
 # export enable_gcc_debug = -g
 
 # nopoll configuration (enable log: uncomment)
-export enable_nopoll_log =-DSHOW_DEBUG_LOG
+# export enable_nopoll_log =-DSHOW_DEBUG_LOG
 
 # compilation mode to use: console, windows. If console is used the
 # output to the console will be allowed. Other wise, if windows
 # selected the console output will be disabled. On windows platforms
 # is prefered the windows mode. For debuging I recomend to use
 # console.
-export MODE        = console
+export MODE        = windows
 
 # optional nsis installation
 makensis              = c:/ARCHIV~1/NSIS/makensis.exe
@@ -68,7 +68,7 @@ build_nopoll: prepare_versions_mk
 	rm -rf release/libnopoll0
 	mkdir release/libnopoll0
 	cp src/nopoll_config_win32.h src/nopoll_config.h
-	@cd $(nopoll_lib); NOPOLL_VERSION=$(nopoll_version) release_dir=../../release/libnopoll0 make -f Makefile.win; cd $(top_srcdir)
+	@cd $(nopoll_lib); NOPOLL_VERSION=$(nopoll_version) release_dir=../release/libnopoll0 make -f Makefile.win; cd $(top_srcdir)
 	@cd $(nopoll_test); NOPOLL_VERSION=$(nopoll_version) make -f Makefile.win; cd $(top_srcdir)
 
 build_debug_nopoll: prepare_versions_mk
@@ -79,13 +79,8 @@ build_debug_nopoll: prepare_versions_mk
 	test -d debug || mkdir debug
 	rm -rf debug/libnopoll0
 	mkdir debug/libnopoll0
-	@cd $(nopoll_lib);  enable_nopoll_log=-DENABLE_NOPOLL_LOG NOPOLL_VERSION=$(nopoll_version) release_dir=../../debug/libnopoll0 make -f Makefile.win; cd $(top_srcdir)
-	@cd $(nopoll_test); enable_nopoll_log=-DENABLE_NOPOLL_LOG NOPOLL_VERSION=$(nopoll_version) make -f Makefile.win; cd $(top_srcdir)
-
-# Uncomment the following line if you have support for the OpenSSL library. In the
-# case the variable OPENSSL_LIBS doesn't include a reference to the .dll files, 
-# modify the next step to copy into the final installation, the dll required.
-	cp $(OPENSSL_LIBS) 		       $(INSTALL_DIR)/bin
+	@cd $(nopoll_lib);  enable_nopoll_log=-DSHOW_DEBUG_LOG NOPOLL_VERSION=$(nopoll_version) release_dir=../debug/libnopoll0 make -f Makefile.win; cd $(top_srcdir)
+	@cd $(nopoll_test); enable_nopoll_log=-DSHOW_DEBUG_LOG NOPOLL_VERSION=$(nopoll_version) make -f Makefile.win; cd $(top_srcdir)
 
 nopoll_bundle_prepare: 
 	make -f Makefile.win clean_nopoll 
