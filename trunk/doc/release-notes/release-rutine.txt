@@ -21,6 +21,9 @@
 
 * Generar paquetes debian
 
+* Publicar noticia en twitter ASPL_es
+
+
 
 
 

@@ -6,14 +6,14 @@ Advanced Software Production Line is proud to announce the first
 public stable release of noPoll toolkit.
 
 noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
-ansi C, that allows building pure WebSocket solutions or to provide
+ANSI C, that allows building pure WebSocket solutions or to provide
 WebSocket support to existing TCP oriented applications.
 
-noPoll was written have a clean, easy to use and integrate library. It
-is released under the terms of LGPL 2.1 (so you can build OpenSource
-or commercial applications) and currently is being used by Vortex
-Library, Turbulence and Core-Admin to provide with WebSocket support
-to those projects (BEEP over WebSocket).
+noPoll was written to have a clean, easy to use and integrate
+library. It is released under the terms of LGPL 2.1 (so you can build
+OpenSource or commercial applications) and currently is being heavily
+used by Vortex Library, Turbulence and Core-Admin to provide with
+WebSocket support to those projects (BEEP over WebSocket).
 
 Resources
 ~~~~~~~~~
@@ -55,4 +55,4 @@ About Advanced Software Production Line, S.L. (ASPL)
 --
 Francis Brosnan Blázquez           - francis@aspl.es
 Advanced Software Production Line  - http://www.aspl.es
-24th Mar 2013, Madrid (Spain)
+26th Apr 2013, Madrid (Spain)

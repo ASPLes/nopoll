@@ -1,7 +1,12 @@
 # still nothing
 EXTRA_DIST = nopoll.doxygen \
 	     nopoll-doc-footer.html \
-	     nopoll-doc-header.html 
+ 	     nopoll-doc-header.html \
+ 	     main-page-logo.png \
+ 	     aspl-logo-header.png \
+ 	     nopoll.css \
+ 	     body_back.gif
+ 	     
 bin_SCRIPTS = initial_build_doc
 
 help:
