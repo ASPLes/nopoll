@@ -877,10 +877,12 @@ void nopoll_cleanup_library (void)
  * - \ref creating_a_nopoll_ctx
  * - \ref creating_basic_web_socket_server
  * - \ref creating_basic_web_socket_client
+ * - \ref nopoll_manual_reading_content_from_connection
  *
  * <b>Section 2: Advanced concepts to consider: </b>
  *
  * - \ref nopoll_manual_retrying_write_operations
+ * - \ref nopoll_implementing_port_sharing 
  *
  * \section installing_nopoll 1. How to install noPoll 
  *
@@ -1064,11 +1066,19 @@ void nopoll_cleanup_library (void)
  * }
  * \endcode
  *
- * Now, to receive the content from this connection you can use the following methods:
+ * Now, to receive the content from this connection see the following.
+ * 
+ * \section nopoll_manual_reading_content_from_connection 7. How to handle read I/O operations on noPollConn objects (or how it integrates with existing I/O loops).
  *
- * -# Set an 
+ * Now, to receive content from connections (or to handle master listeners requests) you can use the following methods:
  *
- * \section nopoll_manual_retrying_write_operations 7. Retrying failed write operations 
+ * - Use noPoll own I/O loop wait (\ref nopoll_loop_wait) and set a onMessage received handler (\ref nopoll_ctx_set_on_msg and \ref nopoll_conn_set_on_msg)
+ *
+ * - Use your already working I/O loop to wait for changes on the
+ *   socket associated to the noPollConn object (see \ref
+ *   nopoll_conn_socket). In the case of detecting changes on a master listener connection use to \ref nopoll_conn_accept to accept new incoming connections. In the case of detecting changes in connections with I/O, call to \ref nopoll_conn_get_msg to receive entire messages or \ref nopoll_conn_read (if you want to use streaming API).
+ *
+ * \section nopoll_manual_retrying_write_operations 8. Retrying failed write operations 
  *
  * Every time you do a write operation (using for example \ref
  * nopoll_conn_send_text or \ref nopoll_conn_send_text_fragment) there
@@ -1157,6 +1167,78 @@ void nopoll_cleanup_library (void)
  *
  * \endcode
  * 
+ * \section nopoll_implementing_port_sharing  9. Implementing protocol port sharing: running WebSocket and legacy protocol on the same port
+ *
+ * Current noPoll design allows to implement full WebSocket connection
+ * accept by calling to \ref nopoll_conn_accept but also it is
+ * possible to let other application to do the accept connection, try
+ * to guess if what is comming is a WebSocket connection, to then let
+ * noPoll to complete the accept socket operation.
+ *
+ * As a example, these concepts are being implemented by Vortex
+ * Library (http://www.aspl.es/vortex) to allow running on the same
+ * port BEEP and BEEP over WebSocket.
+ *
+ * The way each application implements "port sharing concept" is
+ * really especific to each case, but here are the general steps:
+ *
+ * - 1. Let the legacy application to accept the socket by the standard call accept ()
+ *
+ * - 2. Then, call to recv (socket, buffer[3], 3, MSG_PEEK); to get just 3 bytes from the socket without removing them from the queue.
+ *
+ * - 3. Then check with something like the following to know if the incoming connection seems to be a WebSocket one or not:
+ *
+ *  \code
+ *  // detect tls conn 
+ *  nopoll_bool is_tls_conn = bytes[0] == 22 && bytes[1] == 3 && bytes[2] == 1;
+ *
+ *  // detect then both values (TLS WebSocket and just WebScoket)
+ *  if (! axl_memcmp ("GET", bytes, 3) && ! is_tls_conn)
+ *          return nopoll_false; // nothing detected here (it doesn't seems
+ *			         // to be a websocket connection) continue as normal
+ *  
+ *  // nice, it seems we've found an incoming WebSocket connection
+ *  \endcode
+ *
+ * - 4. In the case nothing was detected, stop, and continue with the
+ *     usual accept process that was already in place. In the case you
+ *     detected a posible WebSocket connection, then, you'll have to
+ *     do something like:
+ *
+ * \code
+ * // Create a noPollConn listener object that presents the legacy listener where the connection was
+ * // received. In general is recommended to reuse these references to avoid creating over and over
+ * // again new references as new WebSocket connections are received.
+ * //
+ * noPollConn * nopoll_listener = nopoll_listener_from_socket (nopoll_ctx, listener_socket);
+ *
+ * // Create an accepted listener connection reusing the socket received
+ * // where nopoll_ctx is a reference to a noPollCtx object created and reused by all
+ * // connections accepted, and _socket represents the socket file descriptor
+ * //
+ * noPollConn * conn = nopoll_listener_from_socket (nopoll_ctx, _socket);
+ * if (! nopoll_conn_is_ok (conn)) {
+ *       // ok, something failed, release and return
+ *       nopoll_conn_close (conn);
+ *       return;
+ * }
+ *
+ * // Now, initiate the entire WebSocket accept process (including TLS one)
+ * // where nopoll_ctx is the context we used before, nopoll_listener is a listener where
+ * // the connection was received, conn is the connection accepted and is_tls_conn
+ * // is an indication about what to expect about TLS process.
+ * //
+ * if (! nopoll_conn_accept_complete (nopoll_ctx, nopoll_listener, conn, _socket, is_tls_conn)) {
+ *       // failed to accept connection, release connection
+ *       nopoll_conn_close (conn);
+ *       // optionally close listener reference if it is not reused
+ *       nopoll_conn_close (nopoll_listener);
+ *       return;
+ * }
+ * 
+ * // now process incoming messages as configured (either because you've configured an onMessage handler)
+ * // or because you are handling directly all incoming content (streaming API).
+ * \endcode
  * 
  * 
  * 
