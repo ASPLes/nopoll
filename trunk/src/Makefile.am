@@ -1,4 +1,4 @@
-EXTRA_DIST = libnopoll.def
+EXTRA_DIST = libnopoll.def Makefile.win
 
 if ENABLE_NOPOLL_LOG
 LOG = -DSHOW_DEBUG_LOG

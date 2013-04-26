@@ -1,3 +1,5 @@
+EXTRA_DIST = Makefile.win test-certificate.crt test-private.key
+
 # still nothing
 if ENABLE_NOPOLL_LOG
 LOG = -DSHOW_DEBUG_LOG
