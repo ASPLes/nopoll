@@ -418,7 +418,7 @@ int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
  */
 int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 {
-	int res;
+	int         res;
 	nopoll_bool needs_retry;
 	int         tries = 0;
 
@@ -435,6 +435,7 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 		        break;
 
 		/* next operation */
+		nopoll_sleep (tries * 10000);
 		tries++;
 	}
 	return res;
