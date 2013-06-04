@@ -218,11 +218,19 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 		/* add all connections */
 		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding connections to watch: %d", ctx->conn_num); */
 		nopoll_ctx_foreach_conn (ctx, nopoll_loop_register, NULL);
+
+		/* if (errno == EBADF) { */
+			/* detected some descriptor not properly
+			 * working, try to check them */
+			/* nopoll_ctx_foreach_conn (ctx, nopoll_loop_clean_descriptors, NULL); */
+		/* nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Found some descriptor is not valid (errno==%d)", errno);
+		   continue; */ 
+		/* } */ /* end if */
 		
 		/* implement wait operation */
 		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Waiting for changes into %d connections", ctx->conn_num); */
 		wait_status = ctx->io_engine->wait (ctx, ctx->io_engine->io_object);
-		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Waiting finished with result %d", wait_status); */
+		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Waiting finished with result %d", wait_status);  */
 		if (wait_status == -1) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received error from wait operation, error code was: %d", errno);
 			break;
