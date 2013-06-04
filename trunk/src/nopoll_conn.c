@@ -1312,13 +1312,14 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling with bytes we can reuse (%d), requested: %d",
 			    conn->pending_buf_bytes, maxlen);
 
-		if (conn->pending_buf_bytes > maxlen) {
+		if (conn->pending_buf_bytes >= maxlen) {
 			/* we have more in the buffer to serve than
 			 * requested, ok, copy into the buffer and
 			 * pack */
 
 			memcpy (buffer, conn->pending_buf, maxlen);
 			__nopoll_pack_content (conn->pending_buf, maxlen, conn->pending_buf_bytes - maxlen);
+			conn->pending_buf_bytes -= maxlen;
 			return maxlen;
 		} 
 
@@ -1339,6 +1340,7 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
  keep_reading:
 	/* clear buffer */
 	/* memset (buffer, 0, maxlen * sizeof (char )); */
+	errno = 0;
 	if ((nread = conn->receive (conn, buffer, maxlen)) == NOPOLL_SOCKET_ERROR) {
 		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning errno=%d (%s)", errno, strerror (errno)); */
 		if (errno == NOPOLL_EAGAIN) 
@@ -1357,8 +1359,8 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 	if (nread == 0) {
 		/* check for blocking operations */
 		if (errno == NOPOLL_EAGAIN || errno == NOPOLL_EWOULDBLOCK) {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "unable to read from conn-id=%d, connection is not ready (errno: %d)",
-				    conn->id, errno);
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "unable to read from conn-id=%d (%s:%s), connection is not ready (errno: %d : %s)",
+				    conn->id, conn->host, conn->port, errno, strerror (errno));
 			return 0;
 		} /* end if */
 
@@ -1901,14 +1903,14 @@ void nopoll_conn_complete_handshake (noPollConn * conn)
 	return;
 }
 
-void nopoll_conn_mask_content (noPollCtx * ctx, char * payload, int payload_size, char * mask)
+void nopoll_conn_mask_content (noPollCtx * ctx, char * payload, int payload_size, char * mask, int desp)
 {
 	int iter       = 0;
 	int mask_index = 0;
 
 	while (iter < payload_size) {
 		/* rotate mask and apply it */
-		mask_index = iter % 4;
+		mask_index = (iter + desp) % 4;
 		payload[iter] ^= mask[mask_index];
 		iter++;
 	} /* end while */
@@ -1937,9 +1939,12 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	int         bytes;
 	noPollMsg * msg;
 	int         ssl_error;
+	int         header_size;
 
 	if (conn == NULL)
 		return NULL;
+
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "=== START: conn-id=%d ===", conn->id);
 	
 	/* check for accept SSL connection */
 	if (conn->pending_ssl_accept) {
@@ -2007,8 +2012,8 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	} /* end if */
 
 	if (conn->previous_msg) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Reading bytes from a previous unfinished frame (%d) over conn-id=%d",
-			    conn->previous_msg->remain_bytes, conn->id);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Reading bytes (previously read %d) from a previous unfinished frame (pending: %d) over conn-id=%d",
+			    conn->previous_msg->payload_size, conn->previous_msg->remain_bytes, conn->id);
 		
 		/* build next message holder to continue with this content */
 		if (conn->previous_msg->payload_size > 0) {
@@ -2026,15 +2031,22 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			/* get fin bytes */
 			msg->has_fin      = 1; /* for now final message */
 			msg->op_code      = 0; /* continuation frame */
+
 			/* copy initial mask indication */
 			msg->is_masked    = conn->previous_msg->is_masked;
 			msg->payload_size = conn->previous_msg->remain_bytes;
+			msg->unmask_desp  = conn->previous_msg->unmask_desp;
 
 			/* copy mask */
 			memcpy (msg->mask, conn->previous_msg->mask, 4);
 			
-			if (msg->is_masked)
+			if (msg->is_masked) {
 				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reusing mask value = %d from previous frame (%d)", nopoll_get_32bit (msg->mask));
+				nopoll_show_byte (conn->ctx, msg->mask[0], "mask[0]");
+				nopoll_show_byte (conn->ctx, msg->mask[1], "mask[1]");
+				nopoll_show_byte (conn->ctx, msg->mask[2], "mask[2]");
+				nopoll_show_byte (conn->ctx, msg->mask[3], "mask[3]");
+			}
 
 			/* release previous reference because de don't need it anymore */
 			nopoll_msg_unref (conn->previous_msg);
@@ -2103,6 +2115,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		return NULL;
 	} /* end if */
 
+	/* record header size */
+	header_size = 2;
+
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received %d bytes for websocket header", bytes);
 	nopoll_show_byte (conn->ctx, buffer[0], "header[0]");
 	nopoll_show_byte (conn->ctx, buffer[1], "header[1]");
@@ -2156,6 +2171,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			nopoll_conn_shutdown (conn);
 			return NULL; 	
 		} /* end if */
+
+		/* add to the header bytes read */
+		header_size += bytes;
 			
 		msg->payload_size = nopoll_get_16bit (buffer + 2);
 		
@@ -2216,12 +2234,35 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	if (msg->is_masked) {
 		bytes = __nopoll_conn_receive (conn, (noPollPtr) msg->mask, 4);
 		if (bytes != 4) {
+			/* record header read so far */
+			memcpy (conn->pending_buf, buffer, header_size);
+			conn->pending_buf_bytes = header_size;
+			/* record mask read so far if required */
+			if (bytes > 0) {
+				memcpy (conn->pending_buf + header_size, msg->mask, bytes);
+				conn->pending_buf_bytes += bytes;
+			} /* end if */
+
+			/* release message because it not available here */
 			nopoll_msg_unref (msg);
+			if (bytes >= 0 && nopoll_conn_is_ok (conn)) {
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, 
+					    "Expected to receive incoming mask after header (4 bytes) but found %d bytes on conn-id=%d, saving %d for future operations ", 
+					    bytes, conn->id, conn->pending_buf_bytes);
+				return NULL;
+			} /* end if */
+
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Expected to receive incoming mask after header (4 bytes) but found %d bytes, shutting down id=%d the connection", 
+				    bytes, conn->id);
 			nopoll_conn_shutdown (conn);
 			return NULL; 
 		} /* end if */
 		
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received mask value = %d", nopoll_get_32bit (msg->mask));
+		nopoll_show_byte (conn->ctx, msg->mask[0], "mask[0]");
+		nopoll_show_byte (conn->ctx, msg->mask[1], "mask[1]");
+		nopoll_show_byte (conn->ctx, msg->mask[2], "mask[2]");
+		nopoll_show_byte (conn->ctx, msg->mask[3], "mask[3]");
 	} /* end if */
 
 	/* check payload size */
@@ -2264,12 +2305,12 @@ read_payload:
 		msg->remain_bytes = msg->payload_size - bytes;
 
 		/* set connection in remaining data to read */
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Received fewer bytes than expected (%d < %d)", bytes, (int) msg->payload_size);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Received fewer bytes than expected (bytes: %d < payload size: %d)", 
+			    bytes, (int) msg->payload_size);
 		msg->payload_size = bytes;
 
-		/* grab a reference to previous message to reuse its
-		   data but only when bytes > 0 because when bytes ==
-		   0, the reference is reused since it is not returned
+		/* grab a reference to previous message to reuse itsdata but only when bytes > 0 
+		   because when bytes == 0, the reference is reused since it is not returned
 		   to the caller (see next lines) */
 		if (bytes > 0)
 			nopoll_msg_ref (msg);
@@ -2290,16 +2331,20 @@ read_payload:
 	conn->previous_was_fragment = msg->is_fragment && msg->has_fin == 0;
 
 	/* do not notify any frame since no content was found */
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "bytes == %d, msg (%p) == conn->previous_msg (%p)",
-		    bytes, msg, conn->previous_msg);
-	if (bytes == 0 && msg == conn->previous_msg)
+	if (bytes == 0 && msg == conn->previous_msg) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "bytes == %d, msg (%p) == conn->previous_msg (%p)",
+			    bytes, msg, conn->previous_msg);
 		return NULL;
+	} /* end if */
 
 	/* now unmask content (if required) */
 	if (msg->is_masked) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Unmasking (payload size %d, mask: %d, msg: %p)", 
-			    msg->payload_size, nopoll_get_32bit (msg->mask), msg);
-		nopoll_conn_mask_content (conn->ctx, msg->payload, msg->payload_size, msg->mask);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Unmasking (payload size %d, mask: %d, msg: %p, desp: %d)", 
+			    msg->payload_size, nopoll_get_32bit (msg->mask), msg, msg->unmask_desp);
+		nopoll_conn_mask_content (conn->ctx, msg->payload, msg->payload_size, msg->mask, msg->unmask_desp);
+
+		/* flag what was unmasked */
+		msg->unmask_desp = msg->payload_size;
 	} /* end if */
 
 	return msg;
@@ -2525,12 +2570,9 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 
 	/* for for the content */
 	while (nopoll_true) {
-		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reading more content (read so far: %d, requested %d, non-blocking: %d, timeout: %ld, ellapsed: %ld)", total_read, bytes, block, timeout, ellapsed);  */
-
 		/* call to get next message */
 		msg = nopoll_conn_get_msg (conn);
 		if (msg == NULL) {
-			
 			if (! nopoll_conn_is_ok (conn)) {
 			        nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received websocket conn-id=%d close during wait reply..",
 					    conn->id);
@@ -2830,7 +2872,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	char             * send_buffer;
 	int                bytes_written = 0;
 	char               mask[4];
-	int                mask_value = 0;
+	unsigned int       mask_value = 0;
 	int                desp = 0;
 	int                tries;
 	noPollDebugLevel   level;
@@ -2851,9 +2893,9 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		
 		/* define a random mask */
 #if defined(NOPOLL_OS_WIN32)
-		mask_value = (int) rand ();
+		mask_value = (unsigned int) rand ();
 #else
-		mask_value = (int) random ();
+		mask_value = (unsigned int) random ();
 #endif
 		memset (mask, 0, 4);
 		nopoll_set_32bit (mask_value, mask);
@@ -2909,7 +2951,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 
 		/* mask content before sending if requested */
 		if (masked) {
-			nopoll_conn_mask_content (conn->ctx, send_buffer + header_size, length, mask);
+			nopoll_conn_mask_content (conn->ctx, send_buffer + header_size, length, mask, 0);
 		}
 	} /* end if */
 
@@ -2946,14 +2988,14 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		
 		if ((bytes_written + desp) != (length + header_size)) {
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, 
-				    "Requested to write %d bytes but found %d written (masked? %d, mask: %d, header size: %d, length: %d), errno = %d : %s", 
+				    "Requested to write %d bytes but found %d written (masked? %d, mask: %u, header size: %d, length: %d), errno = %d : %s", 
 				    (int) length + header_size - desp, bytes_written, masked, mask_value, header_size, (int) length, errno, strerror (errno));
 		} else {
 			/* accomulate bytes written to continue */
 			if (bytes_written > 0)
 				desp += bytes_written;
 
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Bytes written to the wire %d (masked? %d, mask: %d, header size: %d, length: %d)", 
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Bytes written to the wire %d (masked? %d, mask: %u, header size: %d, length: %d)", 
 				    bytes_written, masked, mask_value, header_size, (int) length);
 			break;
 		} /* end if */

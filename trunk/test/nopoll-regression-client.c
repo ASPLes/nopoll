@@ -165,7 +165,7 @@ nopoll_bool test_01_masking (void) {
 	nopoll_set_32bit (mask_value, mask);
 
 	memcpy (buffer, "This is a test value", 20);
-	nopoll_conn_mask_content (ctx, buffer, 20, mask);
+	nopoll_conn_mask_content (ctx, buffer, 20, mask, 0);
 
 	if (nopoll_ncmp (buffer, "This is a test value", 20)) {
 		printf ("ERROR: expected to find different values after masking but found the same..\n");
@@ -173,7 +173,7 @@ nopoll_bool test_01_masking (void) {
 	}
 
 	/* revert changes */
-	nopoll_conn_mask_content (ctx, buffer, 20, mask);
+	nopoll_conn_mask_content (ctx, buffer, 20, mask, 0);
 
 	if (! nopoll_ncmp (buffer, "This is a test value", 20)) {
 		printf ("ERROR: expected to find SAME values after masking but found the same..\n");
@@ -575,9 +575,9 @@ nopoll_bool test_04b (void) {
 		iterator ++;
 	}  /* end while */
 
-	if (errno != NOPOLL_EWOULDBLOCK) {
-		printf ("ERROR: expected to find errno=%d, but found errno=%d\n",
-			NOPOLL_EWOULDBLOCK, errno);
+	if (errno != NOPOLL_EWOULDBLOCK && errno != EINPROGRESS) {
+		printf ("ERROR: expected to find errno=%d, but found errno=%d : %s\n",
+			NOPOLL_EWOULDBLOCK, errno, strerror (errno));
 		return nopoll_false;
 	} /* end if */
 
@@ -1078,6 +1078,7 @@ nopoll_bool test_12 (void) {
 	gettimeofday (&start, NULL);
 #endif	
 
+	printf ("Test 12: creating 1000 connections...\n");
 	iterator = 0;
 	while (iterator < 1000) {
 		/* create a working connection */
@@ -1403,6 +1404,190 @@ nopoll_bool test_16 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_17_send_and_receive_test (noPollCtx * ctx, noPollConn * conn, noPollConn * listener, 
+					   const char * message, int length, nopoll_bool read_in_the_middle, 
+					   nopoll_bool read_after_header, nopoll_bool read_after_mask) 
+{
+	char           buffer[1024];
+	char           buffer2[1024];
+	NOPOLL_SOCKET  _socket;
+	char           mask[4];
+	int            desp;
+
+	memset (buffer, 0, 1024);
+
+	/* make it unblock */
+	nopoll_conn_set_sock_block (nopoll_conn_socket (listener), nopoll_false);
+
+	/* now send partial content */
+	printf ("Test 17: sending normal message to test link..\n");
+	if (nopoll_conn_send_text (conn, message, length) != length) {
+		printf ("ERROR: expected to properly send all bytes but it wasn't possible..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* read reply */
+	if (nopoll_conn_read (listener, buffer, length, nopoll_true, 0) != length) {
+		printf ("ERROR: expected read 22 bytes ...but there was a failure..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* printf ("Test 17: sending partial content..\n"); */
+	_socket = nopoll_conn_socket (conn);
+	buffer[0] = 129;
+	buffer[1] = 150;
+	send (_socket, buffer, 2, 0);
+
+	if (read_after_header) {
+		nopoll_sleep (1000000);
+		printf ("Test 17: Reading after header..\n");
+		nopoll_conn_read (listener, buffer2, length, nopoll_false, 0);
+	}
+
+	/* send mask */
+	mask[0] = 23;
+	mask[1] = 24;
+	mask[2] = 25;
+	mask[3] = 26;
+	send (_socket, mask, 4, 0);
+
+	if (read_after_mask) {
+		nopoll_sleep (1000000);
+		printf ("Test 17: Reading after mask..\n");
+		nopoll_conn_read (listener, buffer2, length, nopoll_false, 0);
+	}
+
+	memcpy (buffer, message, length);
+	nopoll_conn_mask_content (ctx, buffer, length, mask, 0);
+
+	send (_socket, buffer, 10, 0);
+	printf ("Test 17: sent partial content...wait a bit (2 seconds)..\n");
+	nopoll_sleep (2000000);
+
+	desp = 0;
+	if (read_in_the_middle) {
+		printf ("Test 17: reading in the middle (10 bytes)\n");
+		memset (buffer2, 0, 100);
+		desp = nopoll_conn_read (listener, buffer2, length, nopoll_false, 0);
+		if (desp != 10) {
+			printf ("Test 17: failed to read some initial content (10), found %d bytes..\n", desp);
+			return nopoll_false;
+		} /* end if */
+
+		printf ("Test 17: read %d bytes..\n", desp);
+	} 
+
+	printf ("Test 17: now send the rest..\n");
+	send (_socket, buffer + 10, length - 10, 0);
+
+	/* copy content into original buffer */
+	if (read_in_the_middle) 
+		memcpy (buffer, buffer2, desp);
+
+	printf ("Test 17: now read the content received..\n");
+	/* now read the content */
+	if (nopoll_conn_read (listener, buffer + desp, length - desp, nopoll_true, 0) != (length - desp)) {
+		printf ("ERROR: expected to receive 22 bytes but found something different..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! nopoll_ncmp (buffer, message, length)) {
+		printf ("ERROR: expected to receive test message but found: '%s'\n", buffer);
+		return nopoll_false;
+	}
+
+	return nopoll_true;
+}
+
+nopoll_bool test_17 (void) {
+
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+	noPollConn     * listener, * master;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* create a listener */
+	master = nopoll_listener_new (ctx, "0.0.0.0", "2235");
+	printf ("Test 17: created master listener (conn-id=%d, status=%d)\n", 
+		nopoll_conn_get_id (master), nopoll_conn_is_ok (master));
+	if (! nopoll_conn_is_ok (master)) {
+		printf ("ERROR: expected proper master listener creation but a failure was found..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* call to create a connection */
+	conn = nopoll_conn_new (ctx, "localhost", "2235", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
+
+
+	/* wait for the reply */
+	printf ("Test 17: accepting listener..\n");
+	listener = nopoll_conn_accept (ctx, master);
+
+	if (! nopoll_conn_is_ok (listener)) {
+		printf ("ERROR: expected to find proper listener status (connection accepted), but found failure..\n");
+		return nopoll_false;
+	} /* end if */
+	
+	/** call test here **/
+	if (! test_17_send_and_receive_test (ctx, conn, listener, "This is a test message", 22, 
+					     /* read in the middle */
+					     nopoll_false, 
+					     /* read after the header */
+					     nopoll_false, 
+					     /* read after the mask */
+					     nopoll_false))
+		return nopoll_false;
+
+	/** call test here **/
+	if (! test_17_send_and_receive_test (ctx, conn, listener, "This is a test message", 22, 
+					     /* read in the middle */
+					     nopoll_true, 
+					     /* read after the header */
+					     nopoll_false, 
+					     /* read after the mask */
+					     nopoll_false))
+		return nopoll_false;
+
+	/** call test here **/
+	if (! test_17_send_and_receive_test (ctx, conn, listener, "This is a test message", 22, 
+					     /* read in the middle */
+					     nopoll_false, 
+					     /* read after the header */
+					     nopoll_true, 
+					     /* read after the mask */
+					     nopoll_false))
+		return nopoll_false;
+
+	/** call test here **/
+	if (! test_17_send_and_receive_test (ctx, conn, listener, "This is a test message", 22, 
+					     /* read in the middle */
+					     nopoll_false, 
+					     /* read after the header */
+					     nopoll_false, 
+					     /* read after the mask */
+					     nopoll_true))
+		return nopoll_false;
+
+	printf ("Test 17: closing connections..\n"); 
+	nopoll_conn_close (listener);
+	nopoll_conn_close (master);
+	nopoll_conn_close (conn);
+
+	printf ("Test 17: finishing context..\n");
+
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	/* report finish */
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -1608,6 +1793,13 @@ int main (int argc, char ** argv)
 		printf ("Test 16: check sending frames with sleep in header [   OK    ]\n");
 	} else {
 		printf ("Test 16: check sending frames with sleep in header [ FAILED  ]\n");
+		return -1;
+	}
+
+	if (test_17 ()) {
+		printf ("Test 17: check partial frame reception [   OK    ]\n");
+	} else {
+		printf ("Test 17: check partial frame reception [ FAILED  ]\n");
 		return -1;
 	}
 

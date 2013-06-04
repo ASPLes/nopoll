@@ -303,6 +303,7 @@ struct _noPollMsg {
 	int            remain_bytes;
 
 	nopoll_bool    is_fragment;
+	int            unmask_desp;
 };
 
 struct _noPollHandshake {

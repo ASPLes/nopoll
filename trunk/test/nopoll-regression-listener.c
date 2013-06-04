@@ -55,8 +55,8 @@ nopoll_bool on_connection_opened (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 	} /* end if */
 
 	/* notify connection accepted */
-	printf ("INFO: connection received from %s, with Host: %s and Origin: %s\n",
-		nopoll_conn_host (conn), nopoll_conn_get_host_header (conn), nopoll_conn_get_origin (conn));
+	/* printf ("INFO: connection received from %s, with Host: %s and Origin: %s\n",
+	   nopoll_conn_host (conn), nopoll_conn_get_host_header (conn), nopoll_conn_get_origin (conn)); */
 	return nopoll_true;
 }
 
@@ -87,7 +87,7 @@ void write_file_handler (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, no
 void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr user_data)
 {
 	const char * content = (const char *) nopoll_msg_get_payload (msg);
-	FILE       * file;
+	FILE       * file = NULL;
 	char         buffer[1024];
 	int          bytes;
 	int          sent;
@@ -95,7 +95,8 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 	int          shown;
 	noPollMsg  * aux;
 	nopoll_bool  dont_reply = nopoll_false;
-	FILE      * open_file_cmd = NULL;
+	FILE       * open_file_cmd = NULL;
+	int          iterator;
 
 	/* check for open file commands */
 	if (nopoll_ncmp (content, "open-file: ", 11)) {
@@ -146,11 +147,26 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 		nopoll_conn_send_ping (conn);
 		return;
 	} else if (nopoll_cmp (content, "get-file")) {
+		iterator = 0;
+		file     = NULL;
+		while (nopoll_true) {
 #if defined(NOPOLL_OS_WIN32)
-		file = fopen ("nopoll-regression-client.c", "rb");
+			file = fopen ("nopoll-regression-client.c", "rb");
 #else
-		file = fopen ("nopoll-regression-client.c", "r");
+			file = fopen ("nopoll-regression-client.c", "r");
 #endif		
+			printf ("LISTENER: file pointer (%p, errno=%d : %s)..\n", file, errno, strerror (errno));
+			
+			if (file)
+				break;
+			iterator++;
+			if (iterator > 3) {
+				printf ("ERROR: failed to open nopoll-regression-client.c (fopen call failed)\n");
+				nopoll_conn_shutdown (conn);
+				return;
+			} /* end if */
+		} /* end while */
+
 		while (! feof (file)) {
 			/* read content */
 			bytes = fread (buffer, 1, 1024, file);
