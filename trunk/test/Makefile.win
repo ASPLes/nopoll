@@ -1,0 +1,45 @@
+# -*- makefile -*- 
+ifdef enable_nopoll_log
+   nopoll_dll = -lnopoll-debug
+   DLL        = libnopoll-debug.dll
+else
+   nopoll_dll = -lnopoll
+   DLL        = libnopoll.dll
+endif
+
+CC       = gcc.exe -g -Wall -Werror
+OBJ      = nopoll-regression-client.o  \
+	    nopoll-regression-client.o
+
+PROGRAMS = nopoll-regression-client.exe \
+	    nopoll-regression-listener.exe
+
+LIBS     = -Wall -Werror -g -lws2_32 $(AXL_LIBS) $(search_lib_path) -L../src $(nopoll_dll) ../src/$(DLL)
+
+INCS =  -I"." -I"../src" -DENABLE_TLS_SUPPORT
+
+CFLAGS   = $(INCS) -DVERSION=\""$(NOPOLL_VERSION)"\" -Wall -g 
+
+.PHONY: all all-before all-after clean clean-custom
+
+all: $(PROGRAMS) all-after links
+
+clean: clean-custom
+	${RM} $(OBJ) $(PROGRAMS) *.dll *.o
+
+client_depends = nopoll-regression-client.o
+nopoll-regression-client.exe: $(client_depends)
+	$(CC) -mconsole $(client_depends) -o $@ $(LIBS)
+
+listener_depends = nopoll-regression-listener.o
+nopoll-regression-listener.exe: $(listener_depends)
+	$(CC) -mconsole $(listener_depends) -o $@ $(LIBS)
+
+
+links:
+	cp ../src/$(DLL) .
+	cp $(OPENSSL_LIBS) .
+
+%.o: %.c
+	$(CC) -c $< -o $@ $(CFLAGS)
+
