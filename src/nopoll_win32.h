@@ -57,6 +57,10 @@ BOOL APIENTRY DllMain                         (HINSTANCE hInst,
 					            DWORD reason,
 					            LPVOID reserved);
 
+#if !defined(EINPROGRESS)
+#define EINPROGRESS (WSAEINPROGRESS)
+#endif
+
 END_C_DECLS
 
 #endif

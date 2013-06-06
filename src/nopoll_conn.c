@@ -1340,7 +1340,9 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
  keep_reading:
 	/* clear buffer */
 	/* memset (buffer, 0, maxlen * sizeof (char )); */
+#if defined(NOPOLL_OS_UNIX)
 	errno = 0;
+#endif
 	if ((nread = conn->receive (conn, buffer, maxlen)) == NOPOLL_SOCKET_ERROR) {
 		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning errno=%d (%s)", errno, strerror (errno)); */
 		if (errno == NOPOLL_EAGAIN) 

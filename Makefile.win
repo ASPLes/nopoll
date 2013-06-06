@@ -82,7 +82,7 @@ build_debug_nopoll: prepare_versions_mk
 	@cd $(nopoll_lib);  enable_nopoll_log=-DSHOW_DEBUG_LOG NOPOLL_VERSION=$(nopoll_version) release_dir=../debug/libnopoll0 make -f Makefile.win; cd $(top_srcdir)
 	@cd $(nopoll_test); enable_nopoll_log=-DSHOW_DEBUG_LOG NOPOLL_VERSION=$(nopoll_version) make -f Makefile.win; cd $(top_srcdir)
 
-nopoll_bundle_prepare: 
+nopoll_bundle_prepare: prepare_nshs
 	make -f Makefile.win clean_nopoll 
 	make -f Makefile.win build_debug_nopoll 
 	make -f Makefile.win clean_nopoll 
@@ -93,7 +93,7 @@ nopoll_bundle_prepare:
 # and then
 # >> make -f Makefile.win nopoll_bundle 
 # in order to run the create the installer
-nopoll_bundle: 
+nopoll_bundle: prepare_nshs
 	@echo "generando fichero de instalación"
 	$(makensis) nopoll.nsi 
 

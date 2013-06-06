@@ -577,7 +577,7 @@ nopoll_bool test_04b (void) {
 
 	if (errno != NOPOLL_EWOULDBLOCK && errno != EINPROGRESS) {
 		printf ("ERROR: expected to find errno=%d, but found errno=%d : %s\n",
-			NOPOLL_EWOULDBLOCK, errno, strerror (errno));
+			(int)NOPOLL_EWOULDBLOCK, (int)errno, strerror (errno));
 		return nopoll_false;
 	} /* end if */
 
