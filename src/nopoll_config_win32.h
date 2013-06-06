@@ -43,7 +43,7 @@
 #define INT_TO_PTR(integer) ((noPollPtr) (integer))
 
 /**
- * @brief Allows to convert a pointer reference (\ref nopollPointer),
+ * @brief Allows to convert a pointer reference (\ref noPollPtr),
  * which stores an integer that was stored using \ref INT_TO_PTR.
  *
  * Use the oposite function to restore the pointer value stored in the
