@@ -30,9 +30,9 @@ LIBS = -Wall $(enable_gcc_debug) -lws2_32 $(OPENSSL_LIBS) $(search_lib_path)
 #INCS       =  -I"$(BASE_DIR)/include" \
 
 # build vortex with log support
-INCS = -Wall $(enable_gcc_debug) -I"." -I"../src" $(enable_nopoll_log)
+INCS = -Wall $(enable_gcc_debug) -I"." -I"../src" $(enable_nopoll_log) $(show_debug)
 
-CFLAGS = $(INCS) -DVERSION=\""$(NOPOLL_VERSION)"\"  \
+CFLAGS = $(INCS) -DVERSION=\""$(NOPOLL_VERSION)"\" \
 	-DPACKAGE_DTD_DIR=\""$(datadir)"\" -DPACKAGE_TOP_DIR=\""$(top_srcdir)"\" -Wall $(enable_gcc_debug) $(OPENSSL_FLAGS)
 RM = rm -f
 
@@ -49,7 +49,7 @@ $(DLL).dll: $(OBJ)
 # is not requiered because gcc automatically get an import library from the dll.
 # -Wl,--out-implib,libvortex-1.1.lib
 	@echo "Creating library.."
-	$(CC) -m$(MODE) -shared -Wl,--out-implib,$(IMPORT_DLL) --export-all-symbols $(OBJ) -o $(DLL).dll $(LIBS)
+	$(CC) -m$(MODE) -shared -Wl,--out-implib,$(IMPORT_DLL) $(export_all_symbols) $(OBJ) -o $(DLL).dll $(LIBS)
 	@echo "Building libnopoll.lib file.."
 	lib.exe /def:libnopoll.def
 	cp $(DLL).dll $(release_dir)

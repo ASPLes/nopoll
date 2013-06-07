@@ -987,11 +987,15 @@ const char  * nopoll_conn_port   (noPollConn * conn)
  */
 void          nopoll_conn_shutdown (noPollConn * conn)
 {
-	const char * role = "unknown";
+#if defined(SHOW_DEBUG_LOG)
+	const char * role = NULL;
+#endif
 
 	if (conn == NULL)
 		return;
 
+	/* report connection close */
+#if defined(SHOW_DEBUG_LOG)
 	if (conn->role == NOPOLL_ROLE_LISTENER)
 		role = "listener";
 	else if (conn->role == NOPOLL_ROLE_MAIN_LISTENER)
@@ -1000,9 +1004,12 @@ void          nopoll_conn_shutdown (noPollConn * conn)
 		role = "unknown";
 	else if (conn->role == NOPOLL_ROLE_CLIENT)
 		role = "client";
+	else
+		role = "unknown";
 
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "shutting down connection id=%d (session: %d, role: %s)", 
 		    conn->id, conn->session, role);
+#endif
 
 	/* shutdown connection here */
 	nopoll_close_socket (conn->session);
@@ -1020,11 +1027,15 @@ void          nopoll_conn_shutdown (noPollConn * conn)
 void          nopoll_conn_close  (noPollConn  * conn)
 {
 	int refs;
+#if defined(SHOW_DEBUG_LOG)
 	const char * role = "unknown";
+#endif
 
 	/* check input data */
 	if (conn == NULL)
 		return;
+
+#if defined(SHOW_DEBUG_LOG)
 	if (conn->role == NOPOLL_ROLE_LISTENER)
 		role = "listener";
 	else if (conn->role == NOPOLL_ROLE_MAIN_LISTENER)
@@ -1036,6 +1047,7 @@ void          nopoll_conn_close  (noPollConn  * conn)
 	
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling to close close id=%d (session %d, refs: %d, role: %s)", 
 		    conn->id, conn->session, conn->refs, role);
+#endif
 	if (conn->session) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "requested proper connection close id=%d (session %d)", conn->id, conn->session);
 
@@ -2096,7 +2108,8 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	bytes = __nopoll_conn_receive (conn, buffer, 2);
 	if (bytes == 0) {
 		/* connection not ready */
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Connection id=%d without data, returning no message", conn->id);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Connection id=%d without data, errno=%d : %s, returning no message", 
+			    conn->id, errno, strerror (errno));
 		return NULL;
 	}
 
@@ -2877,7 +2890,9 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	unsigned int       mask_value = 0;
 	int                desp = 0;
 	int                tries;
+#if defined(SHOW_DEBUG_LOG)
 	noPollDebugLevel   level;
+#endif
 
 	/* check for pending send operation */
 	if (nopoll_conn_complete_pending_write (conn) != 0)
@@ -3023,6 +3038,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	/* record pending write bytes */
 	conn->pending_write_bytes = length + header_size - desp;
 
+#if defined(SHOW_DEBUG_LOG)
 	level = NOPOLL_LEVEL_DEBUG;
 	if (desp != (length + header_size))
 		level = NOPOLL_LEVEL_CRITICAL;
@@ -3036,6 +3052,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		    /* bytes written */
 		    desp - header_size, 
 		    length, conn->pending_write_bytes, conn->id);
+#endif
 
 	/* check pending bytes for the next operation */
 	if (conn->pending_write_bytes > 0) {

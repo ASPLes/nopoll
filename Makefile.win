@@ -4,6 +4,7 @@
 
 # include versions file
 include versions.mk
+include config.mk
 
 # directory were libraries and tools will be installed 
 export INSTALL_DIR = c:/msys/1.0/home/acinom/nopoll/trunk/install
@@ -24,21 +25,10 @@ export CC          = gcc.exe
 # console.
 export MODE        = windows
 
-# optional nsis installation
-makensis              = c:/ARCHIV~1/NSIS/makensis.exe
-
-# Flags to compile OPENSSL
-# Uncomment the following lines, placing the libraries following the path
-# schema provided to get support OpenSSL
-export OPENSSL_FLAGS = -DENABLE_TLS_SUPPORT -Ic:/openssl-098k/include
-export OPENSSL_LIBS = c:/openssl-098k/bin/libeay32.dll c:/openssl-098k/bin/ssleay32.dll
-
-
 #############################################
 # after this line lines shouldn't be edited #
 #############################################
 top_srcdir               = ..
-version_prefix           = -MinGW32
 export search_lib_path   = 
 
 # nopoll configuration
@@ -52,7 +42,7 @@ strip    = strip --strip-unneeded
 all: prepare_versions_mk build_nopoll
 
 prepare_nshs:
-	./prepare-nsh.sh
+	./prepare-nsh.sh $(platform_bits)
 
 prepare_versions_mk: prepare_nshs
 	test -f versions.mk && rm -f versions.mk
@@ -67,7 +57,7 @@ build_nopoll: prepare_versions_mk
 	test -d release || mkdir release
 	rm -rf release/libnopoll0
 	mkdir release/libnopoll0
-	cp src/nopoll_config_win32.h src/nopoll_config.h
+	cp src/nopoll_config_win$(platform_bits).h src/nopoll_config.h
 	@cd $(nopoll_lib); NOPOLL_VERSION=$(nopoll_version) release_dir=../release/libnopoll0 make -f Makefile.win; cd $(top_srcdir)
 	@cd $(nopoll_test); NOPOLL_VERSION=$(nopoll_version) make -f Makefile.win; cd $(top_srcdir)
 
