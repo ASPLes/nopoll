@@ -16,7 +16,7 @@ PROGRAMS = nopoll-regression-client.exe \
 
 LIBS     = -Wall -Werror -g -lws2_32 $(AXL_LIBS) $(search_lib_path) -L../src $(nopoll_dll) ../src/$(DLL)
 
-INCS =  -I"." -I"../src" -DENABLE_TLS_SUPPORT
+INCS =  -I"." -I"../src" -DENABLE_TLS_SUPPORT $(show_debug)
 
 CFLAGS   = $(INCS) -DVERSION=\""$(NOPOLL_VERSION)"\" -Wall -g 
 

@@ -3,7 +3,7 @@
 !include "nopoll_product_version.nsh"
 
 ; HM NIS Edit Wizard helper definesdot
-!define PRODUCT_NAME "noPoll Toolkit"
+!define PRODUCT_NAME "noPoll Toolkit for win${PLATFORM_BITS} (${PLATFORM_BITS} bits)"
 !define PRODUCT_PUBLISHER "ASPL"
 !define PRODUCT_WEB_SITE "http://www.aspl.es/nopoll"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
@@ -52,8 +52,7 @@
 ; MUI end ------
 
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "nopoll-installer-${PRODUCT_VERSION}-w32.exe"
-InstallDir "$PROGRAMFILES\noPoll-1.0-W32"
+OutFile "nopoll-installer-${PRODUCT_VERSION}-w${PLATFORM_BITS}.exe"
 InstallDirRegKey HKLM "${PRODUCT_DIR_REGKEY}" ""
 ShowInstDetails show
 ShowUnInstDetails show

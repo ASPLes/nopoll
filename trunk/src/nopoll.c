@@ -210,14 +210,13 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 	int       size;
 #endif
 	char    * result   = NULL;
-	int       new_size = -1;
 
 	if (chunk == NULL)
 		return NULL;
 
 #ifdef NOPOLL_HAVE_VASPRINTF
 	/* do the operation using the GNU extension */
-	new_size = vasprintf (&result, chunk, args);
+	size = vasprintf (&result, chunk, args);
 #else
 	/* get the amount of memory to be allocated */
 	size = nopoll_vprintf_len (chunk, args);
@@ -233,9 +232,9 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 	
 	/* copy current size */
 #    if defined(NOPOLL_OS_WIN32) && ! defined (__GNUC__)
-	new_size = _vsnprintf_s (result, size + 1, size, chunk, args);
+	size = _vsnprintf_s (result, size + 1, size, chunk, args);
 #    else
-	new_size = vsnprintf (result, size + 1, chunk, args);
+	size = vsnprintf (result, size + 1, chunk, args);
 #    endif
 #endif
 	/* return the result */
@@ -519,7 +518,6 @@ nopoll_bool nopoll_base64_encode (const char  * content,
 	BIO     * b64;
 	BIO     * bmem;
 	BUF_MEM * bptr;
-	int       bwritten;
 
 	if (content == NULL || output == NULL || length <= 0 || output_size == NULL)
 		return nopoll_false;
@@ -535,7 +533,7 @@ nopoll_bool nopoll_base64_encode (const char  * content,
 		printf ("Write values difers..%d\n", length);
 		return nopoll_false;
 	}
-	bwritten = BIO_flush (b64);
+	BIO_flush (b64);
 
 	/* now get content */
 	BIO_get_mem_ptr (b64, &bptr);

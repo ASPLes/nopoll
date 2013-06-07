@@ -391,6 +391,7 @@ nopoll_bool test_04 (int chunk_size) {
 	struct stat  stat_buf;
 	int          total_read = 0;
 	const char * cmd;
+	int          retries = 0;
 
 	/* create context */
 	ctx = create_ctx ();
@@ -403,6 +404,8 @@ nopoll_bool test_04 (int chunk_size) {
 
 	nopoll_ctx_unref (ctx);
 
+	printf ("Test 04: creating connection to download file..\n");
+
 	/* reinit again */
 	ctx = create_ctx ();
 
@@ -413,7 +416,7 @@ nopoll_bool test_04 (int chunk_size) {
 		return nopoll_false;
 	}
 
-	printf ("Test 02: sending basic content..\n");
+	printf ("Test 04: sending get-file..\n");
 
 	/* send content text(utf-8) */
 	if (nopoll_conn_send_text (conn, "get-file", 8) != 8) {
@@ -433,9 +436,12 @@ nopoll_bool test_04 (int chunk_size) {
 
 	stat ("nopoll-regression-client.c", &stat_buf);
 
+	printf ("Test 04: stat file (nopoll-regression-client.c = %d bytes)\n", (int) stat_buf.st_size);
+
+	retries = 0;
 	while (total_read < stat_buf.st_size) {
 		/* wait for the reply (try to read 1024, blocking) */
-		bytes_read = nopoll_conn_read (conn, buffer, chunk_size, nopoll_true, 100);
+		bytes_read = nopoll_conn_read (conn, buffer, chunk_size, nopoll_true, 1000);
 		/* printf ("Test 04: read %d bytes over the connection %d\n", bytes_read, nopoll_conn_get_id (conn));  */
 
 		if (bytes_read < 0) {
@@ -444,9 +450,14 @@ nopoll_bool test_04 (int chunk_size) {
 		}
 
 		if (bytes_read == 0) {
-			/* printf ("Test 04: nothing found (0 bytes), total read %d, total requested: %ld\n", total_read, stat_buf.st_size); */
+			retries ++;
+			if (retries > 100) {
+				printf ("Test 04: nothing found (0 bytes), total read %d, total requested: %ld, for %d retries\n", 
+					total_read, stat_buf.st_size, retries); 
+				return nopoll_false;
+			} /* end if */
 			continue;
-		}
+		} /* end if */
 
 		/* write content */
 		fwrite (buffer, 1, bytes_read, file);
