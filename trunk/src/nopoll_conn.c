@@ -242,8 +242,9 @@ NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
 	/* do a tcp connect */
         if (connect (session, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
 		if(errno != NOPOLL_EINPROGRESS && errno != NOPOLL_EWOULDBLOCK) { 
-			shutdown (session, SHUT_RDWR);
-			nopoll_close_socket (session);
+		        shutdown (session, SHUT_RDWR);
+                        nopoll_close_socket (session);
+
 			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to connect to remote host %s:%s errno=%d",
 				    host, port, errno);
 			return -1;
@@ -304,13 +305,13 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 /**
  * @internal Function that dumps all errors found on current ssl context.
  */
-int nopoll_conn_log_ssl (noPollCtx * ctx)
+int nopoll_conn_log_ssl (noPollConn * conn)
 {
-	char          log_buffer [512];
-	unsigned long err;
-	int           error_position;
-	int           aux_position;
-	
+        noPollCtx      * ctx = conn->ctx;
+	char             log_buffer [512];
+	unsigned long    err;
+	int              error_position;
+	int              aux_position;
 	
 	while ((err = ERR_get_error()) != 0) {
 		ERR_error_string_n (err, log_buffer, sizeof (log_buffer));
@@ -331,6 +332,11 @@ int nopoll_conn_log_ssl (noPollCtx * ctx)
 		} /* end while */
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "    details, run: openssl errstr %s", log_buffer + error_position);
 	}
+
+	recv (conn->session, log_buffer, 1, MSG_PEEK);
+	nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "    noPoll id=%d, socket: %d (after testing errno: %d)",
+		    conn->id, conn->session, errno);
+	
 	
 	return (0);
 }
@@ -366,7 +372,7 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * lab
 		}
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "SSL socket closed on %s (res=%d, ssl_err=%d, errno=%d)",
 			    label, res, ssl_err, errno);
-		nopoll_conn_log_ssl (conn->ctx);
+		nopoll_conn_log_ssl (conn);
 
 		return res;
 	case SSL_ERROR_ZERO_RETURN: /* close_notify received */
@@ -375,7 +381,7 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * lab
 	case SSL_ERROR_SSL:
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "%s function error (received SSL_ERROR_SSL) (res=%d, ssl_err=%d, errno=%d)",
 			    label, res, ssl_err, errno);
-		nopoll_conn_log_ssl (conn->ctx);
+		nopoll_conn_log_ssl (conn);
 		return -1;
 	default:
 		/* nothing to handle */
@@ -576,13 +582,13 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 			case SSL_ERROR_SYSCALL:
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "syscall error while doing TLS handshake, ssl error (code:%d), conn-id: %d (%p), errno: %d, session: %d",
 					    ssl_error, conn->id, conn, errno, conn->session);
-				nopoll_conn_log_ssl (conn->ctx);
+				nopoll_conn_log_ssl (conn);
 				nopoll_conn_shutdown (conn);
 				return NULL;
 			default:
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "there was an error with the TLS negotiation, ssl error (code:%d) : %s",
 					    ssl_error, ERR_error_string (ssl_error, NULL));
-				nopoll_conn_log_ssl (conn->ctx);
+				nopoll_conn_log_ssl (conn);
 				nopoll_conn_shutdown (conn);
 				return NULL;
 			} /* end switch */
@@ -597,7 +603,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 			} /* end if */
 
 			/* wait a bit before retry */
-			nopoll_sleep (100000 * iterator);
+			nopoll_sleep (10000);
 
 		} /* end while */
 
@@ -1015,8 +1021,15 @@ void          nopoll_conn_shutdown (noPollConn * conn)
 		    conn->id, conn->session, role);
 #endif
 
+	/* call to on close handler if defined */
+	if (conn->session > 0 && conn->on_close)
+	        conn->on_close (conn->ctx, conn, conn->on_close_data);
+
 	/* shutdown connection here */
-	nopoll_close_socket (conn->session);
+	if (conn->session > 0) {
+	        shutdown (conn->session, SHUT_RDWR);
+		nopoll_close_socket (conn->session);
+	}
 	conn->session = -1;
 
 	return;
@@ -1057,9 +1070,8 @@ void          nopoll_conn_close  (noPollConn  * conn)
 
 		/* send close message */
 
-		/* call to shutdown connection and release memory */
-		nopoll_close_socket (conn->session);
-		conn->session = -1;
+		/* call to shutdown connection */
+		nopoll_conn_shutdown (conn);
 	} /* end if */
 
 	/* unregister connection from context */
@@ -2711,6 +2723,30 @@ void          nopoll_conn_set_on_msg (noPollConn              * conn,
 	conn->on_msg_data = user_data;
 
 	return;
+}
+
+/** 
+ * @brief Allows to configure an OnClose handler that will be called
+ * when the connection is closed.
+ *
+ * @param conn The connection to configure with the on close handle.
+ *
+ * @param on_close The handler to be configured.
+ *
+ * @param user_data A reference pointer to be passed in into the handler.
+ */
+void          nopoll_conn_set_on_close (noPollConn            * conn,
+					noPollOnCloseHandler    on_close,
+					noPollPtr               user_data)
+{
+	if (conn == NULL)
+		return;
+
+	/* configure on close handler */
+	conn->on_close      = on_close;
+	conn->on_close_data = user_data;
+
+        return;
 }
 
 /** 

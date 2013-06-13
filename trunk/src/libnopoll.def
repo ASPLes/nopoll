@@ -63,6 +63,7 @@ nopoll_conn_send_pong
 nopoll_conn_send_text
 nopoll_conn_send_text_fragment
 nopoll_conn_set_hook
+nopoll_conn_set_on_close
 nopoll_conn_set_on_msg
 nopoll_conn_set_sock_block
 nopoll_conn_set_sock_tcp_nodelay
