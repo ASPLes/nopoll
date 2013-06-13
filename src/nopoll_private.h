@@ -212,6 +212,12 @@ struct _noPollConn {
 	noPollOnMessageHandler on_msg;
 	noPollPtr              on_msg_data;
 
+	/** 
+	 * @internal Reference to the defined on close handling.
+	 */
+	noPollOnCloseHandler   on_close;
+	noPollPtr              on_close_data;
+
 	/* reference to the handshake */
 	noPollHandShake  * handshake;
 
