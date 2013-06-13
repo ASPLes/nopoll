@@ -80,6 +80,7 @@ noPollCtx * nopoll_ctx_new (void) {
 #endif
 
 	/* set initial reference */
+	result->conn_id = 1;
 	result->refs = 1;
 	result->conn_id = 1;
 
@@ -220,8 +221,6 @@ int            nopoll_ctx_ref_count (noPollCtx * ctx)
 	return result;
 }
 
-int conn_id = 1;
-
 /** 
  * @internal Function used to register the provided connection on the
  * provided context.
@@ -244,8 +243,8 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 	nopoll_mutex_lock (ctx->ref_mutex);
 
 	/* get connection */
-	conn->id = conn_id;
-	conn_id ++;
+	conn->id = ctx->conn_id;
+	ctx->conn_id ++;
 
 	/* register connection */
 	iterator = 0;

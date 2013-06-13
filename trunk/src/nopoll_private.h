@@ -63,7 +63,6 @@ struct _noPollCtx {
 	 */
 	/* context reference counting */
 	int             refs;
-	int             conn_id;
 
 	/* console log */
 	nopoll_bool     not_executed;
@@ -93,6 +92,7 @@ struct _noPollCtx {
 	/** 
 	 * @internal Connection array list and its length.
 	 */
+        int               conn_id;
 	noPollConn     ** conn_list;
 	int               conn_length;
 	/** 
@@ -154,7 +154,6 @@ struct _noPollConn {
 	 * the noPollConn object.
 	 */
 	NOPOLL_SOCKET    session;
-
 	/** 
 	 * @internal Flag to signal this connection has finished its
 	 * handshake.
