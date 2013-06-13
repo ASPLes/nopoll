@@ -479,6 +479,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 	conn = nopoll_new (noPollConn, 1);
 	if (conn == NULL) 
 		return NULL;
+
 	conn->refs = 1;
 
 	/* create mutex */
@@ -490,6 +491,9 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 		nopoll_free (conn);
 		return NULL;
 	}
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Created noPoll conn-id=%d (ptr: %p, context: %p, socket: %d)",
+		    conn->id, conn, ctx, session);
 	
 	/* configure context */
 	conn->ctx     = ctx;
@@ -562,16 +566,16 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
  
 			switch (ssl_error) {
 			case SSL_ERROR_WANT_READ:
-			        nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because read wanted, conn-id=%d",
-					    conn->id);
+			        nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because read wanted, conn-id=%d (%p, session: %d), errno=%d",
+					    conn->id, conn, conn->session, errno);
 				break;
 			case SSL_ERROR_WANT_WRITE:
-			        nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because write wanted, conn-id=%d",
-				      conn->id);
+			        nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because write wanted, conn-id=%d (%p)",
+					    conn->id, conn);
 				break;
 			case SSL_ERROR_SYSCALL:
-				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "syscall error while doing TLS handshake, ssl error (code:%d), conn-id=%d",
-					    ssl_error, conn->id);
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "syscall error while doing TLS handshake, ssl error (code:%d), conn-id: %d (%p), errno: %d, session: %d",
+					    ssl_error, conn->id, conn, errno, conn->session);
 				nopoll_conn_log_ssl (conn->ctx);
 				nopoll_conn_shutdown (conn);
 				return NULL;
@@ -587,13 +591,13 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 			iterator++;
 
 			if (iterator > 100) {
-				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Max retry calls=%d to SSL_connect reached, shutting down connection id=%d",
-					    iterator, conn->id);
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Max retry calls=%d to SSL_connect reached, shutting down connection id=%d, errno=%d",
+					    iterator, conn->id, errno);
 				return NULL;
 			} /* end if */
 
 			/* wait a bit before retry */
-			nopoll_sleep (10000);
+			nopoll_sleep (100000 * iterator);
 
 		} /* end while */
 
@@ -1958,7 +1962,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	if (conn == NULL)
 		return NULL;
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "=== START: conn-id=%d ===", conn->id);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "=== START: conn-id=%d (errno=%d, session: %d) ===", conn->id, errno, conn->session);
 	
 	/* check for accept SSL connection */
 	if (conn->pending_ssl_accept) {
@@ -1975,10 +1979,12 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
  
 			switch (ssl_error) {
 			case SSL_ERROR_WANT_READ:
-				nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because read wanted");
+			        nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because read wanted conn-id=%d (%p, session %d)",
+					    conn->id, conn, conn->session);
 				return NULL;
 			case SSL_ERROR_WANT_WRITE:
-				nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because write wanted");
+			        nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "still not prepared to continue because write wanted conn-id=%d (%p)",
+					    conn->id, conn);
 				return NULL;
 			default:
 				break;
