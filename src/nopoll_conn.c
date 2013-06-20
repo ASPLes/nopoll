@@ -2400,7 +2400,7 @@ read_payload:
  * include a pause between sending the header and the rest of the
  * content.
  */
-int           __nopoll_conn_send_common (noPollConn * conn, const char * content, long length, nopoll_bool has_fin, long sleep_in_header)
+int           __nopoll_conn_send_common (noPollConn * conn, const char * content, long length, nopoll_bool has_fin, long sleep_in_header, noPollOpCode frame_type)
 {
 	if (conn == NULL || content == NULL || length == 0 || length < -1)
 		return -1;
@@ -2410,19 +2410,25 @@ int           __nopoll_conn_send_common (noPollConn * conn, const char * content
 		return -1;
 	} /* end if */
 
-	if (length == -1)
+	if (length == -1) {
+		if (NOPOLL_BINARY_FRAME == frame_type) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received length == -1 for binary frame. Unable to guess length");
+			return -1;
+		} /* end if */
+
 		length = strlen (content);
+	}
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_send_text: Attempting to send %d bytes", (int) length);
 
 	/* sending content as client */
 	if (conn->role == NOPOLL_ROLE_CLIENT) {
 		return nopoll_conn_send_frame (conn, /* fin */ has_fin, /* masked */ nopoll_true, 
-					       NOPOLL_TEXT_FRAME, length, (noPollPtr) content, sleep_in_header);
+					       frame_type, length, (noPollPtr) content, sleep_in_header);
 	} /* end if */
 
 	/* sending content as listener */
 	return nopoll_conn_send_frame (conn, /* fin */ has_fin, /* masked */ nopoll_false, 
-				       NOPOLL_TEXT_FRAME, length, (noPollPtr) content, sleep_in_header);	
+				       frame_type, length, (noPollPtr) content, sleep_in_header);	
 }
 
 /** 
@@ -2448,7 +2454,7 @@ int           __nopoll_conn_send_common (noPollConn * conn, const char * content
 int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length)
 {
 	/* do a send common operation with FIN = 1 */
-	return __nopoll_conn_send_common (conn, content, length, nopoll_true, 0);
+	return __nopoll_conn_send_common (conn, content, length, nopoll_true, 0, NOPOLL_TEXT_FRAME);
 }
 
 /** 
@@ -2476,8 +2482,61 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * content, long length)
 {
 	/* do a send common operation with FIN = 0 */
-	return __nopoll_conn_send_common (conn, content, length, nopoll_false, 0);
+	return __nopoll_conn_send_common (conn, content, length, nopoll_false, 0, NOPOLL_TEXT_FRAME);
 }
+
+/** 
+ * @brief Allows to send a binary (op code 2) message over the
+ * provided connection with the provided length.
+ *
+ * @param conn The connection where the message will be sent.
+ *
+ * @param content The content to be sent (it should be utf-8 content
+ * or the function will fail).
+ *
+ * @param length Amount of bytes to take from the content to be
+ * sent. Note you cannot pass in -1 (unlike \ref nopoll_conn_send_text).
+ *
+ * @return The number of bytes written otherwise < 0 is returned in
+ * case of failure. The function will fail if some parameter is NULL
+ * or undefined. In the case of failure, also check errno variable to
+ * know more what went wrong.
+ *
+ * See \ref nopoll_manual_retrying_write_operations to know more about error codes and when it is possible to retry write operations.
+ */
+int           nopoll_conn_send_binary (noPollConn * conn, const char * content, long length)
+{
+	return __nopoll_conn_send_common (conn, content, length, nopoll_true, 0, NOPOLL_BINARY_FRAME);
+}
+
+
+/** 
+ * @brief Allows to send a binary (op code 2) message over the
+ * provided connection with the provided length but flagging the frame
+ * sent as not complete (more frames to come, that is, FIN = 0).
+ *
+ * @param conn The connection where the message will be sent.
+ *
+ * @param content The content to be sent (it should be utf-8 content
+ * or the function will fail).
+ *
+ * @param length Amount of bytes to take from the content to be
+ * sent. Note you cannot pass in -1 (unlike \ref
+ * nopoll_conn_send_text).
+ *
+ * @return The number of bytes written otherwise < 0 is returned in
+ * case of failure. The function will fail if some parameter is NULL
+ * or undefined. In the case of failure, also check errno variable to
+ * know more what went wrong.
+ *
+ * See \ref nopoll_manual_retrying_write_operations to know more about
+ * error codes and when it is possible to retry write operations.
+ */
+int           nopoll_conn_send_binary_fragment (noPollConn * conn, const char * content, long length)
+{
+	return __nopoll_conn_send_common (conn, content, length, nopoll_true, 0, NOPOLL_BINARY_FRAME);
+}
+
 
 /** 
  * @brief Allows to read the provided amount of bytes from the

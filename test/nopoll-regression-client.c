@@ -1388,7 +1388,7 @@ nopoll_bool test_16 (void) {
 	iterator = 0;
 	while (iterator < 10) {
 		printf ("Test 16: send sleep in header content (waiting 1000 ms, iterator=%d)..\n", iterator);
-		if (__nopoll_conn_send_common (conn, "This is a test", 14, nopoll_true, 400000) != 14) {
+		if (__nopoll_conn_send_common (conn, "This is a test", 14, nopoll_true, 400000, NOPOLL_TEXT_FRAME) != 14) {
 			printf ("ERROR: failed to send content..\n");
 			return nopoll_false;
 		} /* end if */
