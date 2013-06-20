@@ -57,6 +57,8 @@ nopoll_conn_readline
 nopoll_conn_ref
 nopoll_conn_ref_count
 nopoll_conn_role
+nopoll_conn_send_binary
+nopoll_conn_send_binary_fragment
 nopoll_conn_send_frame
 nopoll_conn_send_ping
 nopoll_conn_send_pong

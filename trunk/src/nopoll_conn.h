@@ -113,6 +113,10 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
 
 int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * content, long length);
 
+int           nopoll_conn_send_binary (noPollConn * conn, const char * content, long length);
+
+int           nopoll_conn_send_binary_fragment (noPollConn * conn, const char * content, long length);
+
 int           nopoll_conn_complete_pending_write (noPollConn * conn);
 
 int           nopoll_conn_pending_write_bytes    (noPollConn * conn);
@@ -141,7 +145,8 @@ int           __nopoll_conn_send_common (noPollConn * conn,
 					 const char * content, 
 					 long         length, 
 					 nopoll_bool  has_fin, 
-					 long         sleep_in_header);
+					 long         sleep_in_header,
+					 noPollOpCode frame_type);
 
 nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
 							  int          timeout);
