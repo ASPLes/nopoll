@@ -56,7 +56,7 @@ AM_PROG_LIBTOOL
 compiler_options=""
 STRICT_PROTOTYPES=""
 if test "$compiler" = "gcc" ; then
-   compiler_options="-Wstrict-prototypes -Wall -Werror -g -ansi"
+   compiler_options="-Wstrict-prototypes -Wall -Werror -g -ansi -fstack-protector-all -Wstack-protector"
    echo "Detected gcc compiler: $compiler, adding options: $compiler_options"
 fi
 AC_SUBST(compiler_options)
