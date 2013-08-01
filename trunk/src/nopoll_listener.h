@@ -55,7 +55,7 @@ noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
 
 nopoll_bool       nopoll_listener_set_certificate (noPollConn * listener,
 						   const char * certificate,
-						   const char * private,
+						   const char * private_key,
 						   const char * chain_file);
 
 noPollConn      * nopoll_listener_from_socket (noPollCtx      * ctx,

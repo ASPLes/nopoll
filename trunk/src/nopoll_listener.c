@@ -254,12 +254,12 @@ noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
  */
 nopoll_bool           nopoll_listener_set_certificate (noPollConn * listener,
 						       const char * certificate,
-						       const char * private,
+						       const char * private_key,
 						       const char * chain_file)
 {
 	FILE * handle;
 
-	if (! listener || ! certificate || ! private)
+	if (! listener || ! certificate || ! private_key)
 		return nopoll_false;
 
 	/* check certificate file */
@@ -271,16 +271,16 @@ nopoll_bool           nopoll_listener_set_certificate (noPollConn * listener,
 	fclose (handle);
 
 	/* check private file */
-	handle = fopen (private, "r");
+	handle = fopen (private_key, "r");
 	if (! handle) {
-		nopoll_log (listener->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to open private key file from %s", private);
+		nopoll_log (listener->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to open private key file from %s", private_key);
 		return nopoll_false;
 	} /* end if */
 	fclose (handle);
 
 	/* copy certificates to be used */
 	listener->certificate_file = strdup (certificate);
-	listener->private_file     = strdup (private);
+	listener->private_file     = strdup (private_key);
 	nopoll_log (listener->ctx, NOPOLL_LEVEL_DEBUG, "Configured certificate: %s, key: %s, for conn id: %d",
 		    listener->certificate_file, listener->private_file, listener->id);
 
