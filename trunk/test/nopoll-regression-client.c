@@ -304,7 +304,7 @@ nopoll_bool test_02 (void) {
 	} /* end if */
 
 	/* check content received */
-	if (! nopoll_cmp (nopoll_msg_get_payload (msg), "This is a test")) {
+	if (! nopoll_cmp ((char*) nopoll_msg_get_payload (msg), "This is a test")) {
 		printf ("ERROR: expected to find message 'This is a test' but something different was received: '%s'..\n",
 			(const char *) nopoll_msg_get_payload (msg));
 		return nopoll_false;
@@ -1260,7 +1260,7 @@ nopoll_bool test_14 (void) {
 	} /* end if */
 
 	/* check content received */
-	if (! nopoll_cmp (nopoll_msg_get_payload (msg), "Hello")) {
+	if (! nopoll_cmp ((char*) nopoll_msg_get_payload (msg), "Hello")) {
 		printf ("ERROR: expected to find message 'This is a test' but something different was received: '%s'..\n",
 			(const char *) nopoll_msg_get_payload (msg));
 		return nopoll_false;

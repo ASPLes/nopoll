@@ -217,8 +217,8 @@ nopoll_bool  nopoll_msg_is_fragment (noPollMsg * msg)
 noPollOpCode nopoll_msg_opcode (noPollMsg * msg)
 {
 	if (msg == NULL)
-		return -1;
-	return msg->op_code;
+		return NOPOLL_UNKNOWN_OP_CODE;
+	return (noPollOpCode) msg->op_code;
 }
 
 /** 

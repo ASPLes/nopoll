@@ -73,7 +73,7 @@ noPollPtr nopoll_io_wait_select_create (noPollCtx * ctx)
  */
 void    nopoll_io_wait_select_destroy (noPollCtx * ctx, noPollPtr fd_group)
 {
-	fd_set * __fd_set = fd_group;
+	fd_set * __fd_set = (fd_set *) fd_group;
 
 	/* release memory allocated */
 	nopoll_free (__fd_set);
@@ -90,7 +90,7 @@ void    nopoll_io_wait_select_destroy (noPollCtx * ctx, noPollPtr fd_group)
  */
 void    nopoll_io_wait_select_clear (noPollCtx * ctx, noPollPtr __fd_group)
 {
-	noPollSelect * select = __fd_group;
+	noPollSelect * select = (noPollSelect *) __fd_group;
 
 	/* clear the fd set */
 	select->length = 0;
@@ -114,7 +114,7 @@ int nopoll_io_wait_select_wait (noPollCtx * ctx, noPollPtr __fd_group)
 {
 	int                 result = -1;
 	struct timeval      tv;
-	noPollSelect     * _select = __fd_group;
+	noPollSelect     * _select = (noPollSelect *) __fd_group;
 
 	/* init wait */
 	tv.tv_sec    = 0;
@@ -177,7 +177,7 @@ nopoll_bool      nopoll_io_wait_select_is_set (noPollCtx   * ctx,
 					       int           fds, 
 					       noPollPtr      __fd_set)
 {
-	noPollSelect * select = __fd_set;
+	noPollSelect * select = (noPollSelect *) __fd_set;
 	
 	return FD_ISSET (fds, &(select->set));
 }

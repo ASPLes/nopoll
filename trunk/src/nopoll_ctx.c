@@ -278,7 +278,7 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 	/* if reached this place it means no more buckets are
 	 * available, acquire more memory (increase 10 by 10) */
 	ctx->conn_length += 10;
-	ctx->conn_list = nopoll_realloc (ctx->conn_list, sizeof (noPollConn *) * (ctx->conn_length));
+	ctx->conn_list = (noPollConn**) nopoll_realloc (ctx->conn_list, sizeof (noPollConn *) * (ctx->conn_length));
 	if (ctx->conn_list == NULL) {
 		/* release mutex */
 		nopoll_mutex_unlock (ctx->ref_mutex);
@@ -490,7 +490,7 @@ nopoll_bool           nopoll_ctx_set_certificate (noPollCtx  * ctx,
 	if (length == 1)
 		ctx->certificates = nopoll_new (noPollCertificate, 1);
 	else
-		ctx->certificates = nopoll_realloc (ctx->certificates, sizeof (noPollCertificate) * (length));
+		ctx->certificates = (noPollCertificate *) nopoll_realloc (ctx->certificates, sizeof (noPollCertificate) * (length));
 
 	/* hold certificate */
 	cert = &(ctx->certificates[length - 1]);
