@@ -42,11 +42,11 @@
 #include <nopoll_decl.h>
 #include <nopoll_handlers.h>
 
+BEGIN_C_DECLS
+
 #if defined(NOPOLL_OS_WIN32)
 #include <nopoll_win32.h>
 #endif
-
-BEGIN_C_DECLS
 
 #include <nopoll_ctx.h>
 #include <nopoll_io.h>
