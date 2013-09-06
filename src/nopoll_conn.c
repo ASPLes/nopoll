@@ -1408,7 +1408,7 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 	return nread;
 }
 
-nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, int buffer_size, char * method, char ** url)
+nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, int buffer_size, const char * method, char ** url)
 {
 	int          iterator;
 	int          iterator2;
@@ -1544,10 +1544,10 @@ nopoll_bool nopoll_conn_check_mime_header_repeated (noPollConn   * conn,
 
 char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_key)
 {
-	char      * static_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";	
-	char      * accept_key;	
-	int         accept_key_size;
-	int         key_length;
+	const char * static_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";	
+	char       * accept_key;	
+	int          accept_key_size;
+	int          key_length;
 
 	if (websocket_key == NULL)
 		return NULL;
@@ -2265,7 +2265,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 
 	/* get more bytes */
 	if (msg->is_masked) {
-		bytes = __nopoll_conn_receive (conn, (noPollPtr) msg->mask, 4);
+		bytes = __nopoll_conn_receive (conn, (char *) msg->mask, 4);
 		if (bytes != 4) {
 			/* record header read so far */
 			memcpy (conn->pending_buf, buffer, header_size);
@@ -2324,7 +2324,7 @@ read_payload:
 	} /* end if */
 
 	
-	bytes = __nopoll_conn_receive (conn, msg->payload, msg->payload_size);
+	bytes = __nopoll_conn_receive (conn, (char *) msg->payload, msg->payload_size);
 	if (bytes < 0) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Connection lost during message reception, dropping connection id=%d, bytes=%d, errno=%d : %s", 
 			    conn->id, bytes, errno, strerror (errno));
@@ -2374,7 +2374,7 @@ read_payload:
 	if (msg->is_masked) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Unmasking (payload size %d, mask: %d, msg: %p, desp: %d)", 
 			    msg->payload_size, nopoll_get_32bit (msg->mask), msg, msg->unmask_desp);
-		nopoll_conn_mask_content (conn->ctx, msg->payload, msg->payload_size, msg->mask, msg->unmask_desp);
+		nopoll_conn_mask_content (conn->ctx, (char*) msg->payload, msg->payload_size, (char*) msg->mask, msg->unmask_desp);
 
 		/* flag what was unmasked */
 		msg->unmask_desp = msg->payload_size;

@@ -103,7 +103,7 @@ void nopoll_loop_process_data (noPollCtx * ctx, noPollConn * conn)
  */
 nopoll_bool nopoll_loop_process (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
 {
-	int        * conn_changed = user_data;
+	int        * conn_changed = (int *) user_data;
 
 	/* check if the connection have something to notify */
 	if (ctx->io_engine->isset (ctx, conn->session, ctx->io_engine->io_object)) {

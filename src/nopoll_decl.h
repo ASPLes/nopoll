@@ -369,6 +369,10 @@ typedef enum {
  */
 typedef enum {
 	/** 
+	 * @brief Support to model unknown op code.
+	 */
+	NOPOLL_UNKNOWN_OP_CODE = -1,
+	/** 
 	 * @brief Denotes a continuation frame.
 	 */
 	NOPOLL_CONTINUATION_FRAME = 0,

@@ -41,6 +41,13 @@
 
 #include <nopoll_decl.h>
 #include <nopoll_handlers.h>
+
+#if defined(NOPOLL_OS_WIN32)
+#include <nopoll_win32.h>
+#endif
+
+BEGIN_C_DECLS
+
 #include <nopoll_ctx.h>
 #include <nopoll_io.h>
 #include <nopoll_conn.h>
@@ -49,12 +56,6 @@
 #include <nopoll_listener.h>
 #include <nopoll_io.h>
 #include <nopoll_loop.h>
-
-#if defined(NOPOLL_OS_WIN32)
-#include <nopoll_win32.h>
-#endif
-
-BEGIN_C_DECLS
 
 /** 
  * \addtogroup nopoll_module
