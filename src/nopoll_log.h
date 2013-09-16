@@ -70,7 +70,7 @@ void            nopoll_log_set_handler (noPollCtx * ctx, noPollLogHandler handle
 #elif defined(_MSC_VER)
 #  define __function_name__ __FUNCDNAME__
 #  define __line__            __LINE__
-#  define __line__            __FILE__
+#  define __file__            __FILE__
 #else
 /* unknown compiler */
 #define __function_name__ ""
