@@ -516,7 +516,6 @@ nopoll_bool nopoll_base64_encode (const char  * content,
 	BIO     * b64;
 	BIO     * bmem;
 	BUF_MEM * bptr;
-	int       bwritten;
 
 	if (content == NULL || output == NULL || length <= 0 || output_size == NULL)
 		return nopoll_false;
@@ -529,16 +528,22 @@ nopoll_bool nopoll_base64_encode (const char  * content,
 	b64  = BIO_push(b64, bmem);
 	
 	if (BIO_write (b64, content, length) != length) {
-		printf ("Write values difers..%d\n", length);
+		BIO_free_all (b64);
 		return nopoll_false;
 	}
-	bwritten = BIO_flush (b64);
+
+	if (BIO_flush (b64) != 1) {
+		BIO_free_all (b64);
+		return nopoll_false;
+	}
 
 	/* now get content */
 	BIO_get_mem_ptr (b64, &bptr);
 	
 	/* check output size */
 	if ((*output_size) < bptr->length) {
+		BIO_free_all (b64);
+
 		*output_size = bptr->length;
 		return nopoll_false;
 	}

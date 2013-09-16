@@ -396,6 +396,8 @@ nopoll_bool test_04 (int chunk_size) {
 	/* create context */
 	ctx = create_ctx ();
 
+	printf ("Test 04: running test with chunk_size=%d\n", chunk_size);
+
 	/* check connections registered */
 	if (nopoll_ctx_conns (ctx) != 0) {
 		printf ("ERROR: expected to find 0 registered connections but found: %d\n", nopoll_ctx_conns (ctx));
@@ -970,7 +972,7 @@ nopoll_bool test_08 (void) {
 	nopoll_sleep (100000);
 
 	if (nopoll_conn_is_ready (conn)) {
-		printf ("ERROR: Expected to FAILING connection status, but found error..\n");
+		printf ("ERROR: Expected a FAILING connection status, but found error..\n");
 		return nopoll_false;
 	} /* end if */
 
@@ -1001,7 +1003,7 @@ nopoll_bool test_09 (void) {
 	nopoll_sleep (100000);
 
 	if (nopoll_conn_is_ready (conn)) {
-		printf ("ERROR: Expected to FAILING connection status due to protocol version error, but it working..\n");
+		printf ("ERROR: Expected a FAILING connection status due to protocol version error, but it working..\n");
 		return nopoll_false;
 	} /* end if */
 
@@ -1029,7 +1031,7 @@ nopoll_bool test_10 (void) {
 	nopoll_sleep (100000);
 
 	if (nopoll_conn_is_ready (conn)) {
-		printf ("ERROR: Expected to FAILING connection status due to origing denied, but it working..\n");
+		printf ("ERROR: Expected a FAILING connection status due to origing denied, but it working..\n");
 		return nopoll_false;
 	} /* end if */
 
@@ -1054,7 +1056,7 @@ nopoll_bool test_11 (void) {
 	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 
 	if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
-		printf ("ERROR: Expected to FAILING connection status due to origing denied, but it working..\n");
+		printf ("ERROR: Expected a FAILING connection status due to origing denied, but it working..\n");
 		return nopoll_false;
 	} /* end if */
 
@@ -1096,7 +1098,7 @@ nopoll_bool test_12 (void) {
 		conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 		
 		if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
-			printf ("ERROR: Expected to FAILING connection status due to origing denied, but it working..\n");
+			printf ("ERROR: Expected NOT to find a FAILING connection status, errno is=%d..\n", errno);
 			return nopoll_false;
 		} /* end if */
 

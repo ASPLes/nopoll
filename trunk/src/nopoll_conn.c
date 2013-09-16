@@ -307,7 +307,9 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
  */
 int nopoll_conn_log_ssl (noPollConn * conn)
 {
+#if defined(SHOW_DEBUG_LOG)
         noPollCtx      * ctx = conn->ctx;
+#endif
 	char             log_buffer [512];
 	unsigned long    err;
 	int              error_position;
