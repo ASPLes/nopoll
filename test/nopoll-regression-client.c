@@ -1522,16 +1522,16 @@ nopoll_bool test_17 (void) {
 	ctx = create_ctx ();
 
 	/* create a listener */
-	master = nopoll_listener_new (ctx, "0.0.0.0", "2235");
+	master = nopoll_listener_new (ctx, "0.0.0.0", "22351");
 	printf ("Test 17: created master listener (conn-id=%d, status=%d)\n", 
 		nopoll_conn_get_id (master), nopoll_conn_is_ok (master));
 	if (! nopoll_conn_is_ok (master)) {
-		printf ("ERROR: expected proper master listener creation but a failure was found..\n");
+		printf ("ERROR: expected proper master listener at 0.0.0.0:2235 creation but a failure was found..\n");
 		return nopoll_false;
 	} /* end if */
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "2235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", "22351", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;

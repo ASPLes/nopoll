@@ -1,0 +1,107 @@
+                 --== noPoll toolkit ==--
+                   God save the fence!
+                          0.2.5
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  New stable release that support reading partial frames (part of the
+  header or part of the mask) without consider that as a failure and
+  without blocking the caller. Next calls will reuse those bytes to
+  try to complete incoming data.
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Several updates to add additional logging information. Updated
+  conn_id handling to move it into the context (instead of a global
+  variable which tends to cause races in threaded applications).
+
+* [fix] Updated noPoll Connection API to include support to notify
+  connection close. API added:
+  
+  - nopoll_conn_set_on_close
+  - noPollOnCloseHandler
+
+* [new] Added new API functions that allows sending binary frames (op
+  code 2). API added:
+
+  - nopoll_conn_send_binary
+  - nopoll_conn_send_binary_fragment
+
+* [fix] Added SSP gcc compiler options by default.
+
+* [fix] Renamed private parameter to private_key at
+  nopoll_listener_set_certificate so c++ can get get this
+  compiled. Reported by Mike.
+
+* [fix] Various modifications to make the project to be compilable
+  with c++ tools. Bug reported by Ali kim
+
+* [fix] More c++ begin c decls fixings..
+
+* [fix] Fixed wrong reference to __file__ (was pointing to __LINE__)
+  inside nopoll_log.h (for win32 compilation).  Reported by fixed
+  Serge.
+
+* [fix] Added some additional nopoll_base64_encode cleanups to ensure
+  all resources are released under error. Checked call to flush
+  internal BIO.
+
+* [fix] Fixed compilation warning at nopoll_conn.c (due to unused
+   variable when SHOW_DEBUG_LOG isn't defined).
+
+* [fix] Updated regression code to detect some cases where listener is
+   not able to send at a particular moment.
+
+* [fix] Some additional modifications to make the regression test to
+  work..  ...on windows 32 xp..
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organization to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+16th Sep 2013, Madrid (Spain)
+
