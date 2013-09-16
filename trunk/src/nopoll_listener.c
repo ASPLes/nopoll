@@ -243,7 +243,7 @@ noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
  * format) to be used for every TLS connection received under the
  * provided listener.
  *
- * @param private The path to the key file (PEM format) to be used for
+ * @param private_key The path to the key file (PEM format) to be used for
  * every TLS connection received under the provided listener.
  *
  * @param chain_file The path to additional chain certificates (PEM
