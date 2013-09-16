@@ -173,7 +173,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 			/* send content */
 			if (bytes > 0) {
 				/* send content and get the result */
-				printf ("Sending message with %d bytes..\n", bytes);
+				/* printf ("Sending message with %d bytes..\n", bytes); */
 				/* nopoll_log_enable (ctx, nopoll_true); */
 				
 				while (nopoll_true) {
@@ -183,12 +183,12 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 					if (sent != bytes) {
 						if (errno == NOPOLL_EWOULDBLOCK) {
 							nopoll_sleep (1000);
-							printf ("   ..retrying..sending message with %d bytes..\n", bytes);
+							/* printf ("   ..retrying..sending message with %d bytes..\n", bytes); */
 							continue;
 						} /* end if */
+						printf ("ERROR: expected to send %d bytes but sent different content size (%d bytes), errno=%d (%d)..\n", 
+							bytes, sent, errno, NOPOLL_EWOULDBLOCK);
 					} /* end if */
-					printf ("ERROR: expected to send %d bytes but sent different content size (%d bytes), errno=%d (%d)..\n", 
-						bytes, sent, errno, NOPOLL_EWOULDBLOCK);
 					break;
 				}
 			} /* end if */

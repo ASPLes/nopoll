@@ -601,7 +601,7 @@ nopoll_bool test_04b (void) {
 	} /* end if */
 
 	iterator = 0;
-	while (iterator < 3) {
+	while (iterator < 10) {
 		printf ("Test 04-b: found pending write bytes=%d\n", nopoll_conn_pending_write_bytes (conn));
 
 		/* call to flush bytes */
