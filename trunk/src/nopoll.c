@@ -206,7 +206,9 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 	noPollCtx * ctx = NULL;
 #endif
 
+#if !defined(NOPOLL_HAVE_VASPRINTF)
 	int       size;
+#endif
 	char    * result   = NULL;
 
 	if (chunk == NULL)
@@ -214,7 +216,8 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 
 #ifdef NOPOLL_HAVE_VASPRINTF
 	/* do the operation using the GNU extension */
-	size = vasprintf (&result, chunk, args);
+	if (vasprintf (&result, chunk, args) == -1)
+	        return NULL;
 #else
 	/* get the amount of memory to be allocated */
 	size = nopoll_vprintf_len (chunk, args);
