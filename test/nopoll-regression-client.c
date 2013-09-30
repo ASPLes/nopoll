@@ -1601,6 +1601,36 @@ nopoll_bool test_17 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_18 (void) {
+
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1235", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	printf ("Test 18: waiting on nopoll_loop_wait (1 seconds)...\n");
+	nopoll_loop_wait (ctx, 1);
+	printf ("Test 18: waiting on nopoll_loop_wait (1 seconds)...\n");
+	nopoll_loop_wait (ctx, 1);
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	/* report finish */
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -1813,6 +1843,13 @@ int main (int argc, char ** argv)
 		printf ("Test 17: check partial frame reception [   OK    ]\n");
 	} else {
 		printf ("Test 17: check partial frame reception [ FAILED  ]\n");
+		return -1;
+	}
+
+	if (test_18 ()) {
+		printf ("Test 18: check nopoll_loop_wait (second call) [   OK    ]\n");
+	} else {
+		printf ("Test 18: check nopoll_loop_wait (second call) [ FAILED  ]\n");
 		return -1;
 	}
 

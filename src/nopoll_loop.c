@@ -216,7 +216,7 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 		ctx->io_engine->clear (ctx, ctx->io_engine->io_object);
 		
 		/* add all connections */
-		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding connections to watch: %d", ctx->conn_num); */
+		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding connections to watch: %d", ctx->conn_num);  */
 		nopoll_ctx_foreach_conn (ctx, nopoll_loop_register, NULL);
 
 		/* if (errno == EBADF) { */
@@ -237,12 +237,11 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 		} /* end if */
 
 		/* check how many connections changed and restart */
-		if (wait_status == 0) 
-			continue;
-
-		/* check and call for connections with something
-		 * interesting */
-		nopoll_ctx_foreach_conn (ctx, nopoll_loop_process, &wait_status);
+		if (wait_status > 0) {
+			/* check and call for connections with something
+			 * interesting */
+			nopoll_ctx_foreach_conn (ctx, nopoll_loop_process, &wait_status);
+		}
 
 		/* check to stop wait operation */
 		if (timeout > 0) {
@@ -260,6 +259,7 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 
 	/* release engine */
 	nopoll_io_release_engine (ctx->io_engine);
+	ctx->io_engine = NULL;
 
 	return 0;
 }
