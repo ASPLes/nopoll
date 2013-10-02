@@ -1956,7 +1956,7 @@ void nopoll_conn_mask_content (noPollCtx * ctx, char * payload, int payload_size
  * connection. The function returns NULL in the case no message is
  * still ready to be returned. 
  *
- * The function do not block.
+ * The function do not block. 
  *
  * @param conn The connection where the read operation will take
  * place.
