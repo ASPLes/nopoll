@@ -268,8 +268,11 @@ doc/nopoll.doxygen
 test/Makefile
 nopoll.pc])
 
+export NOPOLL_VERSION
+sed -i "s/__NOPOLL_VERSION__/$NOPOLL_VERSION/g" doc/nopoll.doxygen
+
 echo "------------------------------------------"
-echo "--       LibNoPoll LIBRARY SETTINGS     --"
+echo "--       LibNoPoll (${NOPOLL_VERSION}) LIBRARY SETTINGS     --"
 echo "------------------------------------------"
 echo "   Installation prefix:            [$prefix]"
 echo "      select(2) support:           [yes]"
