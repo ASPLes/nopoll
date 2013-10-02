@@ -939,13 +939,14 @@ void nopoll_cleanup_library (void)
  * - \ref creating_basic_web_socket_server
  * - \ref creating_basic_web_socket_client
  * - \ref nopoll_manual_reading_content_from_connection
+ * - \ref nopoll_manual_handling_fragments_with_websocket
  *
  * <b>Section 2: Advanced concepts to consider: </b>
  *
  * - \ref nopoll_manual_retrying_write_operations
  * - \ref nopoll_implementing_port_sharing 
  *
- * \section installing_nopoll 1. How to install noPoll 
+ * \section installing_nopoll 1.1 How to install noPoll 
  *
  * Currently, noPoll has only one dependency, which is OpenSSL
  * (libssl) for all those crypto operations required by the protocol
@@ -982,7 +983,7 @@ void nopoll_cleanup_library (void)
  * >> make install
  * \endcode
  *
- * \section using_nopoll 2. How to use noPoll library into your application
+ * \section using_nopoll 1.2. How to use noPoll library into your application
  *
  * After a successful noPoll installation, you should be able to
  * include noPoll API functions by including the following header:
@@ -1013,7 +1014,7 @@ void nopoll_cleanup_library (void)
  * AM_CONDITIONAL(ENABLE_WEBSOCKET_SUPPORT, test "x$enable_websocket_support" = "xyes")
  * \endcode
  *
- * \section thread_safety 3. noPoll thread safety considerations
+ * \section thread_safety 1.3. noPoll thread safety considerations
  *
  * noPoll is designed as a thread agnostic stateless library so it can
  * fit in any project configuration (no matter if it uses threads or
@@ -1026,7 +1027,7 @@ void nopoll_cleanup_library (void)
  * mutexes. For that, check documentation about \ref
  * nopoll_thread_handlers
  *
- * \section creating_a_nopoll_ctx 4. Creating a noPoll context
+ * \section creating_a_nopoll_ctx 1.4. Creating a noPoll context
  *
  * Before working with noPoll API you must create a
  * \ref noPollCtx object, which represents a single library instance
@@ -1050,7 +1051,7 @@ void nopoll_cleanup_library (void)
  * 
  *
  *
- * \section creating_basic_web_socket_server 5. Creating a basic WebSocket server with noPoll (using noPoll own loop)
+ * \section creating_basic_web_socket_server 1.5. Creating a basic WebSocket server with noPoll (using noPoll own loop)
  *
  * \note Remember you can see many of the code already supported by noPoll by checking the nopoll regression listener at: https://dolphin.aspl.es/svn/publico/nopoll/trunk/test/nopoll-regression-listener.c
  *
@@ -1087,7 +1088,7 @@ void nopoll_cleanup_library (void)
  * }
  * \endcode
  * 
- * \section creating_basic_web_socket_client 6. Creating a basic WebSocket client with noPoll
+ * \section creating_basic_web_socket_client 1.6. Creating a basic WebSocket client with noPoll
  *
  * \note Remember you can see many of the code already supported by noPoll by checking the nopoll regression client at: https://dolphin.aspl.es/svn/publico/nopoll/trunk/test/nopoll-regression-client.c
  *
@@ -1129,7 +1130,7 @@ void nopoll_cleanup_library (void)
  *
  * Now, to receive the content from this connection see the following.
  * 
- * \section nopoll_manual_reading_content_from_connection 7. How to handle read I/O operations on noPollConn objects (or how it integrates with existing I/O loops).
+ * \section nopoll_manual_reading_content_from_connection 1.7. How to handle read I/O operations on noPollConn objects (or how it integrates with existing I/O loops).
  *
  * Now, to receive content from connections (or to handle master listeners requests) you can use the following methods:
  *
@@ -1139,7 +1140,41 @@ void nopoll_cleanup_library (void)
  *   socket associated to the noPollConn object (see \ref
  *   nopoll_conn_socket). In the case of detecting changes on a master listener connection use to \ref nopoll_conn_accept to accept new incoming connections. In the case of detecting changes in connections with I/O, call to \ref nopoll_conn_get_msg to receive entire messages or \ref nopoll_conn_read (if you want to use streaming API).
  *
- * \section nopoll_manual_retrying_write_operations 8. Retrying failed write operations 
+ * \section nopoll_manual_handling_fragments_with_websocket 1.8 Will noPoll automatically integrate fragments into a single  message?.
+ *  
+ * Ok, in general it does, however we would have to look into the
+ * particular case to give a correct answer. That's because the term
+ * "fragment" is *really* broad especially for WebSocket.
+ * 
+ * In general, <b>you shouldn't design in a way that this is important
+ * for your application to work</b>. All about WebSocket must be designed
+ * as if you were working with a stream oriented socket.
+ *
+ * For example, WebSocket standard states that any intermediary may
+ * split or join frames. And by any intermediary we mean any WebSocket
+ * stack in the middle of the transmission including the sender and
+ * the receiver.
+ *
+ * The practical implication is that if your WebSocket peer sends a
+ * message, it may reach to the other peer consolidated along with
+ * other smaller messages or it may be received as several "complete"
+ * WebSocket frames.
+ *
+ * In general noPoll tries to consolidate internal frame fragments but
+ * only for some particular functions like (\ref
+ * nopoll_conn_get_msg). For example, if a frame fragment is received,
+ * that is, just the header and part of the body, this particular
+ * function will "wait" until the entire body is received. And by
+ * "wait" we mean the function will return NULL, waiting you to call
+ * again in the future to get the entire message.
+ *
+ * In general, even though the standard allows it (as we saw), noPoll
+ * doesn't do any split or join operation to avoid confusion. However,
+ * some API calls like \ref nopoll_conn_read, which provides an "stream
+ * view" of the connection, will serve bytes as they come (so the
+ * frame concept is not present in this case).
+ *
+ * \section nopoll_manual_retrying_write_operations 2.1. Retrying failed write operations 
  *
  * Every time you do a write operation (using for example \ref
  * nopoll_conn_send_text or \ref nopoll_conn_send_text_fragment) there
@@ -1228,7 +1263,7 @@ void nopoll_cleanup_library (void)
  *
  * \endcode
  * 
- * \section nopoll_implementing_port_sharing  9. Implementing protocol port sharing: running WebSocket and legacy protocol on the same port
+ * \section nopoll_implementing_port_sharing  2.2. Implementing protocol port sharing: running WebSocket and legacy protocol on the same port
  *
  * Current noPoll design allows to implement full WebSocket connection
  * accept by calling to \ref nopoll_conn_accept but also it is
