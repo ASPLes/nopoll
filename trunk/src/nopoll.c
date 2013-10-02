@@ -874,9 +874,9 @@ void nopoll_cleanup_library (void)
 /* @} */
 
 /** 
- * \mainpage noPoll: a toolkit to add WebSocket support to your project.
+ * \mainpage 
  *
- * \section intro Introduction
+ * \section intro noPoll: a toolkit to add WebSocket support to your project
  *
  * <b>noPoll</b> is a clean implemetnation of the <b>RFC 6455 : The Websocket protocol</b> definition, written in <b>ANSI C</b>.
  *
