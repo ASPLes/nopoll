@@ -89,7 +89,7 @@ void nopoll_loop_process_data (noPollCtx * ctx, noPollConn * conn)
 	if (conn->on_msg) 
 		conn->on_msg (ctx, conn, msg, conn->on_msg_data);
 	else if (ctx->on_msg)
-		ctx->on_msg (ctx, conn, msg, conn->on_msg_data);
+		ctx->on_msg (ctx, conn, msg, ctx->on_msg_data);
 
 	/* release message */
 	nopoll_msg_unref (msg);
