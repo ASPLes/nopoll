@@ -469,6 +469,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 	int              ssl_error;
 	X509           * server_cert;
 	int              iterator;
+	long             remaining_timeout;
 
 	nopoll_return_val_if_fail (ctx, ctx && host_ip, NULL);
 
@@ -629,11 +630,23 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 	} /* end if */
 
 	/* call to send content */
-	if (size != conn->send (conn, content, size)) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to send websocket init message, error code was: %d, closing session", errno);
-		nopoll_conn_shutdown (conn);
-		conn = NULL;
-	} /* end if */
+	remaining_timeout = ctx->conn_connect_std_timeout;
+	while (remaining_timeout > 0) {
+		if (size != conn->send (conn, content, size)) {
+			if (errno == NOPOLL_EWOULDBLOCK || errno == NOPOLL_EINPROGRESS) {
+				/* nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Connection in progress (errno=%d), session: %d", errno, session); */
+				nopoll_sleep (10000);
+				remaining_timeout -= 10000;
+				continue;
+			} /* end if */
+
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to send websocket init message, error code was: %d (2), closing session", errno);
+			nopoll_conn_shutdown (conn);
+			conn = NULL;
+		} /* end if */
+
+		break;
+	}
 
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Web socket initial client handshake sent");
 

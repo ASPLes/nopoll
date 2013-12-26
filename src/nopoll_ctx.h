@@ -49,7 +49,6 @@ void           nopoll_ctx_unref (noPollCtx * ctx);
 
 int            nopoll_ctx_ref_count (noPollCtx * ctx);
 
-
 nopoll_bool    nopoll_ctx_register_conn (noPollCtx  * ctx, 
 					 noPollConn * conn);
 
