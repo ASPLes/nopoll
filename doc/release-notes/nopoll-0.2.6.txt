@@ -1,0 +1,92 @@
+                 --== noPoll toolkit ==--
+                      Jumping Wave
+                          0.2.6
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  New stable release that includes several corrections. Updated
+  connection code to implement/support really slow connection (using
+  configurable EWOULD_BLOCK and EINPROGRESS).
+
+Thanks to
+~~~~~~~~~
+
+- Mario Castelán Castro (reported nopoll_loop_wait's reentrance
+  failure).
+
+- Konstantin (reported a path to receive on_msg_data at on_msg
+  handler).
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Fixed an error about unused variables at nopoll.c and added
+  support to create packages for wheezy.
+
+* [fix] Added references to wheezy packages. Added references into the
+  web to warn users from using these packages if they are using
+  Core-Admin.
+
+* [fix] Fixed support to make nopoll_loop_wait to be callable any
+  number of times. Updated nopoll-regression-client.c (test_18) to
+  reproduce bug and check fix introduced. Bug reported by Mario
+  Castelán Castro.
+
+* [fix] Applied Konstantin's patch to make on_msg handler to receive
+  on_msg_data reference from the ctx object when this is the one with
+  the handler defined. Reported and fixed by Konstantin Eremeev.
+
+* [fix] Some modifications at nopoll_connect functions to make them to
+  implement a I/O waiting mechanism when it is found EWOULD BLOCK and
+  EINPROGRESS.
+
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organization to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+16th Sep 2013, Madrid (Spain)
+
