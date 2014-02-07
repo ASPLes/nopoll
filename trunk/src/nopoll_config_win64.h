@@ -42,7 +42,9 @@
  *
  * @return A \ref noPollPtr reference.
  */
+#ifndef INT_TO_PTR
 #define INT_TO_PTR(integer) IntToPtr(integer)
+#endif
 
 /**
  * @brief Allows to convert a pointer reference (\ref noPollPtr),
@@ -55,7 +57,9 @@
  *
  * @return A int value.
  */
+#ifndef PTR_TO_INT
 #define PTR_TO_INT(ptr) PtrToInt((const void *) (ptr))
+#endif
 
 /**
  * @brief Allows to get current platform configuration. This is used
