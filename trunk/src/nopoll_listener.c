@@ -321,6 +321,7 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 	listener->role    = NOPOLL_ROLE_LISTENER;
 
 	/* get peer value */
+	memset (&sin, 0, sizeof (struct sockaddr_in));
 	if (getpeername (session, (struct sockaddr *) &sin, &sin_size) < -1) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to get remote hostname and port");
 		return nopoll_false;
