@@ -888,7 +888,7 @@ void nopoll_cleanup_library (void)
  * - Flexible design that allows its integration into a external loop or to use its own waiting loop
  * - Support for port share which allows running native protocol and WebSocket protocol on the same port.
  *
- * noPoll is been developed by <b>Advanced Software Production Line,
+ * noPoll has been developed by <b>Advanced Software Production Line,
  * S.L.</b> (http://www.aspl.es). It is licensed under the LGPL 2.1
  * which allows open source and commercial usage.
  *
