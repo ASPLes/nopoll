@@ -186,3 +186,49 @@ pre.fragment {
   height: 420px; 
   background: #c9c9c9;
 }
+
+.sponsored-content { 
+  background: #193141;
+  color: white; 
+  text-align: left;
+  border-bottom: 1px dotted #3465a4;
+  margin-bottom: 10px;
+/*  border-left: 1px dotted #729fcf;
+  border-right: 1px dotted #729fcf; */
+  
+}
+
+.sponsored-content .dotted { 
+/*  border-right: 1px dotted #729fcf; */
+}
+
+.sponsored-content a { 
+   background: #193141;
+   color: white; 
+}
+
+.sponsored-content table { 
+  padding: 10px;
+}
+
+.sponsored-content h1 { 
+  padding-top: 0px;
+  margin-top: 0px;
+  background: #193141;
+  color: white;  
+  padding-bottom: 5px;
+  border-bottom: 1px dotted #729fcf;
+}
+
+.sponsored-content td { 
+  vertical-align: top;
+}
+
+.sponsored-content ul { 
+  padding: 6px;
+  margin: 6px;
+}
+
+.sponsored-content li { 
+  list-style: square;
+}
