@@ -100,7 +100,9 @@ nopoll_bool nopoll_ncmp (const char * string1, const char * string2, int bytes)
 
 	/* next position */
 	iterator = 0;
-	while (string1[iterator] && string1[iterator] && iterator < bytes) {
+	while (string1[iterator] && 
+	       string2[iterator] && 
+	       iterator < bytes) {
 		if (string1[iterator] != string2[iterator])
 			return nopoll_false;
 		iterator++;
@@ -306,7 +308,7 @@ void        nopoll_trim  (char * chunk, int * trimmed)
 	}
 
 	/* check for the really basic case where an empty string is found */
-	if (iterator == strlen (chunk)) {
+	if (iterator == (int) strlen (chunk)) {
 		/* an empty string, trim it all */
 		chunk [0] = 0;
 		if (trimmed)

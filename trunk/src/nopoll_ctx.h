@@ -41,6 +41,8 @@
 
 #include <nopoll.h>
 
+BEGIN_C_DECLS
+
 noPollCtx    * nopoll_ctx_new (void);
 
 nopoll_bool    nopoll_ctx_ref (noPollCtx * ctx);
@@ -86,5 +88,7 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx * ctx, noPollForeachConn forea
 void           nopoll_ctx_set_protocol_version (noPollCtx * ctx, int version);
 
 void           nopoll_ctx_free (noPollCtx * ctx);
+
+END_C_DECLS
 
 #endif

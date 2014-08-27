@@ -41,6 +41,8 @@
 
 #include <nopoll.h>
 
+BEGIN_C_DECLS
+
 const noPollPtr  nopoll_msg_get_payload (noPollMsg * msg);
 
 int          nopoll_msg_get_payload_size (noPollMsg * msg);
@@ -60,5 +62,7 @@ noPollOpCode nopoll_msg_opcode (noPollMsg * msg);
 noPollMsg  * nopoll_msg_join (noPollMsg * msg, noPollMsg * msg2);
 
 void         nopoll_msg_unref (noPollMsg * msg);
+
+END_C_DECLS
 
 #endif

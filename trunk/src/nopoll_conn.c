@@ -184,7 +184,7 @@ nopoll_bool                 nopoll_conn_set_sock_tcp_nodelay   (NOPOLL_SOCKET so
 	int    flag = enable;
 	result      = setsockopt(socket, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof (flag));
 #endif
-	if (result < 0) {
+	if (result == NOPOLL_INVALID_SOCKET) {
 		return nopoll_false;
 	}
 
@@ -815,7 +815,7 @@ nopoll_bool    nopoll_conn_is_ok (noPollConn * conn)
 		return nopoll_false;
 
 	/* return current socket status */
-	return conn->session > 0;
+	return conn->session != NOPOLL_INVALID_SOCKET;
 }
 
 /** 
@@ -832,7 +832,7 @@ nopoll_bool    nopoll_conn_is_ready (noPollConn * conn)
 {
 	if (conn == NULL)
 		return nopoll_false;
-	if (conn->session < 0)
+	if (conn->session == NOPOLL_INVALID_SOCKET)
 		return nopoll_false;
 	if (! conn->handshake_ok) {
 		/* acquire here handshake mutex */
@@ -1037,11 +1037,11 @@ void          nopoll_conn_shutdown (noPollConn * conn)
 #endif
 
 	/* call to on close handler if defined */
-	if (conn->session > 0 && conn->on_close)
+	if (conn->session != NOPOLL_INVALID_SOCKET && conn->on_close)
 	        conn->on_close (conn->ctx, conn, conn->on_close_data);
 
 	/* shutdown connection here */
-	if (conn->session > 0) {
+	if (conn->session != NOPOLL_INVALID_SOCKET) {
 	        shutdown (conn->session, SHUT_RDWR);
 		nopoll_close_socket (conn->session);
 	}
@@ -2649,7 +2649,7 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 		}
 
 		/* read content */
-		memcpy (buffer, nopoll_msg_get_payload (msg) + conn->pending_desp, amount);
+		memcpy (buffer, ((unsigned char *) nopoll_msg_get_payload (msg)) + conn->pending_desp, amount);
 		total_read += amount;
 		desp        = amount;
 		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_read total amount satisfied is not %d, requested %d", total_read, bytes); */
@@ -3262,7 +3262,7 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 	const char * serverName      = NULL;
 
 	/* check input parameters */
-	if (! (ctx && listener && conn && session >= 0)) {
+	if (! (ctx && listener && conn && session != NOPOLL_INVALID_SOCKET)) {
 		nopoll_conn_shutdown (conn);
 		nopoll_ctx_unregister_conn (ctx, conn);
 		return nopoll_false;

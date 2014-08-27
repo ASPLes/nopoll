@@ -153,6 +153,9 @@ nopoll_bool test_01_masking (void) {
 	char         buffer[1024];
 	noPollCtx  * ctx;
 
+	/* clear buffer */
+	memset (buffer, 0, 1024);
+
 	/* create context */
 	ctx = create_ctx ();
 
@@ -327,6 +330,8 @@ nopoll_bool test_03 (void) {
 	noPollConn * conn;
 	char         buffer[1024];
 	int          bytes_read;
+
+	memset (buffer, 0, 1024);
 
 	/* create context */
 	ctx = create_ctx ();
@@ -831,6 +836,8 @@ nopoll_bool test_05 (void) {
 	char         buffer[1024];
 	int          bytes_read;
 	const char * msg = " klasdfkla akldfj klafklajetqkljt kjlwergklwejry90246tkgwr kñljwrglkjdfg lksdjglskg slkg camión adsfasdf pruébasdfad España asdfaklsjdflk jasfkjaslfjetql tjñqgkjadgklj aglkjalk jafkjaslfkjaskj asjaslfkjasfklajg klajefñlqkjetrlkqj lqkj ñlskdfjañlk asldfjñlafj añlfj ñdfjkjt4ñqlkjt lkj34tlkjañlgjañlkgjañlkgjw";
+
+	memset (buffer, 0, 1024);
 
 	/* reinit again */
 	ctx = create_ctx ();

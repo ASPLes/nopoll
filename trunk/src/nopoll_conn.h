@@ -41,6 +41,8 @@
 
 #include <nopoll.h>
 
+BEGIN_C_DECLS
+
 noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * host_ip, 
 			      const char * host_port, 
@@ -159,5 +161,7 @@ int nopoll_conn_default_receive (noPollConn * conn, char * buffer, int buffer_si
 int nopoll_conn_default_send (noPollConn * conn, char * buffer, int buffer_size);
 
 void nopoll_conn_mask_content (noPollCtx * ctx, char * payload, int payload_size, char * mask, int desp);
+
+END_C_DECLS
 
 #endif
