@@ -41,8 +41,12 @@
 
 #include <nopoll.h>
 
+BEGIN_C_DECLS
+
 noPollIoEngine * nopoll_io_get_engine (noPollCtx * ctx, noPollIoEngineType engine_type);
 
 void             nopoll_io_release_engine (noPollIoEngine * engine);
+
+END_C_DECLS
 
 #endif 

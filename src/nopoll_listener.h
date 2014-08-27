@@ -41,6 +41,8 @@
 
 #include <nopoll.h>
 
+BEGIN_C_DECLS
+
 NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
 						    const char  * host,
 						    const char  * port);
@@ -62,5 +64,7 @@ noPollConn      * nopoll_listener_from_socket (noPollCtx      * ctx,
 					       NOPOLL_SOCKET    session);
 
 NOPOLL_SOCKET     nopoll_listener_accept (NOPOLL_SOCKET server_socket);
+
+END_C_DECLS
 
 #endif

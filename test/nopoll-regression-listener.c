@@ -64,7 +64,7 @@ noPollMsg * previous_msg = NULL;
 
 void write_file_handler (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr user_data)
 {
-	FILE * open_file_cmd = user_data;
+	FILE * open_file_cmd = (FILE*) user_data;
 	const char * content = (const char *) nopoll_msg_get_payload (msg);
 
 	/* check for close operation */

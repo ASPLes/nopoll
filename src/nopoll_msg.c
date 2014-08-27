@@ -278,7 +278,7 @@ noPollMsg  * nopoll_msg_join (noPollMsg * msg, noPollMsg * msg2)
 	memcpy (result->payload, msg->payload, msg->payload_size);
 
 	/* copy content from second message */
-	memcpy (result->payload + msg->payload_size , msg2->payload, msg2->payload_size);
+	memcpy (((unsigned char *) result->payload) + msg->payload_size , msg2->payload, msg2->payload_size);
 
 	/* return joined message */
 	return result;
