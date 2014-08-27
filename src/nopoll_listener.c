@@ -174,7 +174,7 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 
 	/* call to create the socket */
 	session = nopoll_listener_sock_listen (ctx, host, port);
-	if (session == -1) {
+	if (session == NOPOLL_INVALID_SOCKET) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to start listener error was: %d", errno);
 		return NULL;
 	} /* end if */

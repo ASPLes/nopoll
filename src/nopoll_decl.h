@@ -89,7 +89,7 @@
 /* Direct portable mapping definitions */
 #if defined(NOPOLL_OS_UNIX)
 
-/* Portable definitions while using Vortex Library */
+/* Portable definitions while using noPoll Library */
 #define NOPOLL_EINTR           EINTR
 /** 
  * @brief Portable definition for EWOULDBLOCK errno code.
@@ -121,6 +121,10 @@
 #include <io.h>
 #include <process.h>
 #include <time.h>
+
+#ifdef _MSC_FULL_VER
+#define strcasecmp(string1, string2) _stricmp(string1, string2)
+#endif
 
 #define NOPOLL_EINTR           WSAEINTR
 #define NOPOLL_EWOULDBLOCK     WSAEWOULDBLOCK

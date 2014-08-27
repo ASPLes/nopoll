@@ -479,7 +479,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 
 	/* create socket connection in a non block manner */
 	session = nopoll_conn_sock_connect (ctx, host_ip, host_port);
-	if (session == -1) {
+	if (session == NOPOLL_INVALID_SOCKET) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to connect to remote host %s:%s", host_ip, host_port);
 		return NULL;
 	} /* end if */
@@ -616,7 +616,6 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 		server_cert = SSL_get_peer_certificate (conn->ssl);
 		if (server_cert == NULL) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "server side didn't set a certificate for this session, these are bad news");
-			/* vortex_support_free (2, ssl, SSL_free, ctx, SSL_CTX_free); */
 			return nopoll_false;
 		}
 		X509_free (server_cert);
@@ -1045,7 +1044,7 @@ void          nopoll_conn_shutdown (noPollConn * conn)
 	        shutdown (conn->session, SHUT_RDWR);
 		nopoll_close_socket (conn->session);
 	}
-	conn->session = -1;
+	conn->session = NOPOLL_INVALID_SOCKET;
 
 	return;
 }
@@ -1080,7 +1079,7 @@ void          nopoll_conn_close  (noPollConn  * conn)
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling to close close id=%d (session %d, refs: %d, role: %s)", 
 		    conn->id, conn->session, conn->refs, role);
 #endif
-	if (conn->session) {
+	if (conn->session != NOPOLL_INVALID_SOCKET) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "requested proper connection close id=%d (session %d)", conn->id, conn->session);
 
 		/* send close message */
@@ -3216,7 +3215,7 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
 	 * connection and ask the app level to accept
 	 * or not */
 	session = nopoll_listener_accept (listener->session);
-	if (session <= 0) {
+	if (session == NOPOLL_INVALID_SOCKET) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received invalid socket value from accept(2): %d, error code errno=: %d", 
 			    session, errno);
 		return NULL;
