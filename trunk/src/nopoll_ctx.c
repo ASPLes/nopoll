@@ -48,23 +48,20 @@
  * \addtogroup nopoll_ctx
  * @{
  */
-#if !defined(NOPOLL_OS_WIN32)
 void __nopoll_ctx_sigpipe_do_nothing (int _signal)
 {
+#if !defined(NOPOLL_OS_WIN32)
 	/* do nothing sigpipe handler to be able to manage EPIPE error
-	 * returned by write. read calls do not fails because we use
-	 * the vortex reader process that is waiting for changes over
-	 * a connection and that changes include remote peer
-	 * closing. So, EPIPE (or receive SIGPIPE) can't happen. */
-	
+	 * returned by write ops. */
 
 	/* the following line is to ensure ancient glibc version that
 	 * restores to the default handler once the signal handling is
 	 * executed. */
 	signal (SIGPIPE, __nopoll_ctx_sigpipe_do_nothing);
+#endif
 	return;
 }
-#endif
+
 
 /** 
  * @brief Creates an empty Nopoll context. 

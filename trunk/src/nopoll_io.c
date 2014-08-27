@@ -165,7 +165,7 @@ nopoll_bool  nopoll_io_wait_select_add_to (int               fds,
 /** 
  * @internal
  *
- * @brief Default Vortex Library implementation for the "is set" on fd
+ * @brief Default noPoll implementation for the "is set" on fd
  * set operation.
  * 
  * @param fds The socket descriptor to be checked to be active on the
