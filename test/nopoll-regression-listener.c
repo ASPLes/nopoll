@@ -272,7 +272,7 @@ int main (int argc, char ** argv)
 
 		/* next position */
 		iterator++;
-	}
+	} 
 
 	/* call to create a listener */
 	listener = nopoll_listener_new (ctx, "0.0.0.0", "1234");

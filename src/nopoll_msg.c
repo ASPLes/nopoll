@@ -73,7 +73,7 @@ noPollMsg  * nopoll_msg_new (void)
  * @return A reference to the payload or NULL if it fails. See \ref
  * nopoll_msg_get_payload_size to get payload size.
  */
-const noPollPtr nopoll_msg_get_payload (noPollMsg * msg)
+const unsigned char * nopoll_msg_get_payload (noPollMsg * msg)
 {
 	if (msg == NULL)
 		return NULL;
