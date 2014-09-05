@@ -43,7 +43,7 @@
 
 BEGIN_C_DECLS
 
-const noPollPtr  nopoll_msg_get_payload (noPollMsg * msg);
+const unsigned char *  nopoll_msg_get_payload (noPollMsg * msg);
 
 int          nopoll_msg_get_payload_size (noPollMsg * msg);
 

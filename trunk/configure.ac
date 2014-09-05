@@ -57,7 +57,7 @@ compiler_options=""
 STRICT_PROTOTYPES=""
 echo "Detected compiler: $compiler"
 if test "$compiler" = "gcc" ; then
-   compiler_options="-Wstrict-prototypes -Wall -Werror -g -ansi -fstack-protector-all -Wstack-protector"
+   compiler_options="-Wstrict-prototypes -Wall -Werror -ansi -fstack-protector-all -Wstack-protector"
    echo "Detected gcc compiler: $compiler, adding options: $compiler_options"
 fi
 AC_SUBST(compiler_options)
