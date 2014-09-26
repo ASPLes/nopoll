@@ -285,7 +285,7 @@ int main (int argc, char ** argv)
 
 	/* now start a TLS version */
 	listener2 = nopoll_listener_tls_new (ctx, "0.0.0.0", "1235");
-	if (! nopoll_conn_is_ok (listener)) {
+	if (! nopoll_conn_is_ok (listener2)) {
 		printf ("ERROR: Expected to find proper listener TLS connection status, but found..\n");
 		return -1;
 	} /* end if */
