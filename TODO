@@ -1,3 +1,5 @@
+* Add support to load certificates with pass phrases in it.
+
 * Fix security issue about allocating more memory for the message at
   nopoll_conn.c:1453 (inside nopoll_conn_get_msg)
 
