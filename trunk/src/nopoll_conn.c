@@ -1636,8 +1636,8 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	   connection */
 	if (ctx->on_open) {
 		if (! ctx->on_open (ctx, conn, ctx->on_open_data)) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s was denied by application level, clossing session", 
-				    conn->host, conn->port);
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s was denied by application level (on open handler %p), clossing session", 
+				    conn->host, conn->port, ctx->on_open);
 			nopoll_conn_shutdown (conn);
 			return nopoll_false;
 		}
@@ -1675,6 +1675,17 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	
 	/* free reply */
 	nopoll_free (reply);
+
+	/* now call the user app level to accept the websocket
+	   connection */
+	if (ctx->on_ready) {
+		if (! ctx->on_ready (ctx, conn, ctx->on_open_data)) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s was denied by application level (on ready handler: %p), clossing session", 
+				    conn->host, conn->port, ctx->on_ready);
+			nopoll_conn_shutdown (conn);
+			return nopoll_false;
+		}
+	} /* end if */
 	
 	return nopoll_true; /* signal handshake was completed */
 }

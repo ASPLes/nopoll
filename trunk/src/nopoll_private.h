@@ -107,10 +107,16 @@ struct _noPollCtx {
 	noPollPtr           on_accept_data;
 
 	/** 
-	 * @internal Reference to defined on accept handling.
+	 * @internal Reference to defined on open handling.
 	 */
 	noPollActionHandler on_open;
 	noPollPtr           on_open_data;
+
+	/** 
+	 * @internal Reference to defined on ready handling.
+	 */
+	noPollActionHandler on_ready;
+	noPollPtr           on_ready_data;
 
 	/** 
 	 * @internal Reference to the defined on message handling.

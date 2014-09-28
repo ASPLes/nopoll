@@ -71,13 +71,17 @@ nopoll_bool    nopoll_ctx_find_certificate (noPollCtx   * ctx,
 					    const char ** privateKey, 
 					    const char ** optionalChainFile);
 
+void           nopoll_ctx_set_on_accept (noPollCtx           * ctx,
+					 noPollActionHandler   on_accept,
+					 noPollPtr             user_data);
+
 void           nopoll_ctx_set_on_open (noPollCtx            * ctx,
 				       noPollActionHandler    on_open,
 				       noPollPtr              user_data);
 
-void           nopoll_ctx_set_on_accept (noPollCtx           * ctx,
-					 noPollActionHandler   on_accept,
-					 noPollPtr             user_data);
+void           nopoll_ctx_set_on_ready (noPollCtx          * ctx,
+					noPollActionHandler  on_ready,
+					noPollPtr            user_data);
 
 void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
 					 noPollOnMessageHandler   on_msg,
