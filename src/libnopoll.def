@@ -89,6 +89,7 @@ nopoll_ctx_set_certificate
 nopoll_ctx_set_on_accept
 nopoll_ctx_set_on_msg
 nopoll_ctx_set_on_open
+nopoll_ctx_set_on_ready
 nopoll_ctx_set_protocol_version
 nopoll_ctx_unref
 nopoll_ctx_unregister_conn

@@ -514,10 +514,23 @@ nopoll_bool           nopoll_ctx_set_certificate (noPollCtx  * ctx,
 /** 
  * @brief Allows to configure the on open handler, the handler that is
  * called when it is received an incoming websocket connection and all
- * websocket client handshake data was received.
+ * websocket client handshake data was received (but still not required).
  *
  * This handler differs from \ref nopoll_ctx_set_on_accept this
  * handler is called after all client handshake data was received.
+ *
+ * Note the connection is still not fully working at this point
+ * because the handshake hasn't been sent to the remote peer yet. This
+ * means that attempting to send any content inside this handler (for
+ * example by using \ref nopoll_conn_send_text) will cause a protocol
+ * violation (because remote side is expecting a handshake reply but
+ * received something different). 
+ *
+ * In the case you want to sent content right away after receiving a
+ * connection (on a listener), you can use \ref
+ * nopoll_ctx_set_on_ready "On Ready" handler which is called just
+ * after the connection has been fully accepted and handshake reply is
+ * fully written.
  *
  * @param ctx The context that will be configured.
  *
@@ -538,6 +551,42 @@ void           nopoll_ctx_set_on_open (noPollCtx            * ctx,
 		ctx->on_open_data = NULL;
 	else
 		ctx->on_open_data = user_data;
+	return;
+}
+
+/** 
+ * @brief Allows to configure a handler that is called when a
+ * connection is received and it is ready to send and receive because
+ * all WebSocket handshake protocol finished OK.
+ *
+ * Unlike handlers configured at \ref nopoll_ctx_set_on_open and \ref
+ * nopoll_ctx_set_on_accept which get notified when the connection
+ * isn't still working (because WebSocket handshake wasn't finished
+ * yet), on read handlers configured here will get called just after
+ * the WebSocket handshake has taken place.
+ *
+ * @param ctx The context that will be configured.
+ *
+ * @param on_ready The handler to be called when a connection is fully
+ * ready to send and receive content because WebSocket handshake has
+ * finished. The function must return nopoll_true to accept the connection. By returning nopoll_false the handler is signalling t
+ *
+ * @param user_data Optional user data pointer passed to the on ready
+ * handler.
+ * 
+ */
+void           nopoll_ctx_set_on_ready (noPollCtx          * ctx,
+					noPollActionHandler  on_ready,
+					noPollPtr            user_data)
+{
+	nopoll_return_if_fail (ctx, ctx && on_ready);
+
+	/* set the handler */
+	ctx->on_ready = on_ready;
+	if (ctx->on_ready == NULL)
+		ctx->on_ready_data = NULL;
+	else
+		ctx->on_ready_data = user_data;
 	return;
 }
 
