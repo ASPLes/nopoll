@@ -782,9 +782,7 @@ nopoll_bool __nopoll_tls_was_init = nopoll_false;
  *
  * @param ctx The context where the operation will take place.
  *
- * @param tls_options For now, pass NULL for this parameter. It will
- * be used in future releases to provide support for TLS
- * configuration.
+ * @param options Optional configuration object. See \ref nopoll_conn_opts_new and \ref nopoll_conn_opts_set_ssl_protocol (for example).
  *
  * @param host_ip The websocket server address to connect to.
  *
@@ -875,8 +873,11 @@ int            nopoll_conn_ref_count (noPollConn * conn)
 /** 
  * @brief Allows to check if the provided connection is in connected
  * state. This is different to be ready to send and receive content
- * because the session needs to be first established. You can use \ref
- * nopoll_conn_is_ready to ensure the connection is ok.
+ * because the session needs to be first established. 
+ *
+ * You can use \ref nopoll_conn_is_ready to ensure the connection is
+ * ready to be used (read or write operation can be done because
+ * handshake has finished).
  *
  * @param conn The websocket connection to be checked.
  *
@@ -922,14 +923,11 @@ nopoll_bool    nopoll_conn_is_ready (noPollConn * conn)
 }
 
 /** 
- * @brief Allows to check if the provided connection is working under
- * a TLS session.
+ * @brief Allows to check if the provided connection is working under a TLS session.
  *
  * @param conn The connection where the TLS is being queired to be enabled.
  *
- * @return nopoll_true in the case TLS is enabled, otherwise
- * nopoll_false is returned. Note the function also returns
- * nopoll_false when the reference received is NULL.
+ * @return nopoll_true in the case TLS is enabled, otherwise* nopoll_false is returned. Note the function also returns* nopoll_false when the reference received is NULL.
  */
 nopoll_bool    nopoll_conn_is_tls_on (noPollConn * conn)
 {
