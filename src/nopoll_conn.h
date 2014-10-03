@@ -52,7 +52,7 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * origin);
 
 noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
-				  noPollPtr    tls_options,
+				  noPollConnOpts * options,
 				  const char * host_ip, 
 				  const char * host_port, 
 				  const char * host_name,

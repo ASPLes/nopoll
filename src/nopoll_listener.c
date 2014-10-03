@@ -167,6 +167,29 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 				       const char * host,
 				       const char * port)
 {
+	return nopoll_listener_new_opts (ctx, NULL, host, port);
+}
+
+/** 
+ * @brief Creates a new websocket server listener on the provided host
+ * name and port.
+ *
+ * @param ctx The context where the operation will take place.
+ *
+ * @param opts Optional connection options to configure this listener.
+ *
+ * @param host The hostname or address interface to bind on.
+ *
+ * @param port The port where to listen, or NULL to use default port: 80.
+ *
+ * @return A reference to a \ref noPollConn object representing the
+ * listener or NULL if it fails.
+ */
+noPollConn      * nopoll_listener_new_opts (noPollCtx      * ctx,
+					    noPollConnOpts * opts,
+					    const char     * host,
+					    const char     * port)
+{
 	NOPOLL_SOCKET   session;
 	noPollConn    * listener;
 
@@ -205,7 +228,7 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 /** 
  * @brief Allows to create a new WebSocket listener but expecting the
  * incoming connection to be under TLS supervision. The function works
- * like \ref nopoll_listener_new.
+ * like \ref nopoll_listener_new (providing wss:// services).
  *
  * @param ctx The context where the operation will take place.
  *
@@ -220,6 +243,32 @@ noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
 					   const char * host,
 					   const char * port)
 {
+	return nopoll_listener_tls_new_opts (ctx, NULL, host, port);
+}
+
+
+/** 
+ * @brief Allows to create a new WebSocket listener but expecting the
+ * incoming connection to be under TLS supervision. The function works
+ * like \ref nopoll_listener_new (providing wss:// services).
+ *
+ * @param ctx The context where the operation will take place.
+ *
+ * @param opts The connection options to configure this particular
+ * listener.
+ *
+ * @param host The hostname or address interface to bind on.
+ *
+ * @param port The port where to listen, or NULL to use default port: 80.
+ *
+ * @return A reference to a \ref noPollConn object representing the
+ * listener or NULL if it fails.
+ */
+noPollConn      * nopoll_listener_tls_new_opts (noPollCtx      * ctx,
+						noPollConnOpts * opts,
+						const char     * host,
+						const char     * port)
+{
 	noPollConn * listener;
 
 	/* call to get listener from base function */
@@ -229,6 +278,7 @@ noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
 
 	/* setup TLS support */
 	listener->tls_on = nopoll_true;
+	listener->opts   = opts;
 
 	return listener;
 }

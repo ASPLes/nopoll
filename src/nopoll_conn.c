@@ -354,6 +354,8 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * lab
 	switch (ssl_err) {
 	case SSL_ERROR_NONE:
 		/* no error, return the number of bytes read */
+	        /* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "%s, ssl_err=%d, perfect, no error reported, bytes read=%d", 
+		   label, ssl_err, res); */
 		return res;
 	case SSL_ERROR_WANT_WRITE:
 	case SSL_ERROR_WANT_READ:
@@ -450,17 +452,46 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 }
 
 
+SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * opts, nopoll_bool is_client)
+{
+	if (opts == NULL) {
+		/* printf ("**** REPORTING TLSv1 ****\n"); */
+		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
+	} /* end if */
+
+	switch (opts->ssl_protocol) {
+	case NOPOLL_METHOD_TLSV1:
+		/* printf ("**** REPORTING TLSv1 ****\n"); */
+		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
+	case NOPOLL_METHOD_TLSV1_1:
+		/* printf ("**** REPORTING TLSv1.1 ****\n"); */
+		return SSL_CTX_new (is_client ? TLSv1_1_client_method () : TLSv1_1_server_method ()); 
+	case NOPOLL_METHOD_SSLV3:
+		/* printf ("**** REPORTING SSLv3 ****\n"); */
+		return SSL_CTX_new (is_client ? SSLv3_client_method () : SSLv3_server_method ()); 
+	case NOPOLL_METHOD_SSLV23:
+		/* printf ("**** REPORTING SSLv23 ****\n"); */
+		return SSL_CTX_new (is_client ? SSLv23_client_method () : SSLv23_server_method ()); 
+	}
+
+	/* reached this point, report default TLSv1 method */
+	printf ("**** REPORTING TLSv1 ****\n");
+	return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
+}
+
+
 /** 
  * @internal Internal implementation used to do a connect.
  */
-noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
-				       nopoll_bool    enable_tls,
-				       const char   * host_ip, 
-				       const char   * host_port, 
-				       const char   * host_name,
-				       const char   * get_url, 
-				       const char   * protocols,
-				       const char   * origin)
+noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
+				       noPollConnOpts  * options,
+				       nopoll_bool       enable_tls,
+				       const char      * host_ip, 
+				       const char      * host_port, 
+				       const char      * host_name,
+				       const char      * get_url, 
+				       const char      * protocols,
+				       const char      * origin)
 {
 	noPollConn     * conn;
 	NOPOLL_SOCKET    session;
@@ -471,7 +502,11 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 	int              iterator;
 	long             remaining_timeout;
 
-	nopoll_return_val_if_fail (ctx, ctx && host_ip, NULL);
+	if (! ctx || ! host_ip) {
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (options);
+		return NULL;
+	} /* end if */
 
 	/* set default connection port */
 	if (host_port == NULL)
@@ -480,14 +515,19 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 	/* create socket connection in a non block manner */
 	session = nopoll_conn_sock_connect (ctx, host_ip, host_port);
 	if (session == NOPOLL_INVALID_SOCKET) {
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (options);
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to connect to remote host %s:%s", host_ip, host_port);
 		return NULL;
 	} /* end if */
 
 	/* create the connection */
 	conn = nopoll_new (noPollConn, 1);
-	if (conn == NULL) 
+	if (conn == NULL) {
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (options);
 		return NULL;
+	} /* end if */
 
 	conn->refs = 1;
 
@@ -498,6 +538,9 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 	if (! nopoll_ctx_register_conn (ctx, conn)) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to register connection into the context, unable to create connection");
 		nopoll_free (conn);
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (options);
+
 		return NULL;
 	}
 
@@ -546,6 +589,10 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 	if (content == NULL) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to build client init message, unable to connect");
 		nopoll_conn_shutdown (conn);
+
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (options);
+
 		return NULL;
 	}
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sending websocket client init: %s", content);
@@ -554,12 +601,17 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 	/* check for TLS support */
 	if (enable_tls) {
 		/* found TLS connection request, enable it */
-		conn->ssl_ctx  = SSL_CTX_new (TLSv1_client_method ()); 
+		conn->ssl_ctx  = __nopoll_conn_get_ssl_context (ctx, conn, options, nopoll_true);
 		conn->ssl      = SSL_new (conn->ssl_ctx);       
 		if (conn->ssl_ctx == NULL || conn->ssl == NULL) {
+			nopoll_free (content);
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to create SSL context");
 			nopoll_conn_shutdown (conn);
-			return NULL;
+
+			/* release connection options */
+			__nopoll_conn_opts_release_if_needed (options);
+
+			return conn;
 		} /* end if */
 		
 		/* set socket */
@@ -587,13 +639,23 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 					    ssl_error, conn->id, conn, errno, conn->session);
 				nopoll_conn_log_ssl (conn);
 				nopoll_conn_shutdown (conn);
-				return NULL;
+				nopoll_free (content);
+
+				/* release connection options */
+				__nopoll_conn_opts_release_if_needed (options);
+
+				return conn;
 			default:
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "there was an error with the TLS negotiation, ssl error (code:%d) : %s",
 					    ssl_error, ERR_error_string (ssl_error, NULL));
 				nopoll_conn_log_ssl (conn);
 				nopoll_conn_shutdown (conn);
-				return NULL;
+				nopoll_free (content);
+
+				/* release connection options */
+				__nopoll_conn_opts_release_if_needed (options);
+
+				return conn;
 			} /* end switch */
 
 			/* try and limit max reconnect allowed */
@@ -602,7 +664,12 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 			if (iterator > 100) {
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Max retry calls=%d to SSL_connect reached, shutting down connection id=%d, errno=%d",
 					    iterator, conn->id, errno);
-				return NULL;
+				nopoll_free (content);
+
+				/* release connection options */
+				__nopoll_conn_opts_release_if_needed (options);
+
+				return conn;
 			} /* end if */
 
 			/* wait a bit before retry */
@@ -616,7 +683,12 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 		server_cert = SSL_get_peer_certificate (conn->ssl);
 		if (server_cert == NULL) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "server side didn't set a certificate for this session, these are bad news");
-			return nopoll_false;
+
+			/* release connection options */
+			nopoll_free (content);
+			__nopoll_conn_opts_release_if_needed (options);
+
+			return conn;
 		}
 		X509_free (server_cert);
 
@@ -641,7 +713,6 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to send websocket init message, error code was: %d (2), closing session", errno);
 			nopoll_conn_shutdown (conn);
-			conn = NULL;
 		} /* end if */
 
 		break;
@@ -651,6 +722,9 @@ noPollConn * __nopoll_conn_new_common (noPollCtx    * ctx,
 
 	/* release content */
 	nopoll_free (content);
+
+	/* release connection options */
+	__nopoll_conn_opts_release_if_needed (options);
 
 	/* return connection created */
 	return conn;
@@ -692,7 +766,7 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * origin)
 {
 	/* call common implementation */
-	return __nopoll_conn_new_common (ctx, nopoll_false, 
+	return __nopoll_conn_new_common (ctx, NULL, nopoll_false, 
 					 host_ip, host_port, host_name, 
 					 get_url, protocols, origin);
 }
@@ -734,7 +808,7 @@ nopoll_bool __nopoll_tls_was_init = nopoll_false;
  * 
  */
 noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
-				  noPollPtr    tls_options,
+				  noPollConnOpts  * options,
 				  const char * host_ip, 
 				  const char * host_port, 
 				  const char * host_name,
@@ -743,12 +817,13 @@ noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
 				  const char * origin)
 {
 	/* init ssl ciphers and engines */
-	if (! __nopoll_tls_was_init)
+	if (! __nopoll_tls_was_init) {
+		__nopoll_tls_was_init = nopoll_true;
 		SSL_library_init ();
-	__nopoll_tls_was_init = nopoll_true;
+	} /* end if */
 
 	/* call common implementation */
-	return __nopoll_conn_new_common (ctx, nopoll_true, 
+	return __nopoll_conn_new_common (ctx, options, nopoll_true, 
 					 host_ip, host_port, host_name, 
 					 get_url, protocols, origin);
 }
@@ -1201,6 +1276,10 @@ void nopoll_conn_unref (noPollConn * conn)
 		nopoll_free (conn->handshake->expected_accept);
 		nopoll_free (conn->handshake);
 	} /* end if */
+
+	/* release connection options if defined and reuse flag is not defined */
+	if (conn->opts && ! conn->opts->reuse)
+		nopoll_conn_opts_free (conn->opts);
 
 	/* release pending write buffer */
 	nopoll_free (conn->pending_write);
@@ -3249,24 +3328,11 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
 	return conn;
 }
 
-/** 
- * @brief Allows to complete accept operation by setting up all I/O
- * handlers required to make the WebSocket connection to work.
- *
- * @param ctx The context where the operation takes place.
- *
- * @param listener The listener where the connection was accepted.
- *
- * @param conn The connection that was accepted.
- *
- * @param session The socket associated to the listener accepted.
- *
- * @param tls_on A boolean indication if the TLS interface should be
- * enabled or not.
- *
- * @return nopoll_true if the listener was accepted otherwise nopoll_false is returned.
+/**
+ * @internal Function to support accept listener operations.
  */
-nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session, nopoll_bool tls_on) {
+nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpts * options, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session, nopoll_bool tls_on) {
+
 	const char * certificateFile = NULL;
 	const char * privateKey      = NULL;
 	const char * serverName      = NULL;
@@ -3275,6 +3341,10 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 	if (! (ctx && listener && conn && session != NOPOLL_INVALID_SOCKET)) {
 		nopoll_conn_shutdown (conn);
 		nopoll_ctx_unregister_conn (ctx, conn);
+
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (options);
+
 		return nopoll_false;
 	} /* end if */
 
@@ -3289,6 +3359,10 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 				    conn->host, conn->port);
 			nopoll_conn_shutdown (conn);
 			nopoll_ctx_unregister_conn (ctx, conn);
+
+			/* release connection options */
+			__nopoll_conn_opts_release_if_needed (options);
+
 			return nopoll_false;
 		} /* end if */
 	} /* end if */
@@ -3318,16 +3392,21 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 				    privateKey ? privateKey : "<not defined>");
 			nopoll_conn_shutdown (conn);
 			nopoll_ctx_unregister_conn (ctx, conn);
+
+			/* release connection options */
+			__nopoll_conn_opts_release_if_needed (options);
+
 			return nopoll_false;
 		} /* end if */
 
 		/* init ssl ciphers and engines */
-		if (! __nopoll_tls_was_init)
+		if (! __nopoll_tls_was_init) {
+			__nopoll_tls_was_init = nopoll_true;
 			SSL_library_init ();
-		__nopoll_tls_was_init = nopoll_true;
+		} /* end if */
 
 		/* accept TLS connection */
-		conn->ssl_ctx  = SSL_CTX_new (TLSv1_server_method ());
+		conn->ssl_ctx  = __nopoll_conn_get_ssl_context (ctx, conn, listener->opts, nopoll_false);
 
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate file: %s", certificateFile);
 		if (SSL_CTX_use_certificate_file (conn->ssl_ctx, certificateFile, SSL_FILETYPE_PEM) <= 0) {
@@ -3337,6 +3416,10 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 			/* dump error stack */
 			nopoll_conn_shutdown (conn);
 			nopoll_ctx_unregister_conn (ctx, conn);
+
+			/* release connection options */
+			__nopoll_conn_opts_release_if_needed (options);
+
 			return nopoll_false;
 		} /* end if */
 
@@ -3348,6 +3431,10 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 			/* dump error stack */
 			nopoll_conn_shutdown (conn);
 			nopoll_ctx_unregister_conn (ctx, conn);
+
+			/* release connection options */
+			__nopoll_conn_opts_release_if_needed (options);
+
 			return nopoll_false;
 		}
 
@@ -3358,6 +3445,10 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 				    certificateFile, privateKey);
 			/* dump error stack */
 			nopoll_conn_shutdown (conn);
+
+			/* release connection options */
+			__nopoll_conn_opts_release_if_needed (options);
+
 			return nopoll_false;
 		} /* end if */
 
@@ -3366,6 +3457,10 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "error while creating TLS transport, SSL_new (%p) returned NULL", conn->ssl_ctx);
 			nopoll_conn_shutdown (conn);
 			nopoll_ctx_unregister_conn (ctx, conn);
+
+			/* release connection options */
+			__nopoll_conn_opts_release_if_needed (options);
+
 			return nopoll_false;
 		} /* end if */
 
@@ -3381,7 +3476,32 @@ nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener,
 		
 	} /* end if */
 
+	/* release connection options */
+	__nopoll_conn_opts_release_if_needed (options);
+
 	return nopoll_true;
+}
+
+/** 
+ * @brief Allows to complete accept operation by setting up all I/O
+ * handlers required to make the WebSocket connection to work.
+ *
+ * @param ctx The context where the operation takes place.
+ *
+ * @param listener The listener where the connection was accepted.
+ *
+ * @param conn The connection that was accepted.
+ *
+ * @param session The socket associated to the listener accepted.
+ *
+ * @param tls_on A boolean indication if the TLS interface should be
+ * enabled or not.
+ *
+ * @return nopoll_true if the listener was accepted otherwise nopoll_false is returned.
+ */
+nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session, nopoll_bool tls_on) {
+
+	return __nopoll_conn_accept_complete_common (ctx, NULL, listener, conn, session, tls_on);
 }
 
 /** 

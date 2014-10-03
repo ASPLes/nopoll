@@ -1,6 +1,9 @@
 EXPORTS
+__nopoll_conn_accept_complete_common
 __nopoll_conn_get_client_init
+__nopoll_conn_get_ssl_context
 __nopoll_conn_new_common
+__nopoll_conn_opts_release_if_needed
 __nopoll_conn_receive
 __nopoll_conn_send_common
 __nopoll_conn_tls_handle_error
@@ -49,6 +52,10 @@ nopoll_conn_is_tls_on
 nopoll_conn_log_ssl
 nopoll_conn_mask_content
 nopoll_conn_new
+nopoll_conn_opts_free
+nopoll_conn_opts_new
+nopoll_conn_opts_set_reuse
+nopoll_conn_opts_set_ssl_protocol
 nopoll_conn_pending_write_bytes
 nopoll_conn_port
 nopoll_conn_produce_accept_key
@@ -112,9 +119,11 @@ nopoll_is_white_space
 nopoll_listener_accept
 nopoll_listener_from_socket
 nopoll_listener_new
+nopoll_listener_new_opts
 nopoll_listener_set_certificate
 nopoll_listener_sock_listen
 nopoll_listener_tls_new
+nopoll_listener_tls_new_opts
 nopoll_log_color_enable
 nopoll_log_color_is_enabled
 nopoll_log_enable

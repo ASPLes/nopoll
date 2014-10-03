@@ -50,6 +50,7 @@ BEGIN_C_DECLS
 
 #include <nopoll_ctx.h>
 #include <nopoll_io.h>
+#include <nopoll_conn_opts.h>
 #include <nopoll_conn.h>
 #include <nopoll_msg.h>
 #include <nopoll_log.h>

@@ -913,6 +913,7 @@ void nopoll_cleanup_library (void)
  *
  * - \ref nopoll_conn
  * - \ref nopoll_listener
+ * - \ref nopoll_conn_opts
  *
  * 3) Functions to handle messages (message based API):
  *

@@ -252,6 +252,7 @@ int main (int argc, char ** argv)
 	noPollConn     * listener;
 	noPollConn     * listener2;
 	int              iterator;
+	noPollConnOpts * opts;
 
 	signal (SIGTERM,  __terminate_listener);
 
@@ -284,6 +285,7 @@ int main (int argc, char ** argv)
 	printf ("noPoll listener started at: %s:%s (refs: %d)..\n", nopoll_conn_host (listener), nopoll_conn_port (listener), nopoll_conn_ref_count (listener));
 
 	/* now start a TLS version */
+	printf ("Test: starting listener with TLS (TLSv1) at :1235\n");
 	listener2 = nopoll_listener_tls_new (ctx, "0.0.0.0", "1235");
 	if (! nopoll_conn_is_ok (listener2)) {
 		printf ("ERROR: Expected to find proper listener TLS connection status, but found..\n");
@@ -301,6 +303,34 @@ int main (int argc, char ** argv)
 		printf ("ERROR: unable to setup certificates at context level..\n");
 		return -1;
 	}
+
+	/* start listener with sslv23 */
+	printf ("Test: starting listener with TLS (SSLv23) at :1236 (all methods)\n");
+	opts     = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_SSLV23);
+	listener2 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1236");
+	if (! nopoll_conn_is_ok (listener2)) {
+		printf ("ERROR: Expected to find proper listener TLS connection status (:1236, SSLv23), but found..\n");
+		return -1;
+	} /* end if */
+
+	printf ("Test: starting listener with TLS (SSLv3) at :1237\n");
+	opts     = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_SSLV3);
+	listener2 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1237");
+	if (! nopoll_conn_is_ok (listener2)) {
+		printf ("ERROR: Expected to find proper listener TLS connection status (:1237, SSLv3), but found..\n");
+		return -1;
+	} /* end if */
+
+	printf ("Test: starting listener with TLS (TLSv1.1) at :1238\n");
+	opts     = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_1);
+	listener2 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1238");
+	if (! nopoll_conn_is_ok (listener2)) {
+		printf ("ERROR: Expected to find proper listener TLS connection status (:1238, TLSv1.1), but found..\n");
+		return -1;
+	} /* end if */
 
 	/* set on message received */
 	nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);
