@@ -286,6 +286,11 @@ struct _noPollConn {
 
 	char                * pending_write;
 	int                   pending_write_bytes;
+
+	/** 
+	 * @internal Internal reference to the connection options.
+	 */
+	noPollConnOpts      * opts;
 };
 
 struct _noPollIoEngine {
@@ -329,6 +334,13 @@ struct _noPollHandshake {
 	char          * websocket_version;
 	char          * websocket_accept;
 	char          * expected_accept;
+};
+
+struct _noPollConnOpts {
+	/* If the connection options object should be reused across calls */
+	nopoll_bool          reuse;
+	/* What ssl protocol should be used */
+	noPollSslProtocol    ssl_protocol;
 };
 
 #endif

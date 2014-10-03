@@ -36,44 +36,23 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#ifndef __NOPOLL_LISTENER_H__
-#define __NOPOLL_LISTENER_H__
+#ifndef __NOPOLL_CONN_OPTS_H__
+#define __NOPOLL_CONN_OPTS_H__
 
 #include <nopoll.h>
 
 BEGIN_C_DECLS
 
-NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
-						    const char  * host,
-						    const char  * port);
+noPollConnOpts * nopoll_conn_opts_new (void);
 
-noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
-				       const char * host,
-				       const char * port);
+void nopoll_conn_opts_set_ssl_protocol (noPollConnOpts * opts, noPollSslProtocol ssl_protocol);
 
-noPollConn      * nopoll_listener_new_opts (noPollCtx      * ctx,
-					    noPollConnOpts * opts,
-					    const char     * host,
-					    const char     * port);
+void nopoll_conn_opts_set_reuse        (noPollConnOpts * opts, nopoll_bool reuse);
 
-noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
-					   const char * host,
-					   const char * port);
+void nopoll_conn_opts_free (noPollConnOpts * opts);
 
-noPollConn      * nopoll_listener_tls_new_opts (noPollCtx      * ctx,
-						noPollConnOpts * opts,
-						const char     * host,
-						const char     * port);
-
-nopoll_bool       nopoll_listener_set_certificate (noPollConn * listener,
-						   const char * certificate,
-						   const char * private_key,
-						   const char * chain_file);
-
-noPollConn      * nopoll_listener_from_socket (noPollCtx      * ctx,
-					       NOPOLL_SOCKET    session);
-
-NOPOLL_SOCKET     nopoll_listener_accept (NOPOLL_SOCKET server_socket);
+/** internal API **/
+void __nopoll_conn_opts_release_if_needed (noPollConnOpts * options);
 
 END_C_DECLS
 

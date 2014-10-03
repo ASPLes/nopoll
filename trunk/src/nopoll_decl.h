@@ -221,6 +221,11 @@ typedef struct _noPollCtx noPollCtx;
 typedef struct _noPollConn noPollConn;
 
 /** 
+ * @brief Optional connection options to change default behaviour.
+ */
+typedef struct _noPollConnOpts noPollConnOpts;
+
+/** 
  * @brief Abstraction that represents a selected IO wait mechanism.
  */
 typedef struct _noPollIoEngine noPollIoEngine;
@@ -404,6 +409,41 @@ typedef enum {
 	 */
 	NOPOLL_PONG_FRAME         = 10
 } noPollOpCode;
+
+/** 
+ * @brief SSL/TLS protocol type to use for the client or listener
+ * connection. 
+ */
+typedef enum { 
+	/** 
+	 * @brief Allows to define SSLv23 as SSL protocol used by the
+	 * client or server connection. A TLS/SSL connection
+	 * established with these methods may understand SSLv3, TLSv1,
+	 * TLSv1.1 and TLSv1.2 protocols (\ref NOPOLL_METHOD_SSLV3, \ref NOPOLL_METHOD_TLSV1, \ref NOPOLL_METHOD_TLSV1_1)
+	 */
+	NOPOLL_METHOD_SSLV23      = 2,
+	/** 
+	 * @brief Allows to define SSLv3 as SSL protocol used by the
+	 * client or server connection. A connection/listener
+	 * established with this method will only understand this
+	 * method.
+	 */
+	NOPOLL_METHOD_SSLV3       = 3,
+	/** 
+	 * @brief Allows to define TLSv1 as SSL protocol used by the
+	 * client or server connection. A connection/listener
+	 * established with this method will only understand this
+	 * method.
+	 */
+	NOPOLL_METHOD_TLSV1       = 4,
+	/** 
+	 * @brief Allows to define TLSv1.1 as SSL protocol used by the
+	 * client or server connection. A connection/listener
+	 * established with this method will only understand this
+	 * method.
+	 */
+	NOPOLL_METHOD_TLSV1_1     = 5
+} noPollSslProtocol ;
 
 BEGIN_C_DECLS
 
