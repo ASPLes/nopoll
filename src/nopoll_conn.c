@@ -463,9 +463,11 @@ SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noP
 	case NOPOLL_METHOD_TLSV1:
 		/* printf ("**** REPORTING TLSv1 ****\n"); */
 		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
+#if defined(TLSv1_1_client_method)
 	case NOPOLL_METHOD_TLSV1_1:
 		/* printf ("**** REPORTING TLSv1.1 ****\n"); */
 		return SSL_CTX_new (is_client ? TLSv1_1_client_method () : TLSv1_1_server_method ()); 
+#endif
 	case NOPOLL_METHOD_SSLV3:
 		/* printf ("**** REPORTING SSLv3 ****\n"); */
 		return SSL_CTX_new (is_client ? SSLv3_client_method () : SSLv3_server_method ()); 

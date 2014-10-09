@@ -323,6 +323,7 @@ int main (int argc, char ** argv)
 		return -1;
 	} /* end if */
 
+#if defined(TLSv1_1_client_method)
 	printf ("Test: starting listener with TLS (TLSv1.1) at :1238\n");
 	opts     = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_1);
@@ -331,6 +332,7 @@ int main (int argc, char ** argv)
 		printf ("ERROR: Expected to find proper listener TLS connection status (:1238, TLSv1.1), but found..\n");
 		return -1;
 	} /* end if */
+#endif
 
 	/* set on message received */
 	nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);
