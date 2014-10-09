@@ -2108,6 +2108,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 
 			/* TLS-fication process have failed */
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "there was an error while accepting TLS connection");
+			nopoll_conn_log_ssl (conn);
 			nopoll_conn_shutdown (conn);
 			return NULL;
 		} /* end if */
