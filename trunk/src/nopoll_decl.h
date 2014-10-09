@@ -436,6 +436,7 @@ typedef enum {
 	 * method.
 	 */
 	NOPOLL_METHOD_TLSV1       = 4,
+#if defined(TLSv1_1_client_method)
 	/** 
 	 * @brief Allows to define TLSv1.1 as SSL protocol used by the
 	 * client or server connection. A connection/listener
@@ -443,6 +444,7 @@ typedef enum {
 	 * method.
 	 */
 	NOPOLL_METHOD_TLSV1_1     = 5
+#endif
 } noPollSslProtocol ;
 
 BEGIN_C_DECLS
