@@ -37,14 +37,11 @@ dnl
 dnl      Email address:
 dnl         info@aspl.es - http://www.aspl.es/nopoll
 dnl
-AC_INIT(src/nopoll.h)
-
-configure_dir=`dirname "$0"`
-NOPOLL_VERSION=`cat $configure_dir/VERSION`
+AC_INIT(nopoll, m4_esyscmd([cat `dirname "$0"`/VERSION | tr -d '\n']))
+NOPOLL_VERSION=$VERSION
 AC_SUBST(NOPOLL_VERSION)
-
-AC_CONFIG_AUX_DIR(.)
-AM_INIT_AUTOMAKE(nopoll, $NOPOLL_VERSION)
+AM_INIT_AUTOMAKE
+AC_CONFIG_SRCDIR([src/nopoll.h])
 AM_CONFIG_HEADER(config.h)
 AM_MAINTAINER_MODE
 
