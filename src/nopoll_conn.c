@@ -1598,7 +1598,12 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 	while (iterator2 < buffer_size && buffer[iterator2] && buffer[iterator2] != '\n')
 		iterator2++;
 	if (buffer[iterator2] != '\n') {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expected to find mime header value end (13) but it wasn't found..");
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
+			    "Expected to find mime header value end (13) but it wasn't found (found value: [%c]), inside content: [%s], iterator=%d, iterator2=%d for header: [%s]..",
+			    buffer[iterator2], buffer, iterator, iterator2, (*header));
+		nopoll_free (*header);
+		(*header) = NULL;
+		(*value)  = NULL;
 		return nopoll_false;
 	} 
 
