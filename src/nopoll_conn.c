@@ -1585,7 +1585,8 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 	while (iterator < buffer_size && buffer[iterator] && buffer[iterator] != ':')
 		iterator++;
 	if (buffer[iterator] != ':') {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expected to find mime header separator : but it wasn't found..");
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expected to find mime header separator : but it wasn't found (buffer_size=%d, iterator=%d, content: [%s]..",
+			    buffer_size, iterator, buffer);
 		return nopoll_false;
 	} 
 
