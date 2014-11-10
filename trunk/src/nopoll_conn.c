@@ -321,7 +321,7 @@ int nopoll_conn_log_ssl (noPollConn * conn)
 
 		/* find error code position */
 		error_position = 0;
-		while (log_buffer[error_position] != ':')
+		while (log_buffer[error_position] != ':' && log_buffer[error_position] != 0 && error_position < 511)
 			error_position++;
 		error_position++;
 		aux_position = error_position;
