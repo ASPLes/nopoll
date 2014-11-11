@@ -2,11 +2,12 @@
 
 * hacer release note.
 
-* subir producto a code.google.com/p/no-poll
+* subir producto a aspl.es/nopoll/downloads/
 
 * publicar en listas de correo de aspl.
 
-* publicar en freshmeat.net
+* publicar en freecode.club - http://freshcode.club/projects/nopoll
+* publicar en launchpad.net - https://launchpad.net/nopoll (make an announcement)
 
 * actualizar web de nopoll (actualizar sección de noticias y a la gestión
   de releases notes).
@@ -17,11 +18,16 @@
   - downloads.html
   - es/downloas.html
 
+* Generar paquetes debian/ubuntu
+* Generar instalador windows
+
 * publicar noticia en aspl.es.
-
-* Generar paquetes debian
-
 * Publicar noticia en twitter ASPL_es
+* Retuitear como FrancisBrosnanB
+* Enlazar noticia con google plus.
+
+
+
 
 
 
