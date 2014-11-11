@@ -2080,6 +2080,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	noPollMsg * msg;
 	int         ssl_error;
 	int         header_size;
+#if defined(NOPOLL_64BIT_PLATFORM)
+	unsigned char *len;
+#endif
 
 	if (conn == NULL)
 		return NULL;
@@ -2323,14 +2326,8 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		
 	} else if (msg->payload_size == 127) {
 #if defined(NOPOLL_64BIT_PLATFORM)
-		/* get extended 2 bytes length as unsigned 16 bit
-		   unsigned integer */
-		msg->payload_size = 0;
-		msg->payload_size |= ((long)(buffer[2]) << 56);
-		msg->payload_size |= ((long)(buffer[3]) << 48);
-
-		/* read more content (next 6 bytes) */
-		if ((bytes = __nopoll_conn_receive (conn, buffer, 6)) != 6) {
+		/* read more content (next 8 bytes) */
+		if ((bytes = __nopoll_conn_receive (conn, buffer, 8)) != 8) {
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, 
 				    "Expected to receive next 6 bytes for websocket frame header but found only %d bytes, closing session: %d",
 				    bytes, conn->id);
@@ -2338,12 +2335,16 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			return NULL;
 		} /* end if */
 
-		msg->payload_size |= ((long)(buffer[0]) << 40);
-		msg->payload_size |= ((long)(buffer[1]) << 32);
-		msg->payload_size |= ((long)(buffer[2]) << 24);
-		msg->payload_size |= ((long)(buffer[3]) << 16);
-		msg->payload_size |= ((long)(buffer[4]) << 8);
-		msg->payload_size |= buffer[5];
+                len = (unsigned char*)buffer;
+		msg->payload_size = 0;
+		msg->payload_size |= ((long)(len[0]) << 56);
+		msg->payload_size |= ((long)(len[1]) << 48);
+		msg->payload_size |= ((long)(len[2]) << 40);
+		msg->payload_size |= ((long)(len[3]) << 32);
+		msg->payload_size |= ((long)(len[4]) << 24);
+		msg->payload_size |= ((long)(len[5]) << 16);
+		msg->payload_size |= ((long)(len[6]) << 8);
+		msg->payload_size |= len[7];
 #else
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "noPoll doesn't support messages bigger than 65k on this plataform (support for 64bit not found)");
 		nopoll_msg_unref (msg);
@@ -2488,7 +2489,7 @@ read_payload:
 		nopoll_conn_mask_content (conn->ctx, (char*) msg->payload, msg->payload_size, (char*) msg->mask, msg->unmask_desp);
 
 		/* flag what was unmasked */
-		msg->unmask_desp = msg->payload_size;
+		msg->unmask_desp += msg->payload_size;
 	} /* end if */
 
 	return msg;
