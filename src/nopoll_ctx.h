@@ -87,6 +87,14 @@ void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
 					 noPollOnMessageHandler   on_msg,
 					 noPollPtr                user_data);
 
+void           nopoll_ctx_set_ssl_context_creator (noPollCtx                * ctx,
+						   noPollSslContextCreator    context_creator,
+						   noPollPtr                  user_data);
+
+void           nopoll_ctx_set_post_ssl_check (noPollCtx          * ctx,
+					      noPollSslPostCheck   post_ssl_check,
+					      noPollPtr            user_data);
+
 noPollConn   * nopoll_ctx_foreach_conn (noPollCtx * ctx, noPollForeachConn foreach, noPollPtr user_data);
 
 void           nopoll_ctx_set_protocol_version (noPollCtx * ctx, int version);
