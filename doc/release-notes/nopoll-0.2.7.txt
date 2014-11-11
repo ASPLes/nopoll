@@ -1,0 +1,143 @@
+                 --== noPoll toolkit ==--
+                       Panic Station
+                          0.2.7
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  New stable release that includes various corrections. Added new API
+  to allow configuring TLS protocol.
+
+
+Thanks to
+~~~~~~~~~
+
+  - Kevin Sucre (various socket error handling updates to make them work
+    with VS win32 compilers)
+
+  - Félix Faisant (updates on automake/autoconf to compile without
+    warnings/errors)
+
+  - Emmanuel Puig (various corrections while receiving a masked frame
+    with two or more read operations and proper length handling when
+    frame indication is 127).
+
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Added memset operation at nopoll_listener functions to avoid
+  valgrind warning.
+
+* [fix] Several modifications to make the library to compilable
+  directly using c++. Updated socket error handling to work on win32
+  using vs compilers. Fixed some memory error reporting by valgrind at
+  reg tests (nothing wrong at noPoll's engine). Thanks Kevin Sucre
+  for reporting win32 issue.
+
+* [fix] More changes to use NOPOLL_INVALID_SOCKET instead of -1 to
+  better support win32 platform (as reported by Kevin Sucre).
+
+* [fix] Updated nopoll_msg_get_payload to return a const unsigned char
+  * instead of a const noPollPTr which seems to be causing problems..
+
+* [fix] Fixed regression test to ensure it is properly checked the
+  right reference while starting listeners..
+
+* [new] Added on ready handler support to notify at server side when
+  the connection is fully ready to start sending content. API added:
+
+  - nopoll_ctx_set_on_ready
+
+* [new] General update to make noPoll API to support SSL method
+  configurations so it can support now SSLv3, TLSv1 and TLSv1.1 or a
+  combination of them. Added an initial API to allow configuring
+  connection options. API added:
+
+  - nopoll_conn_opts_new
+  - nopoll_conn_opts_set_ssl_protocol
+  - nopoll_conn_opts_set_reuse
+  - nopoll_conn_opts_free
+  - noPollSslProtocol (NOPOLL_METHOD_SSLV23, NOPOLL_METHOD_SSLV3, 
+                       NOPOLL_METHOD_TLSV1, NOPOLL_METHOD_TLSV1_1)
+  - nopoll_listener_new_opts
+  - nopoll_listener_tls_new_opts
+
+  Added regression test (test 19) to check support added.
+
+* [fix] Several updates to avoid building TLSv1.1 when it is not
+  present.
+
+* [fix] Fixed automake option (--Werror -> -Werror). Reported by
+  Félix.
+
+* [fix] Replaced INCLUDES by AM_CPPFLAGS inside Makefile.am files
+  (proposed by Felix Faisant).
+
+* [fix] autoconf voodoo updates proposed by Felix Faisant
+
+* [fix] Some updates to better report mime parse errors.... and fixed
+  a possible memory leak at mime handling when error happens.
+
+* [fix] More debug to detect wrong mime handling..
+
+* [fix] More debug to mime header parsing..
+
+* [fix] Fixed nopoll_conn_log_ssl to avoid buffer overrun when openssl
+  does not provide the format expected.
+
+* [fix] Applied patch by Emmanuel Puig to fix payload size handling
+  when using extended payload (len == 127). Also fixes when to reads
+  ops happens. Thanks for reporting Emmanuel, fine work!
+
+* [fix] Updating version..
+
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organization to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+11th Nov 2014, Madrid (Spain)
+
