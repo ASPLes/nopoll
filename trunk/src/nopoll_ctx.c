@@ -649,6 +649,62 @@ void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
 }
 
 /** 
+ * @brief Allows to configure the handler that will be used to let
+ * user land code to define OpenSSL SSL_CTX object.
+ *
+ * By default, SSL_CTX (SSL Context) object is created by default
+ * settings that works for most of the cases. In the case you want to
+ * configure particular configurations that should be enabled on the
+ * provided SSL_CTX that is going to be used by the client ---while
+ * connecting--- or server ---while receiving a connection--- then use
+ * this function to setup your creator handler.
+ *
+ * See \ref noPollSslContextCreator for more information about this
+ * handler.
+ *
+ */
+void           nopoll_ctx_set_ssl_context_creator (noPollCtx                * ctx,
+						   noPollSslContextCreator    context_creator,
+						   noPollPtr                  user_data)
+{
+	if (ctx == NULL)
+		return;
+
+	/* set handlers as indicated by the caller */
+	ctx->context_creator      = context_creator;
+	ctx->context_creator_data = user_data;
+	return;
+}
+
+/** 
+ * @brief Allows to configure a function that will implement an post SSL/TLS check.
+ *
+ * See the following function to get more information: \ref noPollSslPostCheck
+ *
+ * @param ctx The context where the operation is taking place.
+ *
+ * @param post_ssl_check The handler that is going to be called
+ * everything a new connection with SSL is established by a client or
+ * received by a server. The handler is executed right after the SSL
+ * handshake finishes without error.
+ *
+ * @param user_data A reference to user defined pointer that will be
+ * passed in to the handler.
+ */
+void           nopoll_ctx_set_post_ssl_check (noPollCtx          * ctx,
+					      noPollSslPostCheck   post_ssl_check,
+					      noPollPtr            user_data)
+{
+	if (ctx == NULL)
+		return;
+
+	/* set handlers as indicated by the caller */
+	ctx->post_ssl_check      = post_ssl_check;
+	ctx->post_ssl_check_data = user_data;
+	return;
+}
+
+/** 
  * @brief Allows to iterate over all connections currently registered
  * on the provided context, optionally stopping the foreach process,
  * returning the connection reference selected if the foreach handler

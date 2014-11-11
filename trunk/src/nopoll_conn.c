@@ -454,6 +454,10 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 
 SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * opts, nopoll_bool is_client)
 {
+	/* call to user defined function if the context creator is defined */
+	if (ctx && ctx->context_creator)
+		return ctx->context_creator (ctx, conn, opts, is_client, ctx->context_creator_data);
+
 	if (opts == NULL) {
 		/* printf ("**** REPORTING TLSv1 ****\n"); */
 		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
@@ -607,7 +611,8 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 		conn->ssl      = SSL_new (conn->ssl_ctx);       
 		if (conn->ssl_ctx == NULL || conn->ssl == NULL) {
 			nopoll_free (content);
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to create SSL context");
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to create SSL context internal references are null (conn->ssl_ctx=%p, conn->ssl=%p)",
+				    conn->ssl_ctx, conn->ssl);
 			nopoll_conn_shutdown (conn);
 
 			/* release connection options */
@@ -693,6 +698,16 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 			return conn;
 		}
 		X509_free (server_cert);
+
+		/* call to check post ssl checks after SSL finalization */
+		if (conn->ctx && conn->ctx->post_ssl_check) {
+			if (! conn->ctx->post_ssl_check (conn->ctx, conn, conn->ssl_ctx, conn->ssl, conn->ctx->post_ssl_check_data)) {
+				/* TLS post check failed */
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "TLS/SSL post check function failed, dropping connection");
+				nopoll_conn_shutdown (conn);
+				return NULL;
+			} /* end if */
+		} /* end if */
 
 		/* configure default handlers */
 		conn->receive = nopoll_conn_tls_receive;
@@ -2133,6 +2148,16 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		conn->receive = nopoll_conn_tls_receive;
 		conn->send    = nopoll_conn_tls_send;
 
+		/* call to check post ssl checks after SSL finalization */
+		if (conn->ctx && conn->ctx->post_ssl_check) {
+			if (! conn->ctx->post_ssl_check (conn->ctx, conn, conn->ssl_ctx, conn->ssl, conn->ctx->post_ssl_check_data)) {
+				/* TLS post check failed */
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "TLS/SSL post check function failed, dropping connection");
+				nopoll_conn_shutdown (conn);
+				return NULL;
+			} /* end if */
+		} /* end if */
+
 		/* set this connection has TLS ok */
 		conn->tls_on  = nopoll_true;
 
@@ -3417,10 +3442,14 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 		conn->ssl_ctx  = __nopoll_conn_get_ssl_context (ctx, conn, listener->opts, nopoll_false);
 
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate file: %s", certificateFile);
-		if (SSL_CTX_use_certificate_file (conn->ssl_ctx, certificateFile, SSL_FILETYPE_PEM) <= 0) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
-				    "there was an error while setting certificate file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_certificate_file function. Tried certificate file: %s", 
-				    certificateFile);
+		if (conn->ssl_ctx == NULL || SSL_CTX_use_certificate_file (conn->ssl_ctx, certificateFile, SSL_FILETYPE_PEM) <= 0) {
+			/* drop an error log */
+			if (conn->ssl_ctx == NULL)
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept incoming connection, failed to create SSL context. Context creator returned NULL pointer");
+			else 
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "there was an error while setting certificate file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_certificate_file function. Tried certificate file: %s", 
+					    certificateFile);
+
 			/* dump error stack */
 			nopoll_conn_shutdown (conn);
 			nopoll_ctx_unregister_conn (ctx, conn);

@@ -257,6 +257,72 @@ typedef void (*noPollMutexUnlock) (noPollPtr mutex);
  */
 typedef void (*noPollLogHandler) (noPollCtx * ctx, noPollDebugLevel level, const char * log_msg, noPollPtr user_data);
 
+/** 
+ * @brief An optional handler that allows user land code to define how
+ * is SSL_CTX (SSL context) created and which are the settings it
+ * should have before taking place SSL/TLS handshake.
+ *
+ * NOTE: that the function should return one context for every
+ * connection created. Do not reuse unless you know what you are
+ * doing.
+ *
+ * A very bare implementation for this context creation will be:
+ *
+ * \code 
+ * SSL_CTX * my_ssl_ctx_creator (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * opts, nopoll_bool is_client, noPollPtr user_data)
+ * {
+ *        // very basic context creation using default settings provided by OpenSSL
+ *        return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
+ * }
+ * \endcode
+ *
+ * @param ctx The context where the operation is taking place.
+ *
+ * @param conn The connection that is being requested for a new context (SSL_CTX). Use is_client to know if this is a connecting client or a listener connection.
+ *
+ * @param opts Optional reference to the connection object created for this connection.
+ *
+ * @param is_client nopoll_true to signal that this is a request for a context for a client connection. Otherwise, it is for a listener connection.
+ *
+ * @param user_data User defined pointer that received on this function as defined at \ref nopoll_ctx_set_ssl_context_creator.
+ *
+ * @return The function must return a valid SSL_CTX object (see OpenSSL documentation to know more about this) or NULL if it fails.
+ */
+typedef noPollPtr (*noPollSslContextCreator) (noPollCtx       * ctx, 
+					      noPollConn      * conn, 
+					      noPollConnOpts  * opts, 
+					      nopoll_bool       is_client, 
+					      noPollPtr         user_data);
+
+/** 
+ * @brief Optional user defined handler that allows to execute SSL
+ * post checks code before proceed.
+ *
+ * This handler is configured at \ref nopoll_ctx_set_post_ssl_check
+ * and allows to implement custom actions while additional
+ * verifications about certificate received, validation based on
+ * certain attributes, etc.
+ *
+ * Note that when this handler is called, the SSL handshake has
+ * finished without error. In case of SSL handshake failure, this
+ * handler is not executed.
+ *
+ * @param ctx The context where the operation happens.
+ *
+ * @param conn The connection where the operation takes place and for which the post SSL check is being done.
+ *
+ * @param SSL_CTX The OpenSSL SSL_CTX object created for this connection.
+ *
+ * @param SSL The OpenSSL SSL object created for this connection.
+ *
+ * @param user_data User defined data that is received on this handler as configured at \ref nopoll_ctx_set_post_ssl_check
+ */
+typedef nopoll_bool (*noPollSslPostCheck) (noPollCtx      * ctx,
+					   noPollConn     * conn,
+					   noPollPtr        SSL_CTX,
+					   noPollPtr        SSL,
+					   noPollPtr        user_data);
+
 
 #endif
 

@@ -142,6 +142,14 @@ struct _noPollCtx {
 	/* log handling */
 	noPollLogHandler     log_handler;
 	noPollPtr            log_user_data;
+
+	/* context creator */
+	noPollSslContextCreator context_creator;
+	noPollPtr               context_creator_data;
+
+	/* SSL postcheck */
+	noPollSslPostCheck      post_ssl_check;
+	noPollPtr               post_ssl_check_data;
 };
 
 struct _noPollConn {
