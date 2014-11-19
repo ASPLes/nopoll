@@ -1800,6 +1800,36 @@ nopoll_bool test_20 (void) {
 }
 #endif
 
+nopoll_bool test_21 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * conn;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	printf ("Test 21: check ssl connection (with auth certificate)..\n");
+	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1239", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	if (test_sending_and_check_echo (conn, "Test 21", "This is a test")) {
+		printf ("ERROR: it shouldn't work, client certificate isn't working..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -1828,6 +1858,8 @@ int main (int argc, char ** argv)
 		/* next position */
 		iterator++;
 	}
+
+	goto test;
 
 	printf ("INFO: starting tests with pid: %d\n", getpid ());
 	if (test_01_strings ()) {
@@ -2035,6 +2067,15 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 #endif
+
+test:
+
+	if (test_21 ()) {
+		printf ("Test 21: client side ssl certificates verification  [   OK    ]\n");
+	} else {
+		printf ("Test 21: client side ssl certificates verification [ FAILED  ]\n");
+		return -1;
+	} /* end if */
 
 	/* add support to reply with redirect 301 to an opening
 	 * request: page 19 and 22 */

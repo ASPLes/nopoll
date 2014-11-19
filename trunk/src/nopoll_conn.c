@@ -1420,6 +1420,28 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 
 }
 
+/** 
+ * @brief Allows to get the master listener that was used to accept
+ * the provided connection that represents a listener connection.
+ *
+ * @param conn A listener connection that was accepted for which we
+ * want to get the master listener connection. The connection must be
+ * a \ref NOPOLL_ROLE_LISTENER (as reported by \ref nopoll_conn_role).
+ *
+ * @return A reference to the master listener connection or NULL if it
+ * fails. It can only fail when NULL reference is received or the
+ * connection is not a \ref NOPOLL_ROLE_LISTENER.
+ */
+noPollConn  * nopoll_conn_get_listener (noPollConn * conn)
+{
+	/* check if the incoming connection is a NOPOLL_ROLE_LISTENER
+	 * that is an accepted connection */
+	if (conn == NULL || conn->role != NOPOLL_ROLE_LISTENER)
+		return NULL;
+
+	return conn->listener;
+}
+
 void __nopoll_pack_content (char * buffer, int start, int bytes)
 {
 	int iterator = 0;
@@ -3353,6 +3375,10 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
 
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Accepted new WebSocket conn-id=%d, socket=%d, over master id=%d, socket=%d",
 		    conn->id, conn->session, listener->id, listener->session);
+
+	/* configure the listener reference that accepted this
+	 * connection */
+	conn->listener = listener;
 
 	if (! nopoll_conn_accept_complete (ctx, listener, conn, session, listener->tls_on))
 		return NULL;
