@@ -299,6 +299,12 @@ struct _noPollConn {
 	 * @internal Internal reference to the connection options.
 	 */
 	noPollConnOpts      * opts;
+
+	/** 
+	 * @internal Reference to the listener in the case this is a
+	 * connection that was created due to a listener running.
+	 */
+	noPollConn          * listener;
 };
 
 struct _noPollIoEngine {

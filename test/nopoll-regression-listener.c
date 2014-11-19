@@ -40,6 +40,13 @@
 
 #include <signal.h>
 
+#include <openssl/bio.h>
+#include <openssl/evp.h>
+#include <openssl/objects.h>
+#include <openssl/x509v3.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
+
 nopoll_bool on_connection_opened (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
 {
 	if (! nopoll_conn_set_sock_block (nopoll_conn_socket (conn), nopoll_false)) {
@@ -247,6 +254,38 @@ void __terminate_listener (int value)
 	return;
 }
 
+noPollPtr ssl_context_creator (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * opts, nopoll_bool is_client, noPollPtr user_data)
+{
+	SSL_CTX    * ssl_ctx;
+	noPollConn * listener;
+
+	/* very basic context creation using default settings provided
+	 * by OpenSSL */
+	if (is_client) 
+		return SSL_CTX_new (TLSv1_client_method ());
+
+	/* get the ssl context */
+	ssl_ctx = SSL_CTX_new (TLSv1_server_method ());
+
+	/* get a reference to the listener */
+	listener = nopoll_conn_get_listener (conn);
+
+	if (nopoll_cmp ("1239", nopoll_conn_port (listener))) {
+		printf ("ACCEPTED ssl connection on port: %s (for conn %p)\n", nopoll_conn_port (listener), conn);
+
+		/* ok, especiall case where we require a certain
+		 * certificate from renote side */
+		SSL_CTX_use_certificate_chain_file (ssl_ctx, "client-side-cert-auth-cacert.crt");
+
+		/* make server to ask for a certificate to the client
+		 * .... and verify it */
+		SSL_CTX_set_verify (ssl_ctx, SSL_VERIFY_PEER, NULL);
+	} /* end if */
+	
+
+	return ssl_ctx;
+}
+
 int main (int argc, char ** argv)
 {
 	noPollConn     * listener;
@@ -333,6 +372,15 @@ int main (int argc, char ** argv)
 		return -1;
 	} /* end if */
 #endif
+
+	listener2 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1239");
+	if (! nopoll_conn_is_ok (listener2)) {
+		printf ("ERROR: Expected to find proper listener TLS connection status (:1236, SSLv23), but found..\n");
+		return -1;
+	} /* end if */
+
+	/* configure ssl context creator */
+	nopoll_ctx_set_ssl_context_creator (ctx, ssl_context_creator, NULL);
 
 	/* set on message received */
 	nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);

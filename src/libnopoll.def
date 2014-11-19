@@ -42,6 +42,7 @@ nopoll_conn_get_hook
 nopoll_conn_get_host_header
 nopoll_conn_get_http_url
 nopoll_conn_get_id
+nopoll_conn_get_listener
 nopoll_conn_get_mime_header
 nopoll_conn_get_msg
 nopoll_conn_get_origin
