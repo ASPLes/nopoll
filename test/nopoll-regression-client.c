@@ -1800,7 +1800,11 @@ nopoll_bool test_20 (void) {
 }
 #endif
 
-/** http://stackoverflow.com/questions/4261369/openssl-verify-peer-client-certificate-in-c **/
+/* http://stackoverflow.com/questions/4261369/openssl-verify-peer-client-certificate-in-c 
+ *
+ * To check certifcate with the CA that issued it use:
+ * >> openssl verify -verbose -CAfile <ce-certificate-pem.txt>  <server-certificate.txt>
+ */
 nopoll_bool test_21 (void) {
 
 	noPollCtx  * ctx;
