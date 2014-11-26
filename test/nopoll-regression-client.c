@@ -1815,10 +1815,9 @@ nopoll_bool test_20 (void) {
 }
 #endif
 
-/* http://stackoverflow.com/questions/4261369/openssl-verify-peer-client-certificate-in-c 
+/* 
  *
- * To check certifcate with the CA that issued it use:
- * >> openssl verify -verbose -CAfile <ce-certificate-pem.txt>  <server-certificate.txt>
+ * Reg test to check client auth certificate.
  */
 nopoll_bool test_21 (void) {
 
