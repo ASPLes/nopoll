@@ -942,14 +942,19 @@ nopoll_bool test_05 (void) {
 
 nopoll_bool test_06 (void) {
 
-	noPollCtx  * ctx;
-	noPollConn * conn;
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+	noPollConnOpts * opts;
 
 	/* reinit again */
 	ctx = create_ctx ();
 
+	/* disable verification */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
+
 	/* call to create a connection */
-	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -984,14 +989,19 @@ nopoll_bool test_06 (void) {
 
 nopoll_bool test_07 (void) {
 
-	noPollCtx  * ctx;
-	noPollConn * conn;
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+	noPollConnOpts * opts;
 
 	/* reinit again */
 	ctx = create_ctx ();
 
+	/* disable verification */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
+
 	/* call to create a connection */
-	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1671,12 +1681,17 @@ nopoll_bool test_18 (void) {
 
 	noPollCtx      * ctx;
 	noPollConn     * conn;
+	noPollConnOpts * opts;
 
 	/* reinit again */
 	ctx = create_ctx ();
 
+	/* disable verification */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
+
 	/* call to create a connection */
-	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1807,8 +1822,9 @@ nopoll_bool test_20 (void) {
  */
 nopoll_bool test_21 (void) {
 
-	noPollCtx  * ctx;
-	noPollConn * conn;
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+	noPollConnOpts * opts;
 
 	/* reinit again */
 	ctx = create_ctx ();
@@ -1816,13 +1832,26 @@ nopoll_bool test_21 (void) {
 	/* call to create a connection */
 	printf ("Test 21: check ssl connection (with auth certificate)..\n");
 	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1239", NULL, NULL, NULL, NULL);
-	if (! nopoll_conn_is_ok (conn)) {
-		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+	if (nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to FAILURE client connection status, but ok..\n");
 		return nopoll_false;
 	}
+	nopoll_conn_close (conn);
 
-	if (test_sending_and_check_echo (conn, "Test 21", "This is a test")) {
-		printf ("ERROR: it shouldn't work, client certificate isn't working..\n");
+	/* try again configuring conection certificates */
+	printf ("Test 21: checking to connect again with client provided certificates..\n");
+	opts     = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_ssl_certs (opts, 
+					/* certificate */
+					"client.pem",
+					/* private key */
+					"client.pem",
+					NULL,
+					/* ca certificate */
+					"root.pem");
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1239", NULL, NULL, NULL, NULL);
+	if (! test_sending_and_check_echo (conn, "Test 21", "This is a test")) {
+		printf ("ERROR: it should WORK, client certificate isn't working..\n");
 		return nopoll_false;
 	} /* end if */
 
@@ -1863,8 +1892,6 @@ int main (int argc, char ** argv)
 		/* next position */
 		iterator++;
 	}
-
-	goto test;
 
 	printf ("INFO: starting tests with pid: %d\n", getpid ());
 	if (test_01_strings ()) {
@@ -2072,8 +2099,6 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 #endif
-
-test:
 
 	if (test_21 ()) {
 		printf ("Test 21: client side ssl certificates verification  [   OK    ]\n");
