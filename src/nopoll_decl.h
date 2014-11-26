@@ -419,7 +419,7 @@ typedef enum {
 	 * @brief Allows to define SSLv23 as SSL protocol used by the
 	 * client or server connection. A TLS/SSL connection
 	 * established with these methods may understand SSLv3, TLSv1,
-	 * TLSv1.1 and TLSv1.2 protocols (\ref NOPOLL_METHOD_SSLV3, \ref NOPOLL_METHOD_TLSV1, \ref NOPOLL_METHOD_TLSV1_1)
+	 * TLSv1.1 and TLSv1.2 protocols (\ref NOPOLL_METHOD_SSLV3, \ref NOPOLL_METHOD_TLSV1, ...)
 	 */
 	NOPOLL_METHOD_SSLV23      = 2,
 	/** 
