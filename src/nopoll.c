@@ -646,6 +646,21 @@ int     nopoll_timeval_substract                  (struct timeval * a,
        return a->tv_sec < b->tv_sec;	
 }
 
+/** 
+ * @brief Safe strdup () wrapper.
+ *
+ * @param buffer The string to copy
+ *
+ * @return A reference to the string copied or NULL if it fails.
+ */
+char      * nopoll_strdup (const char * buffer)
+{
+	if (buffer == NULL)
+		return NULL;
+
+	return strdup (buffer);
+}
+
 
 /* internal reference to track if we have to randomly init seed */
 nopoll_bool __nopoll_nonce_init = nopoll_false;

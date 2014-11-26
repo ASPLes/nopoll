@@ -3,9 +3,13 @@ __nopoll_conn_accept_complete_common
 __nopoll_conn_get_client_init
 __nopoll_conn_get_ssl_context
 __nopoll_conn_new_common
+__nopoll_conn_opts_free_common
 __nopoll_conn_opts_release_if_needed
 __nopoll_conn_receive
 __nopoll_conn_send_common
+__nopoll_conn_set_ssl_client_options
+__nopoll_conn_ssl_ctx_debug
+__nopoll_conn_ssl_verify_callback
 __nopoll_conn_tls_handle_error
 __nopoll_ctx_sigpipe_do_nothing
 __nopoll_log
@@ -55,8 +59,12 @@ nopoll_conn_mask_content
 nopoll_conn_new
 nopoll_conn_opts_free
 nopoll_conn_opts_new
+nopoll_conn_opts_ref
 nopoll_conn_opts_set_reuse
+nopoll_conn_opts_set_ssl_certs
 nopoll_conn_opts_set_ssl_protocol
+nopoll_conn_opts_ssl_peer_verify
+nopoll_conn_opts_unref
 nopoll_conn_pending_write_bytes
 nopoll_conn_port
 nopoll_conn_produce_accept_key
@@ -160,6 +168,7 @@ nopoll_set_32bit
 nopoll_set_bit
 nopoll_show_byte
 nopoll_sleep
+nopoll_strdup
 nopoll_strdup_printf
 nopoll_strdup_printfv
 nopoll_thread_handlers

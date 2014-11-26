@@ -210,8 +210,8 @@ noPollConn      * nopoll_listener_new_opts (noPollCtx      * ctx,
 	listener->role    = NOPOLL_ROLE_MAIN_LISTENER;
 
 	/* record host and port */
-	listener->host    = strdup (host);
-	listener->port    = strdup (port);
+	listener->host    = nopoll_strdup (host);
+	listener->port    = nopoll_strdup (port);
 
 	/* register connection into context */
 	nopoll_ctx_register_conn (ctx, listener);
@@ -328,11 +328,24 @@ nopoll_bool           nopoll_listener_set_certificate (noPollConn * listener,
 	} /* end if */
 	fclose (handle);
 
+	if (chain_file) {
+		/* check private file */
+		handle = fopen (chain_file, "r");
+		if (! handle) {
+			nopoll_log (listener->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to open chain certificate file from %s", private_key);
+			return nopoll_false;
+		} /* end if */
+		fclose (handle);
+	} /* end if */
+
 	/* copy certificates to be used */
-	listener->certificate_file = strdup (certificate);
-	listener->private_file     = strdup (private_key);
+	listener->certificate   = nopoll_strdup (certificate);
+	listener->private_key   = nopoll_strdup (private_key);
+	if (chain_file)
+		listener->chain_certificate = nopoll_strdup (chain_file);
+	    
 	nopoll_log (listener->ctx, NOPOLL_LEVEL_DEBUG, "Configured certificate: %s, key: %s, for conn id: %d",
-		    listener->certificate_file, listener->private_file, listener->id);
+		    listener->certificate, listener->private_key, listener->id);
 
 	/* certificates configured */
 	return nopoll_true;
@@ -379,7 +392,7 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 
 	/* record host and port */
 	/* lock mutex here to protect inet_ntoa */
-	listener->host    = strdup (inet_ntoa (sin.sin_addr));
+	listener->host    = nopoll_strdup (inet_ntoa (sin.sin_addr));
 	/* release mutex here to protect inet_ntoa */
 	listener->port    = nopoll_strdup_printf ("%d", ntohs (sin.sin_port));
 

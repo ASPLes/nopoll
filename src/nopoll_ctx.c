@@ -494,19 +494,19 @@ nopoll_bool           nopoll_ctx_set_certificate (noPollCtx  * ctx,
 
 	cert->serverName = NULL;
 	if (serverName)
-		cert->serverName         = strdup (serverName);
+		cert->serverName         = nopoll_strdup (serverName);
 
 	cert->certificateFile = NULL;
 	if (certificateFile)
-		cert->certificateFile    = strdup (certificateFile);
+		cert->certificateFile    = nopoll_strdup (certificateFile);
 
 	cert->privateKey = NULL;
 	if (privateKey)
-		cert->privateKey         = strdup (privateKey);
+		cert->privateKey         = nopoll_strdup (privateKey);
 
 	cert->optionalChainFile = NULL;
 	if (optionalChainFile)
-		cert->optionalChainFile  = strdup (optionalChainFile);
+		cert->optionalChainFile  = nopoll_strdup (optionalChainFile);
 
 	return nopoll_true;
 }

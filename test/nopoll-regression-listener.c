@@ -254,10 +254,35 @@ void __terminate_listener (int value)
 	return;
 }
 
+int verify_callback (int ok, X509_STORE_CTX * store) {
+	char   data[256];
+	X509 * cert;
+	int    depth;
+	int    err;
+
+	if (! ok) {
+		cert  = X509_STORE_CTX_get_current_cert (store);
+		depth = X509_STORE_CTX_get_error_depth (store);
+		err   = X509_STORE_CTX_get_error (store);
+
+		printf ("CERTIFICATE: error at depth: %d\n", depth);
+
+		X509_NAME_oneline (X509_get_issuer_name (cert), data, 256);
+		printf ("CERTIFICATE: issuer: %s\n", data);
+
+		X509_NAME_oneline (X509_get_subject_name (cert), data, 256);
+		printf ("CERTIFICATE: subject: %s\n", data);
+
+		printf ("CERTIFICATE: error %d:%s\n", err, X509_verify_cert_error_string (err));
+
+	}
+	return ok; /* return same value */
+}
+
 noPollPtr ssl_context_creator (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * opts, nopoll_bool is_client, noPollPtr user_data)
 {
-	SSL_CTX    * ssl_ctx;
-	noPollConn * listener;
+	SSL_CTX             * ssl_ctx;
+	noPollConn          * listener;
 
 	/* very basic context creation using default settings provided
 	 * by OpenSSL */
@@ -275,14 +300,17 @@ noPollPtr ssl_context_creator (noPollCtx * ctx, noPollConn * conn, noPollConnOpt
 
 		/* ok, especiall case where we require a certain
 		 * certificate from renote side */
-		SSL_CTX_use_certificate_chain_file (ssl_ctx, "client-side-cert-auth-cacert.crt"); 
+		if (SSL_CTX_load_verify_locations (ssl_ctx, "client-side-cert-auth-cacert.crt", NULL) != 1) {
+			printf ("ERROR: unable to add ca certificate...\n");
+		}
+
 
 		/* make server to ask for a certificate to the client
 		 * .... and verify it */
-		SSL_CTX_set_verify (ssl_ctx, SSL_VERIFY_PEER, NULL);
+		SSL_CTX_set_verify (ssl_ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_callback);
 	} /* end if */
 	
-
+	printf ("RETURNING: ssl context reference %p\n", ssl_ctx);
 	return ssl_ctx;
 }
 
@@ -373,14 +401,31 @@ int main (int argc, char ** argv)
 	} /* end if */
 #endif
 
+	opts     = nopoll_conn_opts_new ();
+
+	/* configure server certificates (server.pem) signed by the
+	 * provided ca (root.pem) also configured in the last
+	 * parameter */
+	if (! nopoll_conn_opts_set_ssl_certs (opts, 
+					      "server.pem",
+					      "server.pem",
+					      NULL,
+					      "root.pem")) {
+		printf ("ERROR: unable to setup certificates...\n");
+		return -1;
+	}
+	/* configure peer verification */
+	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_true);
+	    
 	listener2 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1239");
 	if (! nopoll_conn_is_ok (listener2)) {
 		printf ("ERROR: Expected to find proper listener TLS connection status (:1236, SSLv23), but found..\n");
 		return -1;
 	} /* end if */
 
+
 	/* configure ssl context creator */
-	nopoll_ctx_set_ssl_context_creator (ctx, ssl_context_creator, NULL);
+	/* nopoll_ctx_set_ssl_context_creator (ctx, ssl_context_creator, NULL); */
 
 	/* set on message received */
 	nopoll_ctx_set_on_msg (ctx, listener_on_message, NULL);

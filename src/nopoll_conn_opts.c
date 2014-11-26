@@ -65,6 +65,12 @@ noPollConnOpts * nopoll_conn_opts_new ()
 	result->reuse        = nopoll_false; /* this is not needed, just to clearly state defaults */
 	result->ssl_protocol = NOPOLL_METHOD_TLSV1;
 
+	result->mutex        = nopoll_mutex_create ();
+	result->refs         = 1;
+
+	/* by default, disable ssl peer verification */
+	result->disable_ssl_verify = nopoll_true;
+
 	return result;
 }
 
@@ -83,6 +89,130 @@ void nopoll_conn_opts_set_ssl_protocol (noPollConnOpts * opts, noPollSslProtocol
 	opts->ssl_protocol = ssl_protocol;
 	return;
 }
+
+
+/** 
+ * @brief Allows to certificate, private key and optional chain
+ * certificate and ca for on a particular options that can be used for
+ * a client and a listener connection.
+ *
+ * @param opts The connection options where these settings will be
+ * applied.
+ *
+ * @param certificate The certificate to use on the connection.
+ *
+ * @param private_key client_certificate private key.
+ *
+ * @param chain_certificate Optional chain certificate to use 
+ *
+ * @param ca_certificate Optional CA certificate to use during the
+ * process.
+ *
+ * @return nopoll_true in the case all certificate files provided are
+ * reachable.
+ */
+nopoll_bool        nopoll_conn_opts_set_ssl_certs    (noPollConnOpts * opts, 
+						      const char     * certificate,
+						      const char     * private_key,
+						      const char     * chain_certificate,
+						      const char     * ca_certificate)
+{
+	if (opts == NULL)
+		return nopoll_false;
+	
+	/* store certificate settings */
+	opts->certificate        = nopoll_strdup (certificate);
+	if (opts->certificate)
+		if (access (opts->certificate, R_OK) != 0)
+			return nopoll_false;
+	opts->private_key        = nopoll_strdup (private_key);
+	if (opts->private_key)
+		if (access (opts->private_key, R_OK) != 0)
+			return nopoll_false;
+	opts->chain_certificate  = nopoll_strdup (chain_certificate);
+	if (opts->chain_certificate)
+		if (access (opts->chain_certificate, R_OK) != 0)
+			return nopoll_false;
+	opts->ca_certificate     = nopoll_strdup (ca_certificate);
+	if (opts->ca_certificate)
+		if (access (opts->ca_certificate, R_OK) != 0)
+			return nopoll_false;
+
+	return nopoll_true;
+}
+
+/** 
+ * @brief Allows to disable peer ssl certificate verification. This is
+ * not recommended for production enviroment. This affects in a
+ * different manner to a listener connection and a client connection.
+ *
+ * For a client connection, by default, peer verification is enabled
+ * and this function may help to disable it during development or
+ * other reasons.
+ *
+ * In the case of the servers (created by using \ref
+ * nopoll_listener_new for example) this is not required because by
+ * default peer verification is disabled by default.
+ *
+ * @param opts The connection option to configure.
+ *
+ * @param disable_verify nopoll_true to disable verification
+ * otherwise, nopoll_false should be used. By default SSL verification
+ * is enabled.
+ *
+ */
+void nopoll_conn_opts_ssl_peer_verify (noPollConnOpts * opts, nopoll_bool verify)
+{
+	if (opts == NULL)
+		return;
+	opts->disable_ssl_verify = ! verify;
+	return;
+}
+
+
+/** 
+ * @brief Allows to increase a reference to the connection options
+ * provided. 
+ *
+ * @param opts The connection option reference over which a connection
+ * reference is needed.
+ *
+ * @return nopoll_true in the case the operation went ok, otherwise
+ * nopoll_false is returned.
+ */
+nopoll_bool nopoll_conn_opts_ref (noPollConnOpts * opts)
+{
+	if (opts == NULL)
+		return nopoll_false;
+
+	/* lock the mutex */
+	nopoll_mutex_lock (opts->mutex);
+	if (opts->refs <= 0) {
+		/* unlock the mutex */
+		nopoll_mutex_unlock (opts->mutex);
+		return nopoll_false;
+	}
+	
+	opts->refs++;
+
+	/* release here the mutex */
+	nopoll_mutex_unlock (opts->mutex);
+
+	return nopoll_true;
+}
+
+/** 
+ * @brief Allows to unref a reference acquired by \ref nopoll_conn_opts_ref
+ *
+ * @param opts The connection opts to release.
+ */
+void        nopoll_conn_opts_unref (noPollConnOpts * opts)
+{
+	/* call free implementation */
+	nopoll_conn_opts_free (opts);
+	return;
+}
+
 
 /** 
  * @brief Set reuse-flag be used on the API receiving this
@@ -106,6 +236,34 @@ void nopoll_conn_opts_set_reuse        (noPollConnOpts * opts, nopoll_bool reuse
 	return;
 }
 
+void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
+{
+	if (opts == NULL)
+		return;
+
+	/* acquire here the mutex */
+	nopoll_mutex_lock (opts->mutex);
+
+	opts->refs--;
+	if (opts->refs != 0) {
+		/* release here the mutex */
+		nopoll_mutex_unlock (opts->mutex);
+		return;
+	}
+	/* release here the mutex */
+	nopoll_mutex_unlock (opts->mutex);
+
+	nopoll_free (opts->certificate);
+	nopoll_free (opts->private_key);
+	nopoll_free (opts->chain_certificate);
+	nopoll_free (opts->ca_certificate);
+
+	/* release mutex */
+	nopoll_mutex_destroy (opts->mutex);
+	nopoll_free (opts);
+	return;
+}
+
 /** 
  * @brief Allows to release a connection object reported by \ref nopoll_conn_opts_new
  *
@@ -117,9 +275,7 @@ void nopoll_conn_opts_set_reuse        (noPollConnOpts * opts, nopoll_bool reuse
  */
 void nopoll_conn_opts_free (noPollConnOpts * opts)
 {
-	if (opts == NULL)
-		return;
-	nopoll_free (opts);
+	__nopoll_conn_opts_free_common (opts);
 	return;
 } /* end if */
 
@@ -133,7 +289,7 @@ void __nopoll_conn_opts_release_if_needed (noPollConnOpts * options)
 		return;
 	if (options && options->reuse)
 		return;
-	nopoll_free (options);
+	__nopoll_conn_opts_free_common (options);
 	return;
 }
 

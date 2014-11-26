@@ -266,8 +266,9 @@ struct _noPollConn {
 	SSL            * ssl;
 
 	/* certificates */
-	char           * certificate_file;
-	char           * private_file;
+	char           * certificate;
+	char           * private_key;
+	char           * chain_certificate;
 
 	/* pending buffer */
 	char             pending_buf[100];
@@ -353,8 +354,21 @@ struct _noPollHandshake {
 struct _noPollConnOpts {
 	/* If the connection options object should be reused across calls */
 	nopoll_bool          reuse;
+
+	/* mutex */
+	noPollPtr            mutex;
+	int                  refs;
+
 	/* What ssl protocol should be used */
 	noPollSslProtocol    ssl_protocol;
+
+	/* SSL options */
+	char * certificate;
+	char * private_key;
+	char * chain_certificate;
+	char * ca_certificate;
+
+	nopoll_bool  disable_ssl_verify;
 };
 
 #endif

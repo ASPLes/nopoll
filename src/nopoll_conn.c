@@ -53,6 +53,7 @@
 # include <netinet/tcp.h>
 #endif
 
+
 /** 
  * @brief Allows to enable/disable non-blocking/blocking behavior on
  * the provided socket.
@@ -285,7 +286,7 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 
 	/* create accept and store */
 	conn->handshake = nopoll_new (noPollHandShake, 1);
-	conn->handshake->expected_accept = strdup (key);
+	conn->handshake->expected_accept = nopoll_strdup (key);
 
 	/* send initial handshake */
 	return nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nOrigin: %s\r\n%s%s%s%sSec-WebSocket-Version: %d\r\n\r\n", 
@@ -302,6 +303,7 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 				     conn->ctx->protocol_version);
 }
 
+
 /**
  * @internal Function that dumps all errors found on current ssl context.
  */
@@ -317,7 +319,7 @@ int nopoll_conn_log_ssl (noPollConn * conn)
 	
 	while ((err = ERR_get_error()) != 0) {
 		ERR_error_string_n (err, log_buffer, sizeof (log_buffer));
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "tls stack: %s (find reason(code) at openssl/ssl.h)", log_buffer);
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "tls stack: %s (find reason(code) at openssl/ssl.h)", log_buffer); 
 
 		/* find error code position */
 		error_position = 0;
@@ -455,7 +457,7 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * opts, nopoll_bool is_client)
 {
 	/* call to user defined function if the context creator is defined */
-	if (ctx && ctx->context_creator)
+	if (ctx && ctx->context_creator) 
 		return ctx->context_creator (ctx, conn, opts, is_client, ctx->context_creator_data);
 
 	if (opts == NULL) {
@@ -465,7 +467,6 @@ SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noP
 
 	switch (opts->ssl_protocol) {
 	case NOPOLL_METHOD_TLSV1:
-		/* printf ("**** REPORTING TLSv1 ****\n"); */
 		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
 #if defined(TLSv1_1_client_method)
 	case NOPOLL_METHOD_TLSV1_1:
@@ -481,8 +482,99 @@ SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noP
 	}
 
 	/* reached this point, report default TLSv1 method */
-	printf ("**** REPORTING TLSv1 ****\n");
 	return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
+}
+
+noPollCtx * __nopoll_conn_ssl_ctx_debug = NULL;
+
+int __nopoll_conn_ssl_verify_callback (int ok, X509_STORE_CTX * store) {
+	char   data[256];
+	X509 * cert;
+	int    depth;
+	int    err;
+
+	if (! ok) {
+		cert  = X509_STORE_CTX_get_current_cert (store);
+		depth = X509_STORE_CTX_get_error_depth (store);
+		err   = X509_STORE_CTX_get_error (store);
+
+		nopoll_log (__nopoll_conn_ssl_ctx_debug, NOPOLL_LEVEL_CRITICAL, "CERTIFICATE: error at depth: %d", depth);
+
+		X509_NAME_oneline (X509_get_issuer_name (cert), data, 256);
+		nopoll_log (__nopoll_conn_ssl_ctx_debug, NOPOLL_LEVEL_CRITICAL, "CERTIFICATE: issuer: %s", data);
+
+		X509_NAME_oneline (X509_get_subject_name (cert), data, 256);
+		nopoll_log (__nopoll_conn_ssl_ctx_debug, NOPOLL_LEVEL_CRITICAL, "CERTIFICATE: subject: %s", data);
+
+		nopoll_log (__nopoll_conn_ssl_ctx_debug, NOPOLL_LEVEL_CRITICAL, "CERTIFICATE: error %d:%s", err, X509_verify_cert_error_string (err));
+			    
+	}
+	return ok; /* return same value */
+}
+
+nopoll_bool __nopoll_conn_set_ssl_client_options (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * options)
+{
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking to establish SSL options (%p)", options);
+
+	if (options && options->ca_certificate) {
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Setting CA certificate: %s", options->ca_certificate);
+		if (SSL_CTX_load_verify_locations (conn->ssl_ctx, options->ca_certificate, NULL) != 1) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to configure CA certificate (%s), SSL_CTX_load_verify_locations () failed", options->ca_certificate);
+			return nopoll_false;
+		} /* end if */
+		
+	} /* end if */
+
+	/* enable default verification paths */
+	if (SSL_CTX_set_default_verify_paths (conn->ssl_ctx) != 1) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to configure default verification paths, SSL_CTX_set_default_verify_paths () failed");
+		return nopoll_false;
+	} /* end if */
+
+	if (options && options->chain_certificate) {
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Setting chain certificate: %s", options->chain_certificate);
+		if (SSL_CTX_use_certificate_chain_file (conn->ssl_ctx, options->chain_certificate) != 1) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to configure chain certificate (%s), SSL_CTX_use_certificate_chain_file () failed", options->chain_certificate);
+			return nopoll_false;
+		} /* end if */
+	} /* end if */
+
+	if (options && options->certificate) {
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Setting certificate: %s", options->certificate);
+		if (SSL_CTX_use_certificate_chain_file (conn->ssl_ctx, options->certificate) != 1) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to configure client certificate (%s), SSL_CTX_use_certificate_file () failed", options->certificate);
+			return nopoll_false;
+		} /* end if */
+	} /* end if */
+
+	if (options && options->private_key) {
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Setting private key: %s", options->private_key);
+		if (SSL_CTX_use_PrivateKey_file (conn->ssl_ctx, options->private_key, SSL_FILETYPE_PEM) != 1) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to configure private key (%s), SSL_CTX_use_PrivateKey_file () failed", options->private_key);
+			return nopoll_false;
+		} /* end if */
+	} /* end if */
+
+	if (options && options->private_key && options->certificate) {
+		if (!SSL_CTX_check_private_key (conn->ssl_ctx)) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Certificate and private key do not matches, verification fails, SSL_CTX_check_private_key ()");
+			return nopoll_false;
+		} /* end if */
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Certificate (%s) and private key (%s) matches", options->certificate, options->private_key);
+	} /* end if */
+
+	/* if no option and it is not disabled */
+	if (options == NULL || ! options->disable_ssl_verify) {
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Enabling certificate peer verification");
+		/** really, really ugly hack to let
+		 * __nopoll_conn_ssl_verify_callback to be able to get
+		 * access to the context required to drop some logs */
+		__nopoll_conn_ssl_ctx_debug = ctx;
+		SSL_CTX_set_verify (conn->ssl_ctx, SSL_VERIFY_PEER, __nopoll_conn_ssl_verify_callback); 
+		SSL_CTX_set_verify_depth (conn->ssl_ctx, 10); 
+	} /* end if */
+
+	return nopoll_true;
 }
 
 
@@ -559,8 +651,8 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 	conn->role    = NOPOLL_ROLE_CLIENT;
 
 	/* record host and port */
-	conn->host    = strdup (host_ip);
-	conn->port    = strdup (host_port);
+	conn->host    = nopoll_strdup (host_ip);
+	conn->port    = nopoll_strdup (host_port);
 
 	/* configure default handlers */
 	conn->receive = nopoll_conn_default_receive;
@@ -568,25 +660,25 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 
 	/* build host name */
 	if (host_name == NULL)
-		conn->host_name = strdup (host_ip);
+		conn->host_name = nopoll_strdup (host_ip);
 	else
-		conn->host_name = strdup (host_name);
+		conn->host_name = nopoll_strdup (host_name);
 
 	/* build origin */
 	if (origin == NULL)
 		conn->origin = nopoll_strdup_printf ("http://%s", conn->host_name);
 	else
-		conn->origin = strdup (origin);
+		conn->origin = nopoll_strdup (origin);
 
 	/* get url */
 	if (get_url == NULL)
-		conn->get_url = strdup ("/");
+		conn->get_url = nopoll_strdup ("/");
 	else
-		conn->get_url = strdup (get_url);
+		conn->get_url = nopoll_strdup (get_url);
 
 	/* protocols */
 	if (protocols != NULL)
-		conn->protocols = strdup (protocols);
+		conn->protocols = nopoll_strdup (protocols);
 
 
 	/* get client init payload */
@@ -600,19 +692,28 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 		__nopoll_conn_opts_release_if_needed (options);
 
 		return NULL;
-	}
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sending websocket client init: %s", content);
-	size = strlen (content);
+	} /* end if */
 
 	/* check for TLS support */
 	if (enable_tls) {
 		/* found TLS connection request, enable it */
 		conn->ssl_ctx  = __nopoll_conn_get_ssl_context (ctx, conn, options, nopoll_true);
+
+		/* check for client side SSL configuration */
+		if (! __nopoll_conn_set_ssl_client_options (ctx, conn, options)) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to configure additional SSL options, unable to continue",
+				    conn->ssl_ctx, conn->ssl);
+			goto fail_ssl_connection;
+		} /* end if */
+
+		/* create context and check for result */
 		conn->ssl      = SSL_new (conn->ssl_ctx);       
 		if (conn->ssl_ctx == NULL || conn->ssl == NULL) {
-			nopoll_free (content);
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to create SSL context internal references are null (conn->ssl_ctx=%p, conn->ssl=%p)",
 				    conn->ssl_ctx, conn->ssl);
+		fail_ssl_connection:
+
+			nopoll_free (content);
 			nopoll_conn_shutdown (conn);
 
 			/* release connection options */
@@ -716,6 +817,9 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "TLS I/O handlers configured");
 		conn->tls_on = nopoll_true;
 	} /* end if */
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sending websocket client init: %s", content);
+	size = strlen (content);
 
 	/* call to send content */
 	remaining_timeout = ctx->conn_connect_std_timeout;
@@ -1271,8 +1375,9 @@ void nopoll_conn_unref (noPollConn * conn)
 	nopoll_free (conn->get_url);
 
 	/* release TLS certificates */
-	nopoll_free (conn->certificate_file);
-	nopoll_free (conn->private_file);
+	nopoll_free (conn->certificate);
+	nopoll_free (conn->private_key);
+	nopoll_free (conn->chain_certificate);
 
 	/* release uncomplete message */
 	if (conn->previous_msg) 
@@ -1397,7 +1502,7 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 					/* store content read until now */
 					if ((n + desp - 1) > 0) {
 						buffer[n+desp - 1] = 0;
-						conn->pending_line = strdup (buffer);
+						conn->pending_line = nopoll_strdup (buffer);
 					} /* end if */
 				} /* end if */
 				return -2;
@@ -2117,6 +2222,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	noPollMsg * msg;
 	int         ssl_error;
 	int         header_size;
+	long        result;
 #if defined(NOPOLL_64BIT_PLATFORM)
 	unsigned char *len;
 #endif
@@ -2163,8 +2269,10 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		conn->pending_ssl_accept = nopoll_false;
 		nopoll_conn_set_sock_block (conn->session, nopoll_false);
 
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Completed TLS operation from %s:%s (conn id %d)",
-			    conn->host, conn->port, conn->id);
+		result = SSL_get_verify_result (conn->ssl);
+
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Completed TLS operation from %s:%s (conn id %d, ssl veriry result: %d)",
+			    conn->host, conn->port, conn->id, (int) result);
 
 		/* configure default handlers */
 		conn->receive = nopoll_conn_tls_receive;
@@ -3392,9 +3500,10 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
  */
 nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpts * options, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session, nopoll_bool tls_on) {
 
-	const char * certificateFile = NULL;
-	const char * privateKey      = NULL;
-	const char * serverName      = NULL;
+	const char          * certificateFile  = NULL;
+	const char          * privateKey       = NULL;
+	const char          * chainCertificate = NULL;
+	const char          * serverName       = NULL;
 
 	/* check input parameters */
 	if (! (ctx && listener && conn && session != NOPOLL_INVALID_SOCKET)) {
@@ -3436,12 +3545,24 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 
 		/* get here SNI to query about the serverName */
 
-		/* get references to currently configured certificate file */
-		certificateFile = listener->certificate_file;
-		privateKey      = listener->private_file;
+		/* 1) GET FROM OPTIONS: detect here if we have
+		 * certificates provided through options */
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Starting TLS process, options=%p, listener=%p", options, listener);
+
+		if (options) {
+			certificateFile = options->certificate;
+			privateKey      = options->private_key;
+		} /* end if */
 		if (certificateFile == NULL || privateKey == NULL) {
-			/* check if the certificate is already installed */
-			nopoll_ctx_find_certificate (ctx, serverName, &certificateFile, &privateKey, NULL);
+
+			/* 2) GET FROM LISTENER: get references to currently configured certificate file */
+			certificateFile = listener->certificate;
+			privateKey      = listener->private_key;
+			if (certificateFile == NULL || privateKey == NULL) {
+				/* 3) GET FROM STORE: check if the
+				 * certificate is already installed */
+				nopoll_ctx_find_certificate (ctx, serverName, &certificateFile, &privateKey, &chainCertificate);
+			}
 		} /* end if */
 
 		/* check certificates and private key */
@@ -3464,11 +3585,42 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			SSL_library_init ();
 		} /* end if */
 
-		/* accept TLS connection */
+		/* now configure chainCertificate */
+		if (listener->chain_certificate) 
+			chainCertificate = listener->chain_certificate;
+		else if (options && options->chain_certificate)
+			chainCertificate = options->chain_certificate;
+
+		/* create ssl context */
 		conn->ssl_ctx  = __nopoll_conn_get_ssl_context (ctx, conn, listener->opts, nopoll_false);
 
-		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate file: %s", certificateFile);
-		if (conn->ssl_ctx == NULL || SSL_CTX_use_certificate_file (conn->ssl_ctx, certificateFile, SSL_FILETYPE_PEM) <= 0) {
+		/* Configure ca certificate in the case it is defined */
+		if (options && options->ca_certificate) {
+			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Setting up CA certificate: %s", options->ca_certificate);
+			if (SSL_CTX_load_verify_locations (conn->ssl_ctx, options->ca_certificate, NULL) != 1) {
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to configure CA certificate (%s), SSL_CTX_load_verify_locations () failed", options->ca_certificate);
+				return nopoll_false;
+			} /* end if */
+
+		} /* end if */
+
+		/* enable default verification paths */
+		if (SSL_CTX_set_default_verify_paths (conn->ssl_ctx) != 1) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to configure default verification paths, SSL_CTX_set_default_verify_paths () failed");
+			return nopoll_false;
+		} /* end if */
+
+		/* configure chain certificate */
+		if (chainCertificate) {
+			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Setting up chain certificate: %s", chainCertificate);
+			if (SSL_CTX_use_certificate_chain_file (conn->ssl_ctx, chainCertificate) != 1) {
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to configure chain certificate (%s), SSL_CTX_use_certificate_chain_file () failed", chainCertificate);
+				return nopoll_false;
+			} /* end if */
+		} /* end if */
+
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate file: %s (with ssl context ref: %p)", certificateFile, conn->ssl_ctx);
+		if (conn->ssl_ctx == NULL || SSL_CTX_use_certificate_chain_file (conn->ssl_ctx, certificateFile) != 1) {
 			/* drop an error log */
 			if (conn->ssl_ctx == NULL)
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept incoming connection, failed to create SSL context. Context creator returned NULL pointer");
@@ -3487,7 +3639,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 		} /* end if */
 
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate key: %s", privateKey);
-		if (SSL_CTX_use_PrivateKey_file (conn->ssl_ctx, privateKey, SSL_FILETYPE_PEM) <= 0) {
+		if (SSL_CTX_use_PrivateKey_file (conn->ssl_ctx, privateKey, SSL_FILETYPE_PEM) != 1) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
 				    "there was an error while setting private file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_PrivateKey_file function. Tried private file: %s", 
 				    privateKey);
@@ -3515,6 +3667,18 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			return nopoll_false;
 		} /* end if */
 
+		if (options != NULL && ! options->disable_ssl_verify) {
+			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Enabling certificate client peer verification from server");
+			/** really, really ugly hack to let
+			 * __nopoll_conn_ssl_verify_callback to be able to get
+			 * access to the context required to drop some logs */
+			__nopoll_conn_ssl_ctx_debug = ctx;
+			SSL_CTX_set_verify (conn->ssl_ctx, SSL_VERIFY_PEER | SSL_VERIFY_FAIL_IF_NO_PEER_CERT, __nopoll_conn_ssl_verify_callback); 
+			SSL_CTX_set_verify_depth (conn->ssl_ctx, 5);
+		} /* end if */
+
+
+		/* create SSL context */
 		conn->ssl = SSL_new (conn->ssl_ctx);       
 		if (conn->ssl == NULL) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "error while creating TLS transport, SSL_new (%p) returned NULL", conn->ssl_ctx);
@@ -3564,7 +3728,14 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
  */
 nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session, nopoll_bool tls_on) {
 
-	return __nopoll_conn_accept_complete_common (ctx, NULL, listener, conn, session, tls_on);
+	if (listener->opts) {
+		if (! nopoll_conn_opts_ref (listener->opts)) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire a reference to the connection option at nopoll_conn_accept_complete() function nopoll_conn_opts_ref () failed..");
+			return nopoll_false;
+		} /* end if */
+	} /* end if */
+
+	return __nopoll_conn_accept_complete_common (ctx, listener->opts, listener, conn, session, tls_on);
 }
 
 /** 

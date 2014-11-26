@@ -102,6 +102,8 @@ int         nopoll_timeval_substract  (struct timeval * a,
 				       struct timeval * b,
 				       struct timeval * result);
 
+char      * nopoll_strdup (const char * buffer);
+
 nopoll_bool nopoll_nonce (char * buffer, int nonce_size);
 
 void        nopoll_cleanup_library (void);

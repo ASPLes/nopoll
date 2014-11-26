@@ -1,10 +1,4 @@
-client_auth_certs = \
-	client-side-cert-auth.key \
-	client-side-cert-auth.csr \
-	client-side-cert-auth.crt \
-	client-side-cert-auth-cacert.crt
-
-EXTRA_DIST = Makefile.win test-certificate.crt test-private.key $(client_auth_certs)
+EXTRA_DIST = Makefile.win test-certificate.crt test-private.key client.pem server.pem root.pem
 
 # still nothing
 if ENABLE_NOPOLL_LOG
