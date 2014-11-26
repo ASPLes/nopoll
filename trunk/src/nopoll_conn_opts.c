@@ -156,7 +156,7 @@ nopoll_bool        nopoll_conn_opts_set_ssl_certs    (noPollConnOpts * opts,
  *
  * @param opts The connection option to configure.
  *
- * @param disable_verify nopoll_true to disable verification
+ * @param verify nopoll_true to disable verification
  * otherwise, nopoll_false should be used. By default SSL verification
  * is enabled.
  *
