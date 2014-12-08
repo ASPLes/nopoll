@@ -47,8 +47,20 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
+int connection_close_count = 0;
+
+void __nopoll_regression_on_close (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	printf ("Reg test: called connection close (TLS: %d)..\n", nopoll_conn_is_tls_on (conn));
+	connection_close_count++;
+	return;
+}
+
 nopoll_bool on_connection_opened (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
 {
+	/* set connection close */
+	nopoll_conn_set_on_close (conn, __nopoll_regression_on_close, NULL);
+
 	if (! nopoll_conn_set_sock_block (nopoll_conn_socket (conn), nopoll_false)) {
 		printf ("ERROR: failed to configure non-blocking state to connection..\n");
 		return nopoll_false;
@@ -104,6 +116,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 	nopoll_bool  dont_reply = nopoll_false;
 	FILE       * open_file_cmd = NULL;
 	int          iterator;
+	char       * ref;
 
 	/* check for open file commands */
 	if (nopoll_ncmp (content, "open-file: ", 11)) {
@@ -128,6 +141,14 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 		printf ("Listener: RELEASING previous message..\n");
 		nopoll_msg_unref (previous_msg);
 		previous_msg = NULL;
+		return;
+	} /* end if */
+
+	if (nopoll_ncmp (content, "get-connection-close-count", 26)) {
+		printf ("Sending reply to report connection close...\n");
+		ref = nopoll_strdup_printf ("%d", connection_close_count);
+		nopoll_conn_send_text (conn, ref, strlen (ref));
+		nopoll_free (ref);
 		return;
 	} /* end if */
 
