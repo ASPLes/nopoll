@@ -1965,7 +1965,134 @@ nopoll_bool test_22 (void) {
 
 	nopoll_ctx_unref (ctx);
 	return nopoll_true;
- } /* end if */
+} /* end if */
+
+int test_23_get_connection_close_count (noPollCtx * ctx, noPollConn * conn) {
+	
+	int         count_before_closing;
+	noPollMsg * msg;
+
+	/* wait for the reply */
+	while (nopoll_true) {
+		if (nopoll_conn_is_ready (conn))
+			break;
+		nopoll_sleep (10000);
+	} /* end if */
+
+	/* send package to get number of connection close detected */
+	if (nopoll_conn_send_text (conn, "get-connection-close-count", 26) != 26) {
+		printf ("ERROR: Expected to find proper send operation..\n");
+		return nopoll_false;
+	}
+	
+	/* call to get content (we shouldn't get anythign) */
+	while (nopoll_true) {
+		msg = nopoll_conn_get_msg (conn);
+		if (msg)
+			break;
+
+		nopoll_sleep (10000);
+	} /* end if */
+
+
+	count_before_closing = strtod ((const char *) nopoll_msg_get_payload (msg), NULL);
+	printf ("Test 23: Message received: %d..\n", count_before_closing);
+	/* release message */
+	nopoll_msg_unref (msg);
+
+	return count_before_closing;
+}
+
+nopoll_bool test_23 (void) {
+	
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+	int              count_before_closing;
+	int              count_before_closing2;
+	noPollConnOpts * opts;
+
+	printf ("Test 23: testing connection close notification for regular connections (client side)..\n");
+
+	/* init context */
+	ctx = create_ctx ();
+
+	/* create connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* get connection close before closing */
+	if ((count_before_closing = test_23_get_connection_close_count (ctx, conn)) == -1)
+		return nopoll_false;
+	printf ("Test 23: current connection close is: %d\n", count_before_closing);
+
+	/* close the connection cleanly and check connection close is not called  */
+	nopoll_conn_close (conn);
+
+	/* create connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	if ((count_before_closing2 = test_23_get_connection_close_count (ctx, conn)) == -1)
+		return nopoll_false;
+	printf ("Test 23: current connection close is: %d\n", count_before_closing2);
+
+	if (count_before_closing == count_before_closing2) {
+		printf ("ERROR: expected connection close notification ...but same values were found..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* close the connection cleanly and check connection close is not called  */
+	nopoll_conn_close (conn);
+
+	printf ("Test 23: now test TLS connections connection close..\n");
+
+	/* disable verification */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
+
+	/* call to create a connection */
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* get connection close before closing */
+	if ((count_before_closing = test_23_get_connection_close_count (ctx, conn)) == -1)
+		return nopoll_false;
+
+	/* close the connection */
+	nopoll_conn_close (conn);
+
+	/* call to create a connection second connection */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	if ((count_before_closing2 = test_23_get_connection_close_count (ctx, conn)) == -1)
+		return nopoll_false;
+
+	/* close the connection */
+	nopoll_conn_close (conn);
+
+	if (count_before_closing == count_before_closing2) {
+		printf ("ERROR: expected connection close notification ...but same values were found..\n");
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+	return nopoll_true;
+} /* end if */
 
 
 int main (int argc, char ** argv)
@@ -2218,6 +2345,12 @@ int main (int argc, char ** argv)
 		return -1;
 	} /* end if */
 
+	if (test_23 ()) {
+		printf ("Test 23: test connection close trigger (server side)  [   OK    ]\n");
+	} else {
+		printf ("Test 23: test connection close trigger (server side) [ FAILED  ]\n");
+		return -1;
+	} /* end if */
 
 	/* add support to reply with redirect 301 to an opening
 	 * request: page 19 and 22 */
