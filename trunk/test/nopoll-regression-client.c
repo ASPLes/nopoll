@@ -1863,6 +1863,111 @@ nopoll_bool test_21 (void) {
 	return nopoll_true;
 }
 
+
+nopoll_bool __test_22_on_close_signal = nopoll_false;
+
+void __test_22_on_close (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	printf ("Test --: called on connection close for conn-id=%d\n", nopoll_conn_get_id (conn));
+	__test_22_on_close_signal = nopoll_true;
+
+	return;
+}
+
+nopoll_bool test_22 (void) {
+	
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+	NOPOLL_SOCKET    _socket;
+	noPollMsg      * msg;
+	noPollConnOpts * opts;
+
+	printf ("Test 22: testing connection close notification for regular connections (client side)..\n");
+
+	/* init context */
+	ctx = create_ctx ();
+
+	/* create connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* set connection close */
+	nopoll_conn_set_on_close (conn, __test_22_on_close, NULL);
+
+	/* call to close connection as we had lost the connection */
+	_socket = nopoll_conn_socket (conn);
+	nopoll_close_socket (_socket);
+
+	/* call to get content (we shouldn't get anythign) */
+	msg = nopoll_conn_get_msg (conn);
+	if (msg) {
+		printf ("ERROR: we shouldn't get a msg frame, but a well defined pointer was found..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: we shouldn't get an ok value from nopoll_conn_is_ok (conn)..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! __test_22_on_close_signal) {
+		printf ("ERROR: connection close should've been called but it wasn't..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* close the connection */
+	nopoll_conn_close (conn);
+
+	__test_22_on_close_signal = nopoll_false;
+	printf ("Test 22: test close connection close notification for WSS:// (ssl connections), (client side)..\n");
+
+	/* disable verification */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
+
+	/* call to create a connection */
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* set connection close */
+	nopoll_conn_set_on_close (conn, __test_22_on_close, NULL);
+
+	/* call to close connection as we had lost the connection */
+	_socket = nopoll_conn_socket (conn);
+	nopoll_close_socket (_socket);
+
+	/* call to get content (we shouldn't get anythign) */
+	msg = nopoll_conn_get_msg (conn);
+	if (msg) {
+		printf ("ERROR: we shouldn't get a msg frame, but a well defined pointer was found..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: we shouldn't get an ok value from nopoll_conn_is_ok (conn)..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! __test_22_on_close_signal) {
+		printf ("ERROR: connection close should've been called but it wasn't..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* close the connection */
+	nopoll_conn_close (conn);
+	
+
+	nopoll_ctx_unref (ctx);
+	return nopoll_true;
+ } /* end if */
+
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -2105,6 +2210,14 @@ int main (int argc, char ** argv)
 		printf ("Test 21: client side ssl certificates verification [ FAILED  ]\n");
 		return -1;
 	} /* end if */
+
+	if (test_22 ()) {
+		printf ("Test 22: test connection close trigger (client side)  [   OK    ]\n");
+	} else {
+		printf ("Test 22: test connection close trigger (client side) [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
 
 	/* add support to reply with redirect 301 to an opening
 	 * request: page 19 and 22 */
