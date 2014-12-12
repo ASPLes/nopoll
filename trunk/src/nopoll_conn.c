@@ -993,12 +993,19 @@ int            nopoll_conn_ref_count (noPollConn * conn)
 
 /** 
  * @brief Allows to check if the provided connection is in connected
- * state. This is different to be ready to send and receive content
+ * state (just to the connection). This is different to be ready to send and receive content
  * because the session needs to be first established. 
  *
  * You can use \ref nopoll_conn_is_ready to ensure the connection is
  * ready to be used (read or write operation can be done because
  * handshake has finished).
+ *
+ * For example, you might connect to a raw socket server and
+ * nopoll_conn_is_ok will report that everything is ok because the
+ * socket is indeed connected but because you are connecting to a
+ * non-websocket server, it will not work because the WebSocket
+ * session establishment didn't take place and hence
+ * nopoll_conn_is_ready will fail.
  *
  * @param conn The websocket connection to be checked.
  *
