@@ -1007,6 +1007,9 @@ int            nopoll_conn_ref_count (noPollConn * conn)
  * session establishment didn't take place and hence
  * nopoll_conn_is_ready will fail.
  *
+ * Please, see the following link for a complete example that connects
+ * and ensure the connection is ready (for a client):  http://www.aspl.es/nopoll/html/nopoll_core_library_manual.html#creating_basic_web_socket_client
+ *
  * @param conn The websocket connection to be checked.
  *
  * @return nopoll_true in the case the connection is working otherwise
