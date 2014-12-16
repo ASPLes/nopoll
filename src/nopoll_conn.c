@@ -2527,6 +2527,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	if (msg->op_code == NOPOLL_CLOSE_FRAME) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Proper connection close frame received id=%d, shutting down", conn->id);
 		nopoll_msg_unref (msg);
+		nopoll_conn_shutdown (conn);
 		return NULL;
 	} /* end if */
 
