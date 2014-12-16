@@ -298,8 +298,8 @@ nopoll_bool test_01 (void) {
 	while (! nopoll_conn_is_ready (conn)) {
 
 		if (! nopoll_conn_is_ok (conn)) {
-			printf ("ERROR (4.1 jkd412): expected to find proper connection handshake finished, but found connection is broken: session=%d, errno=%d..\n",
-				nopoll_conn_socket (conn), errno);
+			printf ("ERROR (4.1 jkd412): expected to find proper connection handshake finished, but found connection is broken: session=%d, errno=%d : %s..\n",
+				nopoll_conn_socket (conn), errno, strerror (errno));
 			return nopoll_false;
 		} /* end if */
 
@@ -966,8 +966,8 @@ nopoll_bool test_06 (void) {
 	while (! nopoll_conn_is_ready (conn)) {
 
 		if (! nopoll_conn_is_ok (conn)) {
-			printf ("ERROR (4.1 jg72): expected to find proper connection handshake finished, but found connection is broken: session=%d, errno=%d..\n",
-				nopoll_conn_socket (conn), errno);
+			printf ("ERROR (4.1 jg72): expected to find proper connection handshake finished, but found connection is broken: session=%d, errno=%d : %s..\n",
+				nopoll_conn_socket (conn), errno, strerror (errno));
 			return nopoll_false;
 		} /* end if */
 
@@ -1014,8 +1014,8 @@ nopoll_bool test_07 (void) {
 	while (! nopoll_conn_is_ready (conn)) {
 
 		if (! nopoll_conn_is_ok (conn)) {
-			printf ("ERROR (4.1 dk45): expected to find proper connection handshake finished, but found connection is broken: session=%d, errno=%d..\n",
-				nopoll_conn_socket (conn), errno);
+			printf ("ERROR (4.1 dk45): expected to find proper connection handshake finished, but found connection is broken: session=%d, errno=%d : %s..\n",
+				nopoll_conn_socket (conn), errno, strerror (errno));
 			return nopoll_false;
 		} /* end if */
 
