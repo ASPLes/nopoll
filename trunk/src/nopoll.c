@@ -964,6 +964,12 @@ void nopoll_cleanup_library (void)
  * - \ref nopoll_manual_retrying_write_operations
  * - \ref nopoll_implementing_port_sharing 
  *
+ * <b>Section 3: using noPoll TLS API: </b>
+ *
+ * - \ref nopoll_implementing_mutual_auth
+ * - \ref nopoll_implementing_tls_extended_validation_post_check
+ * - \ref nopoll_implementing_tls_context_creator
+ *
  * \section installing_nopoll 1.1 How to install noPoll 
  *
  * Currently, noPoll has only one dependency, which is OpenSSL
@@ -1354,8 +1360,129 @@ void nopoll_cleanup_library (void)
  * // or because you are handling directly all incoming content (streaming API).
  * \endcode
  * 
+ * \section nopoll_implementing_mutual_auth  3.1. Implementing mutual TLS certificate verification
+ *
+ * In the case you want to verify provided client certificate at the
+ * server you can use the following code. It optionally provides the
+ * CA (as root.pem) which will make the listener to also verify client
+ * matches that CA. However, if you remove that CA (root.pem) your
+ * server will just verify peer's certificate:
+ *
+ * \code
+ *  // configure server certificates (server.pem) signed by the
+ *  // provided ca (root.pem) also configured in the last
+ *  // parameter 
+ *  if (! nopoll_conn_opts_set_ssl_certs (opts, 
+ *                                        "server.pem",
+ *                                        "server.key",
+ *                                        NULL,
+ *                                        "root.pem")) {
+ *		printf ("ERROR: unable to setup certificates...\n");
+ *		return -1;
+ *  }
+ *
+ *  // configure peer verification 
+ *  nopoll_conn_opts_ssl_peer_verify (opts, nopoll_true);
+ *
+ *  // create listener	    
+ *  listener2 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1239");
+ *  if (! nopoll_conn_is_ok (listener2)) {
+ *	printf ("ERROR: Expected to find proper listener TLS connection status (:1236, SSLv23), but found..\n");
+ *	return -1;
+ *  } 
+ * \endcode
+ *
+ * Here the important part is calling to \ref
+ * nopoll_conn_opts_ssl_peer_verify. This is because peer verification
+ * is disabled for servers (that is, servers by default do not verify
+ * peer's certificate which usually is not provided). However, this is
+ * not true for clients which is by default enabled (of course, client
+ * must always verify server's certificate when connecting with
+ * TLS/SSL, was we have said, this can be controlled by \ref
+ * nopoll_conn_opts_ssl_peer_verify too).
+ *
+ * Now, in the case you want to provide client certificate for a
+ * WebSocket connecting node, use the following:
+ *
+ *
+ * \code
+ *      // create connection options 
+ *      opts     = nopoll_conn_opts_new ();
+ *	nopoll_conn_opts_set_ssl_certs (opts, 
+ *					// certificate 
+ *					"client.pem",
+ *					// private key 
+ *					"client.pem",
+ *					NULL,
+ *					// ca certificate 
+ *					"root.pem");
+ *
+ *      // connect to remote WebSocket server
+ *	conn = nopoll_conn_tls_new (ctx, opts, "server-address", "1239", NULL, NULL, NULL, NULL);
+ * \endcode
+ *
+ * \section nopoll_implementing_tls_extended_validation_post_check  3.2. Doing extended validation as a post check task (TLS/SSL)
+ *
+ * The idea is to configure the following handler at your server/listener component:
+ *
+ * \code
+ * nopoll_ctx_set_post_ssl_check (ctx, your_post_ssl_check_handler, <some-user-pointer>);
+ * \endcode
+ *        
+ * Now, somewhere, that handler will have the following signature and code example:
+ *
+ * \code
+ * nopoll_bool  your_post_ssl_check_handler (noPollCtx      * ctx,
+ *                                           noPollConn     * conn,
+ *                                           noPollPtr        SSL_CTX,
+ *                                           noPollPtr        SSL,
+ *                                           noPollPtr        user_data)
+ * {
+ *        
+ *       // Do here some additional checks on the certificate received (using SSL_CTX and SSL). 
+ *       // I the case of error, return nopoll_false to ensure the connection is not accepted. 
+ *            
+ *       return nopoll_true; // to accept connection 
+ * }
+ * \endcode
+ *
+ * For example, to get the certificate that is proposing the client you could use: 
+ *
+ * \code
+ *    cert = SSL_get_peer_certificate (SSL);
+ * \endcode
+ *
+ * \section nopoll_implementing_tls_context_creator  3.3. Creating TLS/SSL context to implement especific validation options
+ *
+ * In the case you want to create the SSL_CTX/SSL object so it uses
+ * certain configurations like chain certificates, etc, so that the
+ * verification will only work when matching these settings.
+ *
+ * If this is the case you'll have to use a different handler that
+ * will help noPoll engine to create the SSL context with the settings
+ * you want. By default, the SSL context is created with default
+ * settings if no handler is provided.
  * 
- * 
+ * In the case you want to provide a ssl context creator, use:
+ *
+ * \code
+ * nopoll_ctx_set_ssl_context_creator (ctx, your_ssl_context_creator, NULL);
+ * \endcode
+ *
+ * And your handler will have the following signature with a very
+ * basic configuration:
+ *
+ * \code
+ * SSL_CTX * your_ssl_context_creator (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * opts, nopoll_bool is_client, noPollPtr user_data)
+ * {
+ *     // very basic context creation using default settings provided by OpenSSL
+ *     return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
+ * }
+ * \endcode
+ *
+ * As you can see, the function must return an SSL_CTX for every
+ * connection received and attempting to start TLS session.
+ *
  */
 
 
