@@ -31,3 +31,4 @@ build_doc:
 	cp $(top_srcdir)/doc/aspl-logo-header.png html
 	cp $(top_srcdir)/doc/nopoll.css html
 	cp $(top_srcdir)/doc/body_back.gif html
+	cp $(top_srcdir)/doc/hacha-100x171.png html
