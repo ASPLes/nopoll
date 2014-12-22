@@ -8,7 +8,8 @@ OBJ  = nopoll.o \
        nopoll_listener.o \
        nopoll_loop.o \
        nopoll_io.o \
-       nopoll_msg.o 
+       nopoll_msg.o  \
+	nopoll_conn_opts.o
 
 ifdef enable_nopoll_log
    DLL = libnopoll-debug

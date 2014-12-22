@@ -14,11 +14,11 @@ OBJ      = nopoll-regression-client.o  \
 PROGRAMS = nopoll-regression-client.exe \
 	    nopoll-regression-listener.exe
 
-LIBS     = -Wall -Werror -g -lws2_32 $(AXL_LIBS) $(search_lib_path) -L../src $(nopoll_dll) ../src/$(DLL)
+LIBS     = -Wall -Werror -g -lws2_32 $(AXL_LIBS) $(search_lib_path) -L../src $(nopoll_dll) ../src/$(DLL) $(OPENSSL_LIBS)
 
 INCS =  -I"." -I"../src" -DENABLE_TLS_SUPPORT $(show_debug)
 
-CFLAGS   = $(INCS) -DVERSION=\""$(NOPOLL_VERSION)"\" -Wall -g 
+CFLAGS   = $(INCS) -DVERSION=\""$(NOPOLL_VERSION)"\" -Wall -g  $(OPENSSL_FLAGS)
 
 .PHONY: all all-before all-after clean clean-custom
 

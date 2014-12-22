@@ -1,1 +1,1 @@
-nopoll_version = 0.2.5.b117
+nopoll_version = 0.2.8.b184
