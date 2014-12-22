@@ -1,0 +1,129 @@
+                 --== noPoll toolkit ==--
+                       Old Enough
+                          0.2.8
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  General API update to allow configuring TLS/SSL process by
+  installing handlers that allows to create the SSL context or to
+  implement a verification postfix. Added ready to use support to
+  implement certificate peer verification (from client and server
+  side).
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [new] Several API updates to allow userland to define a set of
+  functions that can be used to expand and customize the SSL/TLS
+  configuration by allowing to create the context that is going to be
+  used by the noPoll engine and also to allow running SSL post checks
+  with the OpenSSL objects created in those cases. API added:
+
+  - noPollSslContextCreator (handler)
+  - noPollSslPostCheck (handler)
+  - nopoll_ctx_set_ssl_context_creator
+  - nopoll_ctx_set_post_ssl_check
+
+* [fix] Adding initial code to implement client side peer certificate
+  verification (test_21). Added API to get listener associated to the
+  client:
+
+  - nopoll_conn_get_listener.
+
+* [new] General API update to allow support to control ssl peer
+  verification process. This is now done by the API:
+
+  - nopoll_conn_opts_ssl_peer_verify
+
+  By default listeners do not verify peer certificate but clients
+  do.
+
+  (added reg test 21 to check this new support)
+
+* [new] Added general API update to support server side client
+  certificate verification by using previous API and allowing to also
+  setup CA certificates and chain. API added:
+
+  - nopoll_conn_opts_set_ssl_certs
+
+  (added reg test 21 to check this new support)
+
+* [fix] General connection options API update to allow handling
+  references so it can be shared among threads and different
+  connections. API added:
+
+  - nopoll_conn_opts_ref
+  - nopoll_conn_opts_unref
+
+* [fix] Fixed noPoll ssl module to use provided chain certificate by
+  the API caller (upps).
+
+* [fix] General engine update to allow listeners to be controlled by
+  connection options in a particular manner.
+
+* [fix] Added regression test to check connection close handler
+  triggered for regular connections and ssl ones. Nothing wrong
+  found. Everything working.  Reg test added: test_22
+
+* [fix] Added test_23 to check connection close notification for TLS
+  connections.  Nothing wrong found. Everything working as expected.
+
+* [fix] Added connection close just after receiving close frame to
+  ensure the connection close process is triggered as fast as
+  possible..and also to ensure it is triggered because some clients do
+  not do it.
+
+* [fix] Added additional documentation on how to use noPoll TLS API to
+  implement server side peer certificate verification, TLS post check
+  and SSL context creator handlers.
+
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organization to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+22th Dec 2014, Madrid (Spain)
+
