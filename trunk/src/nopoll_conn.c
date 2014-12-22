@@ -490,15 +490,19 @@ noPollCtx * __nopoll_conn_ssl_ctx_debug = NULL;
 int __nopoll_conn_ssl_verify_callback (int ok, X509_STORE_CTX * store) {
 	char   data[256];
 	X509 * cert;
+#if defined(SHOW_DEBUG_LOG)
 	int    depth;
 	int    err;
+#endif
 
 	if (! ok) {
 		cert  = X509_STORE_CTX_get_current_cert (store);
+#if defined(SHOW_DEBUG_LOG)
 		depth = X509_STORE_CTX_get_error_depth (store);
 		err   = X509_STORE_CTX_get_error (store);
+#endif
 
-		nopoll_log (__nopoll_conn_ssl_ctx_debug, NOPOLL_LEVEL_CRITICAL, "CERTIFICATE: error at depth: %d", depth);
+		nopoll_log (__nopoll_conn_ssl_ctx_debug, NOPOLL_LEVEL_CRITICAL, "CERTIFICATE: error=%d at depth: %d", err, depth);
 
 		X509_NAME_oneline (X509_get_issuer_name (cert), data, 256);
 		nopoll_log (__nopoll_conn_ssl_ctx_debug, NOPOLL_LEVEL_CRITICAL, "CERTIFICATE: issuer: %s", data);
@@ -2232,7 +2236,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	noPollMsg * msg;
 	int         ssl_error;
 	int         header_size;
+#if defined(SHOW_DEBUG_LOG)
 	long        result;
+#endif
 #if defined(NOPOLL_64BIT_PLATFORM)
 	unsigned char *len;
 #endif
@@ -2279,10 +2285,11 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		conn->pending_ssl_accept = nopoll_false;
 		nopoll_conn_set_sock_block (conn->session, nopoll_false);
 
+#if defined(SHOW_DEBUG_LOG)
 		result = SSL_get_verify_result (conn->ssl);
-
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Completed TLS operation from %s:%s (conn id %d, ssl veriry result: %d)",
 			    conn->host, conn->port, conn->id, (int) result);
+#endif
 
 		/* configure default handlers */
 		conn->receive = nopoll_conn_tls_receive;
