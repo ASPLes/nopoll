@@ -45,7 +45,7 @@ prepare_nshs:
 	./prepare-nsh.sh $(platform_bits)
 
 prepare_versions_mk: prepare_nshs
-	test -f versions.mk && rm -f versions.mk
+	rm -f versions.mk
        # af-arch version
 	echo -n "nopoll_version = " >> versions.mk
 	cat VERSION >> versions.mk
