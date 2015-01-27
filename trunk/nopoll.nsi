@@ -110,6 +110,7 @@ Section /o "Development Headers" SEC10
   File "src\nopoll_private.h"
   File "src\nopoll_ctx.h"
   File "src\nopoll_conn.h"
+  File "src\nopoll_conn_opts.h"
   File "src\nopoll_log.h"
   File "src\nopoll_listener.h"
   File "src\nopoll_loop.h"
