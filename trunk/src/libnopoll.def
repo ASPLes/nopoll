@@ -27,6 +27,7 @@ nopoll_cleanup_library
 nopoll_cmp
 nopoll_conn_accept
 nopoll_conn_accept_complete
+nopoll_conn_accept_socket
 nopoll_conn_check_mime_header_repeated
 nopoll_conn_close
 nopoll_conn_complete_handshake
