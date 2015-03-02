@@ -3494,6 +3494,7 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
 	return nopoll_conn_accept_socket (ctx, listener, session);
 }
 
+
 /** 
  * @brief Allows to accept a new incoming WebSocket connection on the
  * provided listener but with a socket already accepted.
