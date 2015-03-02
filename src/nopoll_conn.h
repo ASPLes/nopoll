@@ -62,6 +62,8 @@ noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
 
 noPollConn   * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener);
 
+noPollConn   * nopoll_conn_accept_socket (noPollCtx * ctx, noPollConn * listener, NOPOLL_SOCKET session);
+
 nopoll_bool    nopoll_conn_accept_complete (noPollCtx      * ctx, 
 					    noPollConn     * listener, 
 					    noPollConn     * conn, 

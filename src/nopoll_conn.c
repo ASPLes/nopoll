@@ -3475,7 +3475,6 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
 {
 	NOPOLL_SOCKET   session;
-	noPollConn    * conn;
 
 	nopoll_return_val_if_fail (ctx, ctx && listener, NULL);
 
@@ -3491,6 +3490,29 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
 			    session, errno);
 		return NULL;
 	} /* end if */
+
+	return nopoll_conn_accept_socket (ctx, listener, session);
+}
+
+/** 
+ * @brief Allows to accept a new incoming WebSocket connection on the
+ * provided listener but with a socket already accepted.
+ *
+ * @param ctx The context where the operation will take place.
+ *
+ * @param listener The WebSocket listener that is receiving a new incoming connection.
+ *
+ * @param session An already accepted socket from the provided
+ * listener.
+ *
+ * @return A newly created \ref noPollConn reference or NULL if it
+ * fails.
+ */
+noPollConn * nopoll_conn_accept_socket (noPollCtx * ctx, noPollConn * listener, NOPOLL_SOCKET session)
+{
+	noPollConn * conn;
+
+	nopoll_return_val_if_fail (ctx, ctx && listener, NULL);
 
 	/* create the connection */
 	conn = nopoll_listener_from_socket (ctx, session);
