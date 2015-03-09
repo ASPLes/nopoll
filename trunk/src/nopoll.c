@@ -906,12 +906,13 @@ void nopoll_cleanup_library (void)
  * - Support for port share which allows running native protocol and WebSocket protocol on the same port.
  *
  * noPoll has been developed by <b>Advanced Software Production Line,
- * S.L.</b> (http://www.aspl.es). It is licensed under the LGPL 2.1
+ * S.L.</b> (http://www.aspl.es). It is \ref license "licensed under the LGPL 2.1"
  * which allows open source and commercial usage.
  *
  * noPoll manual is available in the following link: 
  *
  * - \ref nopoll_core_library_manual
+ * - \ref license
  *
  * Check out <b>noPoll API documentation</b> in the following links:
  *
@@ -946,7 +947,7 @@ void nopoll_cleanup_library (void)
 /** 
  * \page nopoll_core_library_manual noPoll core library manual
  *
- * \section index Index
+ * \section nopoll_core_library_manual_index Index
  *
  * <b>Section 1: Basic concepts to starting writing with or integrating noPoll:</b>
  * 
@@ -1485,4 +1486,80 @@ void nopoll_cleanup_library (void)
  *
  */
 
-
+/** 
+ * \page license noPoll License
+ *
+ * \section licence_intro noPoll terms of use
+ * The noPoll is release under the terms of the Lesser General
+ * Public license (LGPL). You can find it at
+ * http://www.gnu.org/licenses/licenses.html#LGPL.
+ *
+ * The main implication this license has is that you are allowed to
+ * use the noPoll for commercial application as well on open
+ * source application using GPL/LGPL compatible licenses. 
+ *
+ * Restrictions for proprietary development are the following: 
+ *
+ * - You have to provide back to the main repository or to your
+ * customers any change, modifications, improvements you may do to the
+ * noPoll. Of course, we would appreciate to add to the main
+ * noPoll repository any patch, idea or improvement you send
+ * us but you are not required to do so.
+ *
+ * - You cannot use our company name or image, the noPoll name
+ * or any trademark associated to that product or any product the
+ * Advanced Software Production Line company may have in a way that
+ * they could be damaged. Of course, we would appreciate your project, in
+ * the case it is a proprietary one, make a reference to us but you are
+ * not required to do so. 
+ *
+ * \section license_about_static_linking About statically linking noPoll
+ *
+ * Statically linking noPoll or any other component based on GPL/LGPL
+ * <b>is strictly forbidden by the license</b> unless all components
+ * taking part into the final products are all of them GPL, LGPL, MIT,
+ * Bsds, etc, or similar licenses that allow an end user or the
+ * customer to download the entire product source code and clear
+ * instructions to rebuild it.
+ *
+ * If the library is being used by a proprietary product the only
+ * allowed option is dynamic linking (so final user is capable of
+ * updating that dynamic linked part) or a practical procedure where
+ * the propritary binary object along with the instructions to relink
+ * the LGPL part (including an update or modification of it) is
+ * provided.
+ * 
+ * An end user or customer using a product using LGPL components must
+ * be able to rebuild those components by introducing updates or
+ * improvements.
+ * 
+ * Thus, statically linking a LGPL components without considering
+ * previous points takes away this user/customer right because he/she
+ * cannot replace/update that LGPL component anymore unless you can
+ * have access to the whole solution.
+ *
+ * - See more about this at:  https://www.gnu.org/licenses/lgpl-2.1.html
+ * - Also at: http://stackoverflow.com/questions/10130143/gpl-lgpl-and-static-linking
+ * - LGPL 2.1 Guide: http://copyleft.org/guide/comprehensive-gpl-guidech11.html
+ *
+ * \section other Contact us to know more about licenses.
+ *
+ * Use the following contact information to reach us about this issue.
+ * 
+ * \code
+ *      Postal address:
+ *         Advanced Software Production Line, S.L.
+ *         C/ Antonio Suarez Nº 10, 
+ *         Edificio Alius A, Despacho 102
+ *         AlcalÃ¡ de Henares 28802 (Madrid)
+ *         Spain
+ *
+ *      Email address:
+ *         info@aspl.es - http://www.aspl.es/nopoll
+ *      Fax and Telephones:
+ *         (+34) 91 669 55 32 - (+34) 91 231 44 50
+ *         From outside Spain must use (+34) prefix.
+ * \endcode
+ * 
+ *
+ */
