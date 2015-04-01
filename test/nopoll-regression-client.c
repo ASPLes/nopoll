@@ -527,7 +527,8 @@ nopoll_bool test_04 (int chunk_size) {
 		} /* end if */
 
 		/* write content */
-		fwrite (buffer, 1, bytes_read, file);
+		if (fwrite (buffer, 1, bytes_read, file) != bytes_read)
+		  return nopoll_false;
 	
 		/* count total read bytes */
 		total_read += bytes_read;
