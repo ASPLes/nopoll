@@ -8,11 +8,6 @@ Group:          System Environment/Libraries
 License:        LGPLv2+ 
 URL:            http://www.aspl.es/nopoll
 Source:         %{name}-%{version}.tar.gz
-# %_topdir 	/usr/src/libaxl/rpm
-# BuildRequires:  libidn-devel
-# BuildRequires:  krb5-devel
-# BuildRequires:  libntlm-devel
-# BuildRequires:  pkgconfig
 
 %define debug_package %{nil}
 
@@ -57,6 +52,10 @@ noPoll is a WebSocket implementation designed to integreate well into
 existing projects that needs support for WebSocket, even in the same
 native port.
 %files -n libnopoll0
+/usr/lib64/libnopoll.a
+/usr/lib64/libnopoll.so
+/usr/lib64/libnopoll.so.0
+/usr/lib64/libnopoll.so.0.0.0
 
 # libnopoll0-dev package
 %package -n libnopoll0-dev
@@ -67,6 +66,21 @@ noPoll is a WebSocket implementation designed to integreate well into
 existing projects that needs support for WebSocket, even in the same
 native port (devel packages)
 %files -n libnopoll0-dev
+/usr/include/nopoll/nopoll.h
+/usr/include/nopoll/nopoll_config.h
+/usr/include/nopoll/nopoll_conn.h
+/usr/include/nopoll/nopoll_conn_opts.h
+/usr/include/nopoll/nopoll_ctx.h
+/usr/include/nopoll/nopoll_decl.h
+/usr/include/nopoll/nopoll_handlers.h
+/usr/include/nopoll/nopoll_io.h
+/usr/include/nopoll/nopoll_listener.h
+/usr/include/nopoll/nopoll_log.h
+/usr/include/nopoll/nopoll_loop.h
+/usr/include/nopoll/nopoll_msg.h
+/usr/include/nopoll/nopoll_private.h
+/usr/include/nopoll/nopoll_win32.h
+/usr/lib64/pkgconfig/nopoll.pc
 
 %changelog
 * Sun Aug 17 2014 Francis Brosnan Blázquez <francis@aspl.es> - (cat VERSION)
