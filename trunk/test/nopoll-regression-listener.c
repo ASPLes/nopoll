@@ -83,8 +83,9 @@ noPollMsg * previous_msg = NULL;
 
 void write_file_handler (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr user_data)
 {
-	FILE * open_file_cmd = (FILE*) user_data;
+	FILE       * open_file_cmd = (FILE*) user_data;
 	const char * content = (const char *) nopoll_msg_get_payload (msg);
+	int          value;
 
 	/* check for close operation */
 	if (nopoll_ncmp (content, "close-file", 10)) {
@@ -96,7 +97,8 @@ void write_file_handler (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, no
 
 	if (open_file_cmd) {
 		/* write content */
-	        if (fwrite (content, 1, nopoll_msg_get_payload_size (msg), open_file_cmd) < 0)
+	        value = fwrite (content, 1, nopoll_msg_get_payload_size (msg), open_file_cmd);
+	        if (value < 0)
 		        return;
 
 		return;

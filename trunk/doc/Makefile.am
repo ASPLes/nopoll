@@ -5,7 +5,8 @@ EXTRA_DIST = nopoll.doxygen \
 	     main-page-logo.png \
 	     aspl-logo-header.png \
 	     nopoll.css \
-	     body_back.gif
+	     body_back.gif \
+	     hacha-100x171.png
 
 bin_SCRIPTS = initial_build_doc
 
