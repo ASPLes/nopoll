@@ -3,8 +3,9 @@
 set -x
 
 echo "Preparing sources"
-rm -f rpm/SOURCES/*.tar.gz
-rm -f rpm/BUILD/*
+rm -rf rpm/SOURCES/*.tar.gz
+rm -rf rpm/BUILD/*
+rm -rf rpm/BUILDROOT/*
 make dist
 cp nopoll-`cat VERSION`.tar.gz rpm/SOURCES
 
