@@ -1,3 +1,4 @@
+%define release_date %(date +"%a %b %d %Y")
 %define nopoll_version %(cat VERSION)
 
 Name:           nopoll
@@ -83,6 +84,5 @@ native port (devel packages)
 /usr/lib64/pkgconfig/nopoll.pc
 
 %changelog
-* Sun Aug 17 2014 Francis Brosnan Blázquez <francis@aspl.es> - (cat VERSION)
-- New upstream release
+%include rpm/SPECS/changelog.inc
 
