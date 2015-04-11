@@ -1820,7 +1820,7 @@ nopoll_bool test_20 (void) {
 #endif
 
 /* 
- *
+ * Use gen-certificates-test-21.sh to rebuild certificates.
  * Reg test to check client auth certificate.
  */
 nopoll_bool test_21 (void) {
