@@ -569,7 +569,9 @@ void           nopoll_ctx_set_on_open (noPollCtx            * ctx,
  *
  * @param on_ready The handler to be called when a connection is fully
  * ready to send and receive content because WebSocket handshake has
- * finished. The function must return nopoll_true to accept the connection. By returning nopoll_false the handler is signalling t
+ * finished. The function must return nopoll_true to accept the
+ * connection. By returning nopoll_false the handler is signalling to
+ * terminate the connection.
  *
  * @param user_data Optional user data pointer passed to the on ready
  * handler.

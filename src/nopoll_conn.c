@@ -1843,9 +1843,11 @@ char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_k
 
 nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPollConn * conn)
 {
-	char      * reply;
-	int         reply_size;
-	char      * accept_key;
+	char                 * reply;
+	int                    reply_size;
+	char                 * accept_key;
+	noPollActionHandler    on_ready;
+	noPollPtr              on_ready_data;
 
 	/* call to check listener handshake */
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking client handshake data..");
@@ -1919,10 +1921,18 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 
 	/* now call the user app level to accept the websocket
 	   connection */
-	if (ctx->on_ready) {
-		if (! ctx->on_ready (ctx, conn, ctx->on_open_data)) {
+	if (ctx->on_ready || conn->on_ready) {
+		/* set on ready handler, first considering conn->on_ready and then ctx->on_ready */
+		on_ready      = conn->on_ready;
+		on_ready_data = conn->on_ready_data;
+		if (! on_ready) {
+			on_ready      = ctx->on_ready;
+			on_ready_data = ctx->on_ready_data;
+		} /* end if */
+
+		if (on_ready &&  ! on_ready (ctx, conn, on_ready_data)) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s was denied by application level (on ready handler: %p), clossing session", 
-				    conn->host, conn->port, ctx->on_ready);
+				    conn->host, conn->port, on_ready);
 			nopoll_conn_shutdown (conn);
 			return nopoll_false;
 		}
@@ -3066,6 +3076,45 @@ void          nopoll_conn_set_on_msg (noPollConn              * conn,
 	conn->on_msg      = on_msg;
 	conn->on_msg_data = user_data;
 
+	return;
+}
+
+/** 
+ * @brief Allows to configure a handler that is called when the
+ * connection provided is ready to send and receive because all
+ * WebSocket handshake protocol finished OK.
+ *
+ * Unlike handlers configured at \ref nopoll_ctx_set_on_open and \ref
+ * nopoll_ctx_set_on_accept which get notified when the connection
+ * isn't still working (because WebSocket handshake wasn't finished
+ * yet), on read handlers configured here will get called just after
+ * the WebSocket handshake has taken place.
+ *
+ * @param conn The connection to configure.
+ *
+ * @param on_ready The handler to be called when a connection is fully
+ * ready to send and receive content because WebSocket handshake has
+ * finished. The function must return nopoll_true to accept the
+ * connection. By returning nopoll_false the handler is signalling to
+ * terminate the connection.
+ *
+ * @param user_data Optional user data pointer passed to the on ready
+ * handler.
+ * 
+ */
+void           nopoll_conn_set_on_ready (noPollConn            * conn,
+					 noPollActionHandler     on_ready,
+					 noPollPtr               user_data)
+{
+	if (conn == NULL)
+		return;
+
+	/* set the handler */
+	conn->on_ready = on_ready;
+	if (conn->on_ready == NULL)
+		conn->on_ready_data = NULL;
+	else
+		conn->on_ready_data = user_data;
 	return;
 }
 
