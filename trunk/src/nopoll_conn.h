@@ -139,6 +139,10 @@ void          nopoll_conn_set_on_msg (noPollConn              * conn,
 				      noPollOnMessageHandler    on_msg,
 				      noPollPtr                 user_data);
 
+void          nopoll_conn_set_on_ready (noPollConn            * conn,
+					noPollActionHandler     on_ready,
+					noPollPtr               user_data);
+
 void          nopoll_conn_set_on_close (noPollConn            * conn,
 					noPollOnCloseHandler    on_close,
 					noPollPtr               user_data);
