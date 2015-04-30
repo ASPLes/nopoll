@@ -1008,7 +1008,7 @@ nopoll_bool test_07 (void) {
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
-	}
+	} /* end if */
 
 	/* check if the connection already finished its connection
 	   handshake */

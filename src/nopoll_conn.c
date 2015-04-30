@@ -2319,6 +2319,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		conn->tls_on  = nopoll_true;
 
 		/* report NULL because this was a call to complete TLS */
+		errno = NOPOLL_EWOULDBLOCK; /* simulate there is no data available to stop
+					       here. If there is no data indeed, on next
+					       call it will not fail */
 		return NULL;
 		
 	} /* end if */
