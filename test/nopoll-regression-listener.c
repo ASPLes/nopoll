@@ -146,6 +146,11 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 		previous_msg = NULL;
 		return;
 	} /* end if */
+	if (nopoll_ncmp (content, "get-cookie", 10)) {
+		printf ("Listener: reporting cookie: %s\n", nopoll_conn_get_cookie (conn));
+		nopoll_conn_send_text (conn, nopoll_conn_get_cookie (conn), strlen (nopoll_conn_get_cookie (conn)));
+		return;
+	}
 
 	if (nopoll_ncmp (content, "get-connection-close-count", 26)) {
 		printf ("Sending reply to report connection close...\n");

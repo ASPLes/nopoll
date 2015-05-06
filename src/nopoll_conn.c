@@ -263,7 +263,7 @@ NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
  * @internal Function that builds the client init greetings that will
  * be send to the server according to registered implementation.
  */ 
-char * __nopoll_conn_get_client_init (noPollConn * conn)
+char * __nopoll_conn_get_client_init (noPollConn * conn, noPollConnOpts * opts)
 {
 	/* build sec-websocket-key */
 	char key[50];
@@ -288,13 +288,18 @@ char * __nopoll_conn_get_client_init (noPollConn * conn)
 	conn->handshake = nopoll_new (noPollHandShake, 1);
 	conn->handshake->expected_accept = nopoll_strdup (key);
 
-	/* send initial handshake */
-	return nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nOrigin: %s\r\n%s%s%s%sSec-WebSocket-Version: %d\r\n\r\n", 
+	/* send initial handshake                                                                                                                        |cookie |prot  | */
+	return nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nOrigin: %s\r\n%s%s%s%s%s%s%s%sSec-WebSocket-Version: %d\r\n\r\n", 
 				     conn->get_url, conn->host_name, 
 				     /* sec-websocket-key */
 				     key,
-				     /* origin */
+				     /* Origin */
 				     conn->origin, 
+				     /* Cookie */
+				     (opts && opts->cookie) ? "Cookie" : "",
+				     (opts && opts->cookie) ? ": " : "",
+				     (opts && opts->cookie) ? opts->cookie : "",
+				     (opts && opts->cookie) ? "\n\r" : "",
 				     /* protocol part */
 				     conn->protocols ? "Sec-WebSocket-Protocol" : "",
 				     conn->protocols ? ": " : "",
@@ -686,8 +691,8 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 
 
 	/* get client init payload */
-	content = __nopoll_conn_get_client_init (conn);
-	
+	content = __nopoll_conn_get_client_init (conn, options);
+
 	if (content == NULL) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to build client init message, unable to connect");
 		nopoll_conn_shutdown (conn);
@@ -892,6 +897,51 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 {
 	/* call common implementation */
 	return __nopoll_conn_new_common (ctx, NULL, nopoll_false, 
+					 host_ip, host_port, host_name, 
+					 get_url, protocols, origin);
+}
+
+/** 
+ * @brief Creates a new Websocket connection to the provided
+ * destination, physically located at host_ip and host_port and
+ * allowing to provide a noPollConnOpts object.
+ *
+ * @param ctx The noPoll context to which this new connection will be associated.
+ *
+ * @param opts The connection options to use during the connection and
+ * the usage of this connection.
+ *
+ * @param host_ip The websocket server address to connect to.
+ *
+ * @param host_port The websocket server port to connect to. If NULL
+ * is provided, port 80 is used.
+ *
+ * @param host_name This is the Host: header value that will be
+ * sent. This header is used by the websocket server to activate the
+ * right virtual host configuration. If null is provided, Host: will
+ * use host_ip value.
+ *
+ * @param get_url As part of the websocket handshake, an url is passed
+ * to the remote server inside a GET method. This parameter allows to
+ * configure this. If NULL is provided, then / will be used.
+ *
+ * @param origin Websocket origin to be notified to the server.
+ *
+ * @param protocols Optional protocols requested to be activated for
+ * this connection (an string of list of strings separated by a white
+ * space).
+ */
+noPollConn * nopoll_conn_new_opts (noPollCtx       * ctx,
+				   noPollConnOpts  * opts,
+				   const char      * host_ip, 
+				   const char      * host_port, 
+				   const char      * host_name,
+				   const char      * get_url, 
+				   const char      * protocols,
+				   const char      * origin)
+{
+	/* call common implementation */
+	return __nopoll_conn_new_common (ctx, opts, nopoll_false, 
 					 host_ip, host_port, host_name, 
 					 get_url, protocols, origin);
 }
@@ -1197,6 +1247,23 @@ const char  * nopoll_conn_get_host_header (noPollConn * conn)
 }
 
 /** 
+ * @brief Allows to get cookie header content received during
+ * handshake (if received).
+ *
+ * @param conn The websocket connection where the operation takes place.
+ *
+ * @return A reference to the cookie value or NULL if nothing is
+ * configured or if failed to get it.
+ */
+const char  * nopoll_conn_get_cookie (noPollConn * conn)
+{
+	
+        if (conn == NULL || conn->handshake == NULL)
+                return NULL;
+        return conn->handshake->cookie;
+}
+
+/** 
  * @brief Returns the port location this connection connects to or it
  * is listening (according to the connection role \ref noPollRole).
  *
@@ -1408,6 +1475,7 @@ void nopoll_conn_unref (noPollConn * conn)
 		nopoll_free (conn->handshake->websocket_version);
 		nopoll_free (conn->handshake->websocket_accept);
 		nopoll_free (conn->handshake->expected_accept);
+		nopoll_free (conn->handshake->cookie);
 		nopoll_free (conn->handshake);
 	} /* end if */
 
@@ -2043,6 +2111,8 @@ int nopoll_conn_complete_handshake_listener (noPollCtx * ctx, noPollConn * conn,
 		return 0;
 	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Version", conn->handshake->websocket_version)) 
 		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Cookie", conn->handshake->cookie)) 
+		return 0;
 	
 	/* set the value if required */
 	if (strcasecmp (header, "Host") == 0)
@@ -2061,6 +2131,9 @@ int nopoll_conn_complete_handshake_listener (noPollCtx * ctx, noPollConn * conn,
 	} else if (strcasecmp (header, "Connection") == 0) {
 		conn->handshake->connection_upgrade = 1;
 		nopoll_free (value);
+	} else if (strcasecmp (header, "Cookie") == 0) {
+		/* record cookie so it can be used by the application level */
+		conn->handshake->cookie = value;
 	} else {
 		/* release value, no body claimed it */
 		nopoll_free (value);
