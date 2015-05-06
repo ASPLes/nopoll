@@ -2098,6 +2098,67 @@ nopoll_bool test_23 (void) {
 	return nopoll_true;
 } /* end if */
 
+nopoll_bool test_24 (void) {
+	
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+	noPollConnOpts * opts;
+	noPollMsg      * msg;
+
+	printf ("Test 24: test cookie support (set client and receive on server..)\n");
+
+	/* init context */
+	ctx = create_ctx ();
+
+	/* configure cookie */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_cookie (opts, "theme=light; sessionToken=abc123");
+
+	/* create connection */
+	conn = nopoll_conn_new_opts (ctx, opts, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* send package to get number of connection close detected */
+	if (nopoll_conn_send_text (conn, "get-cookie", 10) != 10) {
+		printf ("ERROR: Expected to find proper send operation..\n");
+		return nopoll_false;
+	}
+	
+	/* call to get content (we shouldn't get anythign) */
+	while (nopoll_true) {
+		msg = nopoll_conn_get_msg (conn);
+		if (msg)
+			break;
+
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR: connection failure found during message wait..\n");
+			return nopoll_false;
+		}
+
+		nopoll_sleep (10000);
+	} /* end if */
+
+	printf ("Test 24: received header set on server side: %s\n", nopoll_msg_get_payload (msg));
+	if (! nopoll_cmp ((const char *) nopoll_msg_get_payload (msg), "theme=light; sessionToken=abc123")) {
+		printf ("ERROR: expected to receive different header, error was: %s\n", nopoll_msg_get_payload (msg));
+		return nopoll_false;
+	}
+
+	/* release message */
+	nopoll_msg_unref (msg);
+
+
+	/* close the connection */
+	nopoll_conn_close (conn);
+
+
+	nopoll_ctx_unref (ctx);
+	return nopoll_true;
+} /* end if */
+
 
 int main (int argc, char ** argv)
 {
@@ -2353,6 +2414,13 @@ int main (int argc, char ** argv)
 		printf ("Test 23: test connection close trigger (server side)  [   OK    ]\n");
 	} else {
 		printf ("Test 23: test connection close trigger (server side) [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_24 ()) {
+		printf ("Test 24: check cookie support (client and server side)  [   OK    ]\n");
+	} else {
+		printf ("Test 24: check cookie support (client and server side)  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

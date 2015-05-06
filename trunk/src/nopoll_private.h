@@ -355,6 +355,9 @@ struct _noPollHandshake {
 	char          * websocket_version;
 	char          * websocket_accept;
 	char          * expected_accept;
+
+	/* reference to cookie header */
+	char          * cookie;
 };
 
 struct _noPollConnOpts {
@@ -375,6 +378,9 @@ struct _noPollConnOpts {
 	char * ca_certificate;
 
 	nopoll_bool  disable_ssl_verify;
+
+	/* cookie support */
+	char * cookie;
 };
 
 #endif

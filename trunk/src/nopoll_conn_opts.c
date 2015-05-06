@@ -169,6 +169,32 @@ void nopoll_conn_opts_ssl_peer_verify (noPollConnOpts * opts, nopoll_bool verify
 	return;
 }
 
+/** 
+ * @brief Allows to set Cookie header content to be sent during the
+ * connection handshake. If configured and the remote side server is a
+ * noPoll peer, use \ref nopoll_conn_get_cookie to get this value.
+ *
+ * @param opts The connection option to configure.
+ *
+ * @param cookie_content Content for the cookie. If you pass NULL the
+ * cookie is unset.
+ */
+void        nopoll_conn_opts_set_cookie (noPollConnOpts * opts, const char * cookie_content)
+{
+	if (opts == NULL)
+		return;
+
+	if (cookie_content) {
+		/* configure cookie content to be sent */
+		opts->cookie = nopoll_strdup (cookie_content);
+	} else {
+		nopoll_free (opts->cookie);
+		opts->cookie = NULL;
+	} /* end if */
+
+	return;
+}
+
 
 /** 
  * @brief Allows to increase a reference to the connection options
@@ -257,6 +283,9 @@ void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
 	nopoll_free (opts->private_key);
 	nopoll_free (opts->chain_certificate);
 	nopoll_free (opts->ca_certificate);
+
+	/* cookie */
+	nopoll_free (opts->cookie);
 
 	/* release mutex */
 	nopoll_mutex_destroy (opts->mutex);

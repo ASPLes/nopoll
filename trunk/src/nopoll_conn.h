@@ -51,6 +51,15 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * protocols,
 			      const char * origin);
 
+noPollConn * nopoll_conn_new_opts (noPollCtx       * ctx,
+				   noPollConnOpts  * opts,
+				   const char      * host_ip, 
+				   const char      * host_port, 
+				   const char      * host_name,
+				   const char      * get_url, 
+				   const char      * protocols,
+				   const char      * origin);
+
 noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
 				  noPollConnOpts * options,
 				  const char * host_ip, 
@@ -99,6 +108,8 @@ const char  * nopoll_conn_port   (noPollConn * conn);
 const char  * nopoll_conn_get_origin (noPollConn * conn);
 
 const char  * nopoll_conn_get_host_header (noPollConn * conn);
+
+const char  * nopoll_conn_get_cookie (noPollConn * conn);
 
 void          nopoll_conn_shutdown (noPollConn * conn);
 
