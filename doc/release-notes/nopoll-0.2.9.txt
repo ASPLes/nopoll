@@ -1,0 +1,114 @@
+                 --== noPoll toolkit ==--
+                      Jumping Cookie
+                          0.2.9
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+    - Added additional corrections. Updated API to get notification
+      when a connection is ready.
+
+    - Updated TLS handling to report EWOULD errno when finished TLS
+      handshake to better adapt application transports that expect
+      that error code when NULL is returned when asking for a message.
+
+    - Added support to set and get Cookie header set during HTTP
+      handshake.
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Fixing some warnings produced by unused variables make nopoll
+  debug is disabled.
+
+* [fix] Some changes to compile regression-test on windows7 (64 bits).
+
+* [fix] Added missing nopoll_conn_opts.h reference from nopoll.nsi
+  (windows installer builder). Reported by Jorge Olmos.
+
+* [fix] Updated nopoll_conn_accept implementation to be implemented
+  into two reusable functions that can be called depending on the
+  needs.  API update:
+
+  - nopoll_conn_accept (accept socket and process WebSocket protocol)
+  - nopoll_conn_accept_socket (just process WebSocket protocol assuming
+    socket was previously accepted).
+
+* [fix] Adding support to create centos packages for noPoll library.
+
+* [fix] Updated certificates needed by reg test-21. Added script to
+  generate certificates used by this test.
+
+* [fix] Updated noPollConn API to allow setting an onReady handler to
+  get a notification (mainly for server side) when a connection is
+  ready for I/O because WebSocket handshake has finished. API added:
+  
+   - nopoll_conn_set_on_ready
+
+* [fix] Added missing header for nopoll_conn_set_on_ready.
+
+* [fix] Added a subtlety to report a EWOULD errno just after finished
+  TLS handshake to ensure the caller can report NULL but it is not
+  understood as a connection failure by an upper level API. Fixes
+  MyQtt WebSocket over TLS WebSocket integration reported.
+
+* [new] Added support to handle and set cookie configured for every
+  connection. Regression test added to check this (test_24).  API
+  added:
+
+  - nopoll_conn_get_cookie
+  - nopoll_conn_new_opts
+  - nopoll_conn_opts_set_cookie
+
+* [fix] Added additional regressiontest (test_25) to check cookie
+  attack. Nothing was reported because the test..
+
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+7th May 2015, Madrid (Spain)
+

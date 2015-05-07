@@ -6,8 +6,7 @@
 
 * publicar en listas de correo de aspl.
 
-* publicar en freecode.club - http://freshcode.club/projects/nopoll
-* publicar en launchpad.net - https://launchpad.net/nopoll (make an announcement)
+
 
 * actualizar web de nopoll (actualizar sección de noticias y a la gestión
   de releases notes).
@@ -21,8 +20,13 @@
 * Generar paquetes debian/ubuntu
 * Generar instalador windows
 
+* publicar en freecode.club - http://freshcode.club/projects/nopoll
+* publicar en launchpad.net - https://launchpad.net/nopoll (make an announcement)
+* publicar en softpedia.com - 
+
 * publicar noticia en aspl.es.
 * Publicar noticia en twitter ASPL_es
+
 * Retuitear como FrancisBrosnanB
 * Enlazar noticia con google plus.
 
