@@ -66,6 +66,7 @@ Section "Core Binaries" SEC01
   SetOutPath "$INSTDIR\bin"
   SetOverwrite ifnewer
   File "release\libnopoll0\libnopoll.dll"
+  File "libgcc_s_dw2.1.dll"
 SectionEnd
 
 Section "Library with debug support enabled" SEC0112
