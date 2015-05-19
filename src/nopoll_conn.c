@@ -299,7 +299,7 @@ char * __nopoll_conn_get_client_init (noPollConn * conn, noPollConnOpts * opts)
 				     (opts && opts->cookie) ? "Cookie" : "",
 				     (opts && opts->cookie) ? ": " : "",
 				     (opts && opts->cookie) ? opts->cookie : "",
-				     (opts && opts->cookie) ? "\n\r" : "",
+				     (opts && opts->cookie) ? "\r\n" : "",
 				     /* protocol part */
 				     conn->protocols ? "Sec-WebSocket-Protocol" : "",
 				     conn->protocols ? ": " : "",
