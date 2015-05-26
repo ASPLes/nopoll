@@ -53,7 +53,7 @@
  *
  * @return A newly created connection options object. In general you don't have to worry about releasing this object because this is automatically done by functions using this object. However, if you call to \ref nopoll_conn_opts_set_reuse (opts, nopoll_true), then you'll have to use \ref nopoll_conn_opts_free to release the object after it is no longer used. The function may return NULL in case of memory allocation problems. Creating an object without setting anything will cause the library to provide same default behaviour as not providing it.
  */
-noPollConnOpts * nopoll_conn_opts_new ()
+noPollConnOpts * nopoll_conn_opts_new (void)
 {
 	noPollConnOpts * result;
 
