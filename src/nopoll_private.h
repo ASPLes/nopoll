@@ -219,6 +219,8 @@ struct _noPollConn {
 	 * this connection.
 	 */
 	char           * protocols;
+	/* @internal reference to the protocol that was replied by the server */
+	char           * accepted_protocol;
 	
 	/** 
 	 * @internal Reference to the defined on message handling.

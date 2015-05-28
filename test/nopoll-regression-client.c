@@ -2240,6 +2240,34 @@ nopoll_bool test_26 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_27 (void) {
+
+	noPollConn     * conn;
+	noPollCtx      * ctx;
+
+	/* init context */
+	ctx = create_ctx ();
+
+	/* create connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, "/", "chat-protocol", "http://www.aspl.es");
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* check test */
+	if (! test_sending_and_check_echo (conn, "Test 27", "This is a test"))
+		return nopoll_false;
+
+	/* close the connection */
+	nopoll_conn_close (conn);	
+
+	/* release context */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 int main (int argc, char ** argv)
 {
@@ -2516,6 +2544,13 @@ int main (int argc, char ** argv)
 		printf ("Test 26: checking echo.websocket.org  [   OK    ]\n");
 	} else {
 		printf ("Test 26: chekcing echo.websocket.org  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_27 ()) {
+		printf ("Test 27: checking setting protocol  [   OK    ]\n");
+	} else {
+		printf ("Test 27: chekcing setting protocol  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 
