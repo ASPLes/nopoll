@@ -885,7 +885,18 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
  *
  * @param protocols Optional protocols requested to be activated for
  * this connection (an string of list of strings separated by a white
- * space).
+ * space). If the server accepts the connection you can use \ref
+ * nopoll_conn_get_accepted_protocol to get the protocol accepted by
+ * the server.
+ *
+ * @return A reference to the connection created or NULL if it
+ * fails. Keep in mind the connection reported may not be connected at
+ * the time is returned by this function. You can use \ref
+ * nopoll_conn_is_ready and \ref nopoll_conn_is_ok to ensure it can be
+ * used. There is also a helper function (NOTE it is blocking) that
+ * can help you implement a very simple wait until ready operation:
+ * \ref nopoll_conn_wait_until_connection_ready (however, it is not
+ * recommended for any serious, non-command line programming).
  */
 noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * host_ip, 
@@ -929,7 +940,18 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
  *
  * @param protocols Optional protocols requested to be activated for
  * this connection (an string of list of strings separated by a white
- * space).
+ * space). If the server accepts the connection you can use \ref
+ * nopoll_conn_get_accepted_protocol to get the protocol accepted by
+ * the server.
+ *
+ * @return A reference to the connection created or NULL if it
+ * fails. Keep in mind the connection reported may not be connected at
+ * the time is returned by this function. You can use \ref
+ * nopoll_conn_is_ready and \ref nopoll_conn_is_ok to ensure it can be
+ * used. There is also a helper function (NOTE it is blocking) that
+ * can help you implement a very simple wait until ready operation:
+ * \ref nopoll_conn_wait_until_connection_ready (however, it is not
+ * recommended for any serious, non-command line programming).
  */
 noPollConn * nopoll_conn_new_opts (noPollCtx       * ctx,
 				   noPollConnOpts  * opts,
@@ -977,7 +999,18 @@ nopoll_bool __nopoll_tls_was_init = nopoll_false;
  *
  * @param protocols Optional protocols requested to be activated for
  * this connection (an string of list of strings separated by a white
- * space).
+ * space). If the server accepts the connection you can use \ref
+ * nopoll_conn_get_accepted_protocol to get the protocol accepted by
+ * the server.
+ *
+ * @return A reference to the connection created or NULL if it
+ * fails. Keep in mind the connection reported may not be connected at
+ * the time is returned by this function. You can use \ref
+ * nopoll_conn_is_ready and \ref nopoll_conn_is_ok to ensure it can be
+ * used. There is also a helper function (NOTE it is blocking) that
+ * can help you implement a very simple wait until ready operation:
+ * \ref nopoll_conn_wait_until_connection_ready (however, it is not
+ * recommended for any serious, non-command line programming).
  * 
  */
 noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
@@ -1261,6 +1294,64 @@ const char  * nopoll_conn_get_cookie (noPollConn * conn)
         if (conn == NULL || conn->handshake == NULL)
                 return NULL;
         return conn->handshake->cookie;
+}
+
+/** 
+ * @brief Allows to get accepted protocol in the case a protocol was
+ * requested during connection.
+ *
+ * @param conn The connection where the operation is taking place.
+ *
+ * @return A reference to the protocol accepted or NULL if no protocol
+ * was mentioned during the handshake.
+ */
+const char  * nopoll_conn_get_accepted_protocol (noPollConn * conn)
+{
+	if (conn == NULL)
+		return NULL;
+	return conn->accepted_protocol; /* report accepted protocol */
+}
+
+/** 
+ * @brief Allows to get requested protocols for the provided
+ * connection
+ *
+ * @param conn The connection where the operation is taking place.
+ *
+ * @return A reference to the protocol or list of protocols requested
+ * by this connection.
+ */
+const char  * nopoll_conn_get_requested_protocol (noPollConn * conn)
+{
+	if (conn == NULL)
+		return NULL;
+	return conn->protocols; /* report requested protocol */
+}
+
+/** 
+ * @brief Allows to configure accepted protocol on the provided
+ * connection.
+ *
+ * @param conn The connection where the accepted protocol will be
+ * notified. This function is only useful at server side to notify
+ * accepted protocol to the connecting client. Caller is entirely
+ * responsible on setting an appropriate value that is understood by
+ * the client. No especial check is done on the value provided to this function.
+ *
+ * @param protocol The protocol to configure in the reply, that is,
+ * the protocol accepted by the server. 
+ *
+ * If no protocol is configured and the client requests a protocol,
+ * the server will reply by default the same accepting it.
+ */
+void          nopoll_conn_set_accepted_protocol (noPollConn * conn, const char * protocol)
+{
+	if (conn == NULL || protocol == NULL)
+		return;
+
+	/* set accepted protocol */
+	conn->accepted_protocol = nopoll_strdup (protocol);
+	return;
 }
 
 /** 
@@ -1917,6 +2008,7 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	char                 * accept_key;
 	noPollActionHandler    on_ready;
 	noPollPtr              on_ready_data;
+	const char           * protocol;
 
 	/* call to check listener handshake */
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking client handshake data..");
@@ -1962,10 +2054,16 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	accept_key = nopoll_conn_produce_accept_key (ctx, conn->handshake->websocket_key);
 	
 	/* ok, send handshake reply */
-	if (conn->protocols) {
+	if (conn->protocols || conn->accepted_protocol) {
+		/* set protocol in the reply taking preference by the
+		   value configured at conn->accepted_protocol */
+		protocol = conn->accepted_protocol;
+		if (! protocol)
+			protocol = conn->protocols;
+
 		/* send accept header accepting protocol requested by the user */
 		reply = nopoll_strdup_printf ("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\nSec-WebSocket-Protocol: %s\r\n\r\n", 
-					      accept_key, conn->protocols);
+					      accept_key, protocol);
 	} else {
 		/* send accept header without telling anything about protocols */
 		reply = nopoll_strdup_printf ("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n", 

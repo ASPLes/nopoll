@@ -111,6 +111,12 @@ const char  * nopoll_conn_get_host_header (noPollConn * conn);
 
 const char  * nopoll_conn_get_cookie (noPollConn * conn);
 
+const char  * nopoll_conn_get_accepted_protocol (noPollConn * conn);
+
+const char  * nopoll_conn_get_requested_protocol (noPollConn * conn);
+
+void          nopoll_conn_set_accepted_protocol (noPollConn * conn, const char * protocol);
+
 void          nopoll_conn_shutdown (noPollConn * conn);
 
 void          nopoll_conn_close  (noPollConn  * conn);

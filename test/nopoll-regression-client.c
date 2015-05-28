@@ -2259,8 +2259,41 @@ nopoll_bool test_27 (void) {
 	if (! test_sending_and_check_echo (conn, "Test 27", "This is a test"))
 		return nopoll_false;
 
+	/* check accepted protocol */
+	if (! nopoll_cmp ("chat-protocol", nopoll_conn_get_accepted_protocol (conn))) {
+		printf ("ERROR: expected to find [chat-protocol] but found something: %s\n", 
+			nopoll_conn_get_accepted_protocol (conn));
+		return nopoll_false;
+	} /* end if */ 
+
+	printf ("Test 27: accepted protocol by the server: %s\n", nopoll_conn_get_accepted_protocol (conn));
+
 	/* close the connection */
 	nopoll_conn_close (conn);	
+
+	/* create connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, "/", "hello-protocol", "http://www.aspl.es");
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* check test */
+	if (! test_sending_and_check_echo (conn, "Test 27", "This is a test"))
+		return nopoll_false;
+
+	/* check accepted protocol */
+	if (! nopoll_cmp ("hello-protocol-response", nopoll_conn_get_accepted_protocol (conn))) {
+		printf ("ERROR: expected to find [chat-protocol] but found something: %s\n", 
+			nopoll_conn_get_accepted_protocol (conn));
+		return nopoll_false;
+	} /* end if */ 
+
+	printf ("Test 27: accepted protocol by the server: %s\n", nopoll_conn_get_accepted_protocol (conn));
+
+	/* close the connection */
+	nopoll_conn_close (conn);	
+
 
 	/* release context */
 	nopoll_ctx_unref (ctx);
