@@ -2221,7 +2221,7 @@ nopoll_bool test_26 (void) {
 	ctx = create_ctx ();
 
 	/* create connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "echo.websocket.org", "80", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
