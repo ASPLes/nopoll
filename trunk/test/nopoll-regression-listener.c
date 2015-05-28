@@ -73,6 +73,15 @@ nopoll_bool on_connection_opened (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 		return nopoll_false;
 	} /* end if */
 
+	/* get protocol to reply an especific case. This is an example
+	   on how to detect protocols requested by the client and how
+	   to reply with a particular value at the server. */
+	printf ("Requested protocol: %s\n", nopoll_conn_get_requested_protocol (conn));
+	if (nopoll_cmp (nopoll_conn_get_requested_protocol (conn), "hello-protocol")) {
+		/* set hello-protocol-response */
+		nopoll_conn_set_accepted_protocol (conn, "hello-protocol-response");
+	} /* end if */
+
 	/* notify connection accepted */
 	/* printf ("INFO: connection received from %s, with Host: %s and Origin: %s\n",
 	   nopoll_conn_host (conn), nopoll_conn_get_host_header (conn), nopoll_conn_get_origin (conn)); */

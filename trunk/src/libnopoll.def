@@ -42,6 +42,7 @@ nopoll_conn_ctx
 nopoll_conn_default_receive
 nopoll_conn_default_send
 nopoll_conn_flush_writes
+nopoll_conn_get_accepted_protocol
 nopoll_conn_get_connect_timeout
 nopoll_conn_get_cookie
 nopoll_conn_get_hook
@@ -52,6 +53,7 @@ nopoll_conn_get_listener
 nopoll_conn_get_mime_header
 nopoll_conn_get_msg
 nopoll_conn_get_origin
+nopoll_conn_get_requested_protocol
 nopoll_conn_host
 nopoll_conn_is_ok
 nopoll_conn_is_ready
@@ -84,6 +86,7 @@ nopoll_conn_send_ping
 nopoll_conn_send_pong
 nopoll_conn_send_text
 nopoll_conn_send_text_fragment
+nopoll_conn_set_accepted_protocol
 nopoll_conn_set_hook
 nopoll_conn_set_on_close
 nopoll_conn_set_on_msg
