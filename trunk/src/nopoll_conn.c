@@ -1453,6 +1453,7 @@ void nopoll_conn_unref (noPollConn * conn)
 	nopoll_free (conn->host_name);
 	nopoll_free (conn->origin);
 	nopoll_free (conn->protocols);
+	nopoll_free (conn->accepted_protocol);
 	nopoll_free (conn->get_url);
 
 	/* release TLS certificates */
@@ -2189,14 +2190,14 @@ int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, c
 		return 0;
 	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Accept", conn->handshake->websocket_accept)) 
 		return 0;
-	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Protocol", conn->protocols)) 
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Sec-WebSocket-Protocol", conn->accepted_protocol)) 
 		return 0;
 	
 	/* set the value if required */
 	if (strcasecmp (header, "Sec-Websocket-Accept") == 0)
 		conn->handshake->websocket_accept = value;
 	else if (strcasecmp (header, "Sec-Websocket-Protocol") == 0)
-		conn->protocols = value;
+		conn->accepted_protocol = value;
 	else if (strcasecmp (header, "Upgrade") == 0) {
 		conn->handshake->upgrade_websocket = 1;
 		nopoll_free (value);
