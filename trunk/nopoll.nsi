@@ -66,7 +66,7 @@ Section "Core Binaries" SEC01
   SetOutPath "$INSTDIR\bin"
   SetOverwrite ifnewer
   File "release\libnopoll0\libnopoll.dll"
-  File "libgcc_s_dw2.1.dll"
+  ; File "libgcc_s_dw2.1.dll"
 SectionEnd
 
 Section "Library with debug support enabled" SEC0112
@@ -94,6 +94,8 @@ Section "Test examples" SEC08
   File "test\nopoll-regression-listener.exe"
   File "test\test-private.key"
   File "test\test-certificate.crt"
+  File "test\server.pem"
+  File "test\root.pem"
 SectionEnd
 
 Section /o "Development Headers" SEC10
