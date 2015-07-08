@@ -1557,13 +1557,13 @@ void nopoll_cleanup_library (void)
  * "install" folder that inside includes the following structure:
  * 
  * \code
- * install/<android-platform>/lib/<arch>/*.so files
+ * install/<android-platform>/lib/<arch>/{libfiles}.so
  * \endcode
  * 
  * That way, if you need ready to use compiled libraries for android-21, arch mips64, the look at:
  * 
  * \code
- * install/android-21/<arch>/lib/mips64/*.so files.
+ * install/android-21/<arch>/lib/mips64/{libfiles}.so files.
  * \endcode
  * 
  * You might wonder why don't use a <android-platform>/<arch>/lib
