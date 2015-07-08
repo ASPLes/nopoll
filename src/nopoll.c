@@ -971,6 +971,10 @@ void nopoll_cleanup_library (void)
  * - \ref nopoll_implementing_tls_extended_validation_post_check
  * - \ref nopoll_implementing_tls_context_creator
  *
+ * <b>Section 4: Android platfom notes: </b>
+ * 
+ * - \ref nopoll_android_usage "4.1 Android noPoll's usage"
+ *
  * \section installing_nopoll 1.1 How to install noPoll 
  *
  * Currently, noPoll has only one dependency, which is OpenSSL
@@ -1484,6 +1488,152 @@ void nopoll_cleanup_library (void)
  * As you can see, the function must return an SSL_CTX for every
  * connection received and attempting to start TLS session.
  *
+ *
+ */
+
+/** 
+ * \page nopoll_android_usage Android noPoll's usage
+ *
+ * 
+ * \section nopoll_android_usage Using noPoll's Android install and development kit
+ *
+ * Inside http://www.aspl.es/nopoll/downloads/android you'll find two types of downloads. 
+ * One prefixed with <b>-install.zip</b> that provides just those binaries needed and <b>-full.zip</b>
+ * that provides a ready to use binaries with all the headers, etc needed to produce 
+ * Android solutions using noPoll library.
+ *
+ *
+ * \section nopoll_general_notes General notes
+ * 
+ * The idea behind these installers is the following. Because there
+ * are several platforms (android APIs) that you might want to support
+ * and for each platform there could be several archs (up to 6), these
+ * installers include all files compiled for each possible
+ * combination.
+ * 
+ * That way, you only have to pick desired combinations to compile
+ * your project with ready to use binaries.
+ *
+ *
+ * \section nopoll_platforms_archs Platforms and archs
+ *
+ * In particular the following platforms are supported by the
+ * NDK. Each of them represents an android particular version:
+ * 
+ * - android-12  
+ * - android-13  
+ * - android-14  
+ * - android-15  
+ * - android-16  
+ * - android-17  
+ * - android-18  
+ * - android-19  
+ * - android-21  
+ * - android-3  
+ * - android-4  
+ * - android-5  
+ * - android-8  
+ * - android-9
+ * 
+ * In the following link you have a declaration between each platform
+ * and each Android version: https://developer.android.com/ndk/guides/stable_apis.html
+ * 
+ * Now, for each platform you may have different archs supported (cpu
+ * style):
+ * 
+ * - arm  
+ * - arm64  
+ * - mips  
+ * - mips64  
+ * - x86  
+ * - x86_64
+ * 
+ * More information about this at: https://developer.android.com/ndk/guides/abis.html
+ * 
+ * \section nopoll_using_install_bundle Using the install bundle
+ *
+ * Assuming previous information, please, uncompress
+ * nopoll-VERSION-instal.zip bundle. Inside it, you'll find a
+ * "install" folder that inside includes the following structure:
+ * 
+ * \code
+ * install/<android-platform>/lib/<arch>/*.so files
+ * \endcode
+ * 
+ * That way, if you need ready to use compiled libraries for android-21, arch mips64, the look at:
+ * 
+ * \code
+ * install/android-21/<arch>/lib/mips64/*.so files.
+ * \endcode
+ * 
+ * You might wonder why don't use a <android-platform>/<arch>/lib
+ * scheme? That's good question.  This is because Android
+ * architectural design. See "Native code in app packages" in the
+ * following link https://developer.android.com/ndk/guides/abis.html
+ * to know more about this structure.
+ * 
+ * The idea is that you have to support all <archs> for a given
+ * <android-platform> (android-21 i.e.).
+ * 
+ * In that case, the install.zip is prepared to pick the entire
+ * directory content of a given android platform (for example
+ * install/android-21/) so the structure follows the guide lines of
+ * Android but also provides you full support for all archs, in that
+ * platform, to all components that noPoll is made of.
+ * 
+ * \section nopoll_use_development_kit Using development kit bundle (full.zip)
+ * 
+ * Ok, now for compiling your project for android using this bundle,
+ * please grab a reference to the full installer and uncompress it.
+ * 
+ * Inside, you'll find the following structure (more handy for a
+ * developer using autoconf or cmake):
+ * 
+ * \code
+ * full/<arch>/<platform>/{ready to use devel files to compile using noPoll}
+ * \endcode
+ * 
+ * 
+ * Now, assuming you are working with an ARM device, running android
+ * 4.0, then you can use files found at:
+ * 
+ * \code
+ * full/arm/android-14/bin/
+ *                     include/
+ *                     lib/
+ *                     share/
+ *                     ssl/
+ *  \endcode
+ * 
+ * 
+ * In your case, you only have to provide the following gcc flags to
+ * your cmake or autoconf environment as follows:
+ * 
+ * 1) Compiler flags:
+ *     
+ * \code
+ *    CFLAGS="-I/full/arm/android-14/include -I/full/arm/android-14/include/vortex -I/full/arm/android-14/include/axl -I/full/arm/android-14/include/nopoll"
+ * \endcode
+ * 
+ * 2) Linker flags:
+ * 
+ * \code
+ *    LDFLAGS=" -L/full/arm/android-14/lib -lvortex -lvortex-tls-1.1 -l axl -lssl -lcrypto -lpthread -pthread -lm"
+ * \endcode
+ * 
+ * 3) And your compiler must match the target platform, for example, for ARM:
+ * 
+ * \code
+ *  CC := $(ANDROID_NDK_BIN)/arm-linux-androideabi-gcc
+ *  CPP := $(ANDROID_NDK_BIN)/arm-linux-androideabi-g++
+ *  AR := $(ANDROID_NDK_BIN)/arm-linux-androideabi-ar
+ *  LD := $(ANDROID_NDK_BIN)/arm-linux-androideabi-ld
+ * \endcode
+ * 
+ * After that, according to your compiling tool, have it to use these
+ * indicatations to compile your source code using noPoll.
+ * 
+ * 
  */
 
 /** 
