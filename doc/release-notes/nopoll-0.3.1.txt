@@ -1,0 +1,90 @@
+                 --== noPoll toolkit ==--
+                 A filter inside a filter
+                          0.3.1
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  - Header bug fix when setting Cookie header and added support to
+    allow handling requested protocol
+
+  - Added support for Android platform, precompiled binaries for all
+    android apis and android archs are now available.
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Fixed bug when setting cookie (it was setting \n\r rather than
+  \r\n). Reported by Ettore Rizza.
+
+* [fix] Fixed nopoll.nsi to include libgcc_s_dw2.1.dll into the
+  installer.
+
+* [fix] Fixed nopoll_conn_opts_new to include (void).
+
+* [fix] Added regression test to check echo.websocket.org Kaazing
+  support (test_26). Everything working without any issue.
+
+* [fix] Fixed test_26 test..
+
+* [fix] Fixed support for protocol notified by the server, reported by
+  Rahul Kale (barco.com). Added regression test (test_27) to check fix
+  introduced.
+
+* [fix] General update to allow setting and handling protocol
+  requested and supported by the client and server. Updated regression
+  test (test_27) to check all changes introduced. API added:
+
+  - nopoll_conn_get_accepted_protocol
+  - nopoll_conn_get_requested_protocol
+  - nopoll_conn_set_accepted_protocol
+
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+8th Jul 2015, Madrid (Spain)
+

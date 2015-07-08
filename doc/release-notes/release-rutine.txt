@@ -6,10 +6,9 @@
 
 * publicar en listas de correo de aspl.
 
-
-
 * actualizar web de nopoll (actualizar sección de noticias y a la gestión
   de releases notes).
+
   - index.html
   - es/index.html
   - news.html
@@ -19,6 +18,17 @@
 
 * Generar paquetes debian/ubuntu
 * Generar instalador windows
+* Generar bundle para Android:
+
+  >> ssh debian-jessie-amd64 -l root -X -C
+  >> cd /usr/src
+  >> rm nopoll*.zip
+  >> rm -rf /usr/src/libnopoll/compilation
+  >> ./android-compile-targets.py /usr/src/android-ndk-r10e /usr/src/libnopoll /usr/src/libnopoll/compilation /usr/src/openssl-1.0.2c/compilation
+  >> ./prepare-bundle.py nopoll-`cat libnopoll/VERSION` /usr/src/libnopoll/compilation
+  >> rsync --bwlimit=400 -avz nopoll*.zip aspl-web@www.aspl.es:www/nopoll/downloads/android/
+
+
 
 * publicar en freecode.club - http://freshcode.club/projects/nopoll
 * publicar en launchpad.net - https://launchpad.net/nopoll (make an announcement)
