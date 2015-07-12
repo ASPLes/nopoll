@@ -183,7 +183,7 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 		va_end (args);
 
 		log_msg2 = log_msg;
-		log_msg = nopoll_strdup_printf ("%s:%d (%s) %s ", file, line, function_name, log_msg);
+		log_msg = nopoll_strdup_printf ("%s:%d %s ", file, line, log_msg);
 		nopoll_free (log_msg2);
 
 		ctx->log_handler (ctx, level, log_msg, ctx->log_user_data);
@@ -225,7 +225,7 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 	}
 
 	/* drop a log according to the domain */
-	printf ("%s:%d (%s) ", file, line, function_name);
+	printf ("%s:%d ", file, line);
 
 	/* print the message */
 	va_start (args, message);
