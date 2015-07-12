@@ -64,11 +64,11 @@ void            nopoll_log_set_handler (noPollCtx * ctx, noPollLogHandler handle
 #  ifndef _GNU_SOURCE
 #  define _GNU_SOURCE
 #  endif
-#  define __function_name__ __PRETTY_FUNCTION__
+#  define __function_name__   __PRETTY_FUNCTION__
 #  define __line__            __LINE__
 #  define __file__            __FILE__
 #elif defined(_MSC_VER)
-#  define __function_name__ __FUNCDNAME__
+#  define __function_name__   __FUNCDNAME__
 #  define __line__            __LINE__
 #  define __file__            __FILE__
 #else
