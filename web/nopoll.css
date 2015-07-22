@@ -359,3 +359,25 @@ ul.menu li {
   list-style: none;
 }
 
+table.licensing-table { 
+  text-align: center;
+}
+
+.licensing-table .header { 
+  color: white;
+  font-weight: bold;
+  background: #729fcf                  
+}
+
+.licensing-table td { 
+  padding: 6px;
+}
+
+.licensing-table .table-option { 
+  width: 400px; 
+  text-align: right;
+}
+
+.licensing-table .row-odd { 
+  background: #e7f0f3
+}
