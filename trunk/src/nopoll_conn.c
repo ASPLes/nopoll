@@ -242,7 +242,7 @@ NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
 	
 	/* do a tcp connect */
         if (connect (session, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
-		if(errno != NOPOLL_EINPROGRESS && errno != NOPOLL_EWOULDBLOCK) { 
+		if(errno != NOPOLL_EINPROGRESS && errno != NOPOLL_EWOULDBLOCK && errno != NOPOLL_ENOTCONN) { 
 		        shutdown (session, SHUT_RDWR);
                         nopoll_close_socket (session);
 
@@ -834,7 +834,8 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 	remaining_timeout = ctx->conn_connect_std_timeout;
 	while (remaining_timeout > 0) {
 		if (size != conn->send (conn, content, size)) {
-			if (errno == NOPOLL_EWOULDBLOCK || errno == NOPOLL_EINPROGRESS) {
+		        /* for some reason, under FreeBSD, a ENOTCONN is reported when they should be returning EINPROGRESS and/or EWOULDBLOCK */
+			if (errno == NOPOLL_EWOULDBLOCK || errno == NOPOLL_EINPROGRESS || errno == NOPOLL_ENOTCONN) {
 				/* nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Connection in progress (errno=%d), session: %d", errno, session); */
 				nopoll_sleep (10000);
 				remaining_timeout -= 10000;

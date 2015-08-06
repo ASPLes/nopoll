@@ -172,10 +172,6 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 	char       * log_msg;
 	char       * log_msg2;
 
-	/* check if the log is enabled */
-	if (! nopoll_log_is_enabled (ctx))
-		return;
-
 	if (ctx && ctx->log_handler) {
 		/* print the message */
 		va_start (args, message);
@@ -190,6 +186,10 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 		nopoll_free (log_msg);
 		return;
 	}
+
+	/* check if the log is enabled */
+	if (! nopoll_log_is_enabled (ctx))
+		return;
 
 	/* printout the process pid */
 	if (nopoll_log_color_is_enabled (ctx)) 

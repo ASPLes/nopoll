@@ -91,6 +91,7 @@ void __nopoll_regtest_mutex_unlock (noPollPtr _mutex) {
 #endif
 
 nopoll_bool debug = nopoll_false;
+nopoll_bool show_critical_only = nopoll_false;
 
 nopoll_bool test_sending_and_check_echo (noPollConn * conn, const char * label, const char * msg)
 {
@@ -135,12 +136,24 @@ nopoll_bool test_sending_and_check_echo (noPollConn * conn, const char * label, 
 	return nopoll_true;
 }
 
+void __report_critical (noPollCtx * ctx, noPollDebugLevel level, const char * log_msg, noPollPtr user_data)
+{
+        if (level == NOPOLL_LEVEL_CRITICAL) {
+  	        printf ("CRITICAL: %s\n", log_msg);
+	}
+	return;
+}
+
 noPollCtx * create_ctx (void) {
 	
 	/* create a context */
 	noPollCtx * ctx = nopoll_ctx_new ();
 	nopoll_log_enable (ctx, debug);
 	nopoll_log_color_enable (ctx, debug);
+
+	/* configure handler */
+	if (show_critical_only)
+	        nopoll_log_set_handler (ctx, __report_critical, NULL);
 	return ctx;
 }
 
@@ -275,7 +288,8 @@ nopoll_bool test_01 (void) {
 	/* call to create a connection */
 	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
-		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+	        printf ("ERROR: Expected to find proper client connection status, but found error (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d)..\n",
+			conn, nopoll_conn_socket (conn), NOPOLL_INVALID_SOCKET);
 		return nopoll_false;
 	}
 
@@ -287,7 +301,8 @@ nopoll_bool test_01 (void) {
 
 	/* ensure connection status is ok */
 	if (! nopoll_conn_is_ok (conn)) {
-		printf ("ERROR (3): expected to find proper connection status, but found failure..\n");
+		printf ("ERROR (3): expected to find proper connection status, but found failure.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d)..\n",
+			conn, nopoll_conn_socket (conn), NOPOLL_INVALID_SOCKET);
 		return nopoll_false;
 	}
 
@@ -339,7 +354,8 @@ nopoll_bool test_02 (void) {
 	/* call to create a connection */
 	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
-		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
+			conn, nopoll_conn_socket (conn), NOPOLL_INVALID_SOCKET, errno, strerror (errno));
 		return nopoll_false;
 	}
 
@@ -2311,7 +2327,7 @@ int main (int argc, char ** argv)
 	printf ("** NoPoll regression tests: version=%s\n**\n",
 		VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");
-	printf ("**     >> time ./nopoll-regression-client [--debug]\n**\n");
+	printf ("**     >> time ./nopoll-regression-client [--debug,--show-critical-only]\n**\n");
 	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
 	printf ("**     >> libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./nopoll-regression-client\n**\n");
 	printf ("**\n");
@@ -2325,6 +2341,10 @@ int main (int argc, char ** argv)
 		if (nopoll_cmp (argv[iterator], "--debug")) {
 			printf ("Activating debug..\n");
 			debug = nopoll_true;
+		} /* end if */
+		if (nopoll_cmp (argv[iterator], "--show-critical-only")) {
+			printf ("Activating reporting of critical messages..\n");
+			show_critical_only = nopoll_true;
 		} /* end if */
 
 		/* next position */
