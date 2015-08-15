@@ -221,6 +221,10 @@ struct _noPollConn {
 	char           * protocols;
 	/* @internal reference to the protocol that was replied by the server */
 	char           * accepted_protocol;
+
+	/* close status and reason */
+	int              peer_close_status;
+	char           * peer_close_reason;
 	
 	/** 
 	 * @internal Reference to the defined on message handling.

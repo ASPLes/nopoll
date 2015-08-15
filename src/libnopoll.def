@@ -43,6 +43,8 @@ nopoll_conn_default_receive
 nopoll_conn_default_send
 nopoll_conn_flush_writes
 nopoll_conn_get_accepted_protocol
+nopoll_conn_get_close_reason
+nopoll_conn_get_close_status
 nopoll_conn_get_connect_timeout
 nopoll_conn_get_cookie
 nopoll_conn_get_hook

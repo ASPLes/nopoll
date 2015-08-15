@@ -1371,6 +1371,40 @@ const char  * nopoll_conn_port   (noPollConn * conn)
 }
 
 /** 
+ * @brief Optionally, remote peer can close the connection providing an
+ * error code (\ref nopoll_conn_get_close_status) and a reason (\ref nopoll_conn_get_close_reason).
+ *
+ * These functions are used to get those values.
+ *
+ * @param conn The connection where the peer reported close status is being asked.
+ *
+ * @return Status code reported by the remote peer or 0 if nothing was reported.
+ */ 
+int           nopoll_conn_get_close_status (noPollConn * conn)
+{
+	if (conn == NULL)
+		return 0;
+	return conn->peer_close_status;
+}
+
+/** 
+ * @brief Optionally, remote peer can close the connection providing an
+ * error code (\ref nopoll_conn_get_close_status) and a reason (\ref nopoll_conn_get_close_reason).
+ *
+ * These functions are used to get those values.
+ *
+ * @param conn The connection where the peer reported close reason is being asked.
+ *
+ * @return Status close reason reported by the remote peer or NULL if nothing was reported.
+ */ 
+const char *  nopoll_conn_get_close_reason (noPollConn * conn)
+{
+	if (conn == NULL)
+		return NULL;
+	return conn->peer_close_reason;
+}
+
+/** 
  * @brief Call to close the connection immediately without going
  * through websocket close negotiation.
  *
@@ -1547,6 +1581,9 @@ void nopoll_conn_unref (noPollConn * conn)
 	nopoll_free (conn->protocols);
 	nopoll_free (conn->accepted_protocol);
 	nopoll_free (conn->get_url);
+
+	/* close reason if any */
+	nopoll_free (conn->peer_close_reason);
 
 	/* release TLS certificates */
 	nopoll_free (conn->certificate);
@@ -2135,7 +2172,8 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 	}
 	nopoll_free (accept);
 
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sec-Websocket-Accept matches expected value..");
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sec-Websocket-Accept matches expected value..nopoll_conn_complete_handshake_check_client (%p, %p)=%d",
+		    ctx, conn, result);
 
 	return result;
 }
@@ -2429,7 +2467,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	if (conn == NULL)
 		return NULL;
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "=== START: conn-id=%d (errno=%d, session: %d) ===", conn->id, errno, conn->session);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, 
+		    "=== START: conn-id=%d (errno=%d, session: %d, conn->handshake_ok: %d, conn->pending_ssl_accept: %d) ===", 
+		    conn->id, errno, conn->session, conn->handshake_ok, conn->pending_ssl_accept);
 	
 	/* check for accept SSL connection */
 	if (conn->pending_ssl_accept) {
@@ -2720,10 +2760,19 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	} /* end if */
 
 	if (msg->op_code == NOPOLL_CLOSE_FRAME) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Proper connection close frame received id=%d, shutting down", conn->id);
-		nopoll_msg_unref (msg);
-		nopoll_conn_shutdown (conn);
-		return NULL;
+		if (msg->payload_size == 0) {
+			/* nothing more to add here, close frame
+			   without content received, so we have no
+			   reason to keep on reading */
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Proper connection close frame received id=%d, shutting down", conn->id);
+			nopoll_msg_unref (msg);
+			nopoll_conn_shutdown (conn);
+			return NULL;
+		} /* end if */
+
+		/* received close frame with content, try to read the content */
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Proper connection close frame received id=%d with content bytes=%d, reading reason..", 
+			    conn->id, msg->payload_size);
 	} /* end if */
 
 	if (msg->op_code == NOPOLL_PING_FRAME) {
@@ -2796,7 +2845,6 @@ read_payload:
 		return NULL;		
 	} /* end if */
 
-	
 	bytes = __nopoll_conn_receive (conn, (char *) msg->payload, msg->payload_size);
 	if (bytes < 0) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Connection lost during message reception, dropping connection id=%d, bytes=%d, errno=%d : %s", 
@@ -2852,6 +2900,26 @@ read_payload:
 		/* flag what was unmasked */
 		msg->unmask_desp += msg->payload_size;
 	} /* end if */
+
+	/* check here close frame with reason */
+	if (msg->op_code == NOPOLL_CLOSE_FRAME) {
+		/* try to read reason and report those values */
+		if (msg->payload_size >= 2) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Close frame received id=%d with content bytes=%d, peer status=%d, peer reason=%s, reading reason..", 
+				    conn->id, msg->payload_size, nopoll_get_16bit (msg->payload), msg->payload + 2);
+
+			/* get values so the user can get them */
+			conn->peer_close_status = nopoll_get_16bit (msg->payload);
+			conn->peer_close_reason = nopoll_strdup (msg->payload + 2);
+		} /* end if */
+
+		/* release message, close the connection and return
+		   NULL to notify caller nothing to read for the
+		   application */
+		nopoll_msg_unref (msg);
+		nopoll_conn_shutdown (conn);
+		return NULL;
+	}
 
 	return msg;
 }
@@ -3655,7 +3723,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	level = NOPOLL_LEVEL_DEBUG;
 	if (desp != (length + header_size))
 		level = NOPOLL_LEVEL_CRITICAL;
-	else if (errno == NOPOLL_EWOULDBLOCK)
+	else if (errno == NOPOLL_EWOULDBLOCK && conn->pending_write_bytes > 0)
 		level = NOPOLL_LEVEL_WARNING;
 
 	nopoll_log (conn->ctx, level, 
@@ -4036,11 +4104,11 @@ nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
 		nopoll_sleep (500);
 
 		/* reduce the amount of time we have to wait */
-		total_timeout = total_timeout - 10000;
+		total_timeout = total_timeout - 500;
 	} /* end if */
 
 	/* report if the connection is ok */
-	return nopoll_conn_is_ok (conn);
+	return nopoll_conn_is_ok (conn) && nopoll_conn_is_ready (conn);
 }
 
 /* @} */
