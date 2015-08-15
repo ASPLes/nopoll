@@ -117,6 +117,10 @@ const char  * nopoll_conn_get_requested_protocol (noPollConn * conn);
 
 void          nopoll_conn_set_accepted_protocol (noPollConn * conn, const char * protocol);
 
+int           nopoll_conn_get_close_status (noPollConn * conn);
+
+const char *  nopoll_conn_get_close_reason (noPollConn * conn);
+
 void          nopoll_conn_shutdown (noPollConn * conn);
 
 void          nopoll_conn_close  (noPollConn  * conn);
