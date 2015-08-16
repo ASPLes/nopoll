@@ -125,6 +125,8 @@ void          nopoll_conn_shutdown (noPollConn * conn);
 
 void          nopoll_conn_close  (noPollConn  * conn);
 
+void          nopoll_conn_close_ext  (noPollConn  * conn, int status, const char * reason, int reason_size);
+
 void          nopoll_conn_set_hook (noPollConn * conn, noPollPtr ptr);
 
 noPollPtr     nopoll_conn_get_hook (noPollConn * conn);
