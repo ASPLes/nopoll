@@ -1455,10 +1455,18 @@ void          nopoll_conn_shutdown (noPollConn * conn)
  * (\ref noPollRole).
  *
  * @param conn The connection to close.
+ *
+ * @param status Optional status code to send to remote side. If
+ * status is < 0, no status code is sent.
+ *
+ * @param reason Pointer to the content to be sent.
+ *
+ * @param reason_size The amount of bytes that should be used from content pointer.
  */ 
-void          nopoll_conn_close  (noPollConn  * conn)
+void          nopoll_conn_close_ext  (noPollConn  * conn, int status, const char * reason, int reason_size)
 {
-	int refs;
+	int    refs;
+	char * content;
 #if defined(SHOW_DEBUG_LOG)
 	const char * role = "unknown";
 #endif
@@ -1483,7 +1491,28 @@ void          nopoll_conn_close  (noPollConn  * conn)
 	if (conn->session != NOPOLL_INVALID_SOCKET) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "requested proper connection close id=%d (session %d)", conn->id, conn->session);
 
-		/* send close message */
+		/* build reason indication */
+		content = NULL;
+		if (reason && reason_size > 0) {
+			/* send content */
+			content = nopoll_new (char, reason_size + 3);
+			if (content) {
+				nopoll_set_16bit (status, content);
+				memcpy (content + 2, reason, reason_size);
+			} /* end if */
+		} /* end if */
+
+		/* send close without reason */
+		nopoll_conn_send_frame (conn, nopoll_true /* has_fin */, 
+					/* masked */
+					conn->role == NOPOLL_ROLE_CLIENT, NOPOLL_CLOSE_FRAME, 
+					/* content size and content */
+					reason_size > 0 ? reason_size + 2 : 0, content, 
+					/* sleep in header */
+					0);
+
+		/* release content (if defined) */
+		nopoll_free (content);
 
 		/* call to shutdown connection */
 		nopoll_conn_shutdown (conn);
@@ -1501,6 +1530,23 @@ void          nopoll_conn_close  (noPollConn  * conn)
 	/* call to unref connection */
 	nopoll_conn_unref (conn);
 
+	return;	
+}
+
+/** 
+ * @brief Allows to close an opened \ref noPollConn no matter its role
+ * (\ref noPollRole).
+ *
+ * @param conn The connection to close.
+ *
+ * There is available an alternative extended version that allows to
+ * send the status code and the error message: \ref
+ * nopoll_conn_close_ext
+ */ 
+void          nopoll_conn_close  (noPollConn  * conn)
+{
+	/* call to close without providing a reason */
+	nopoll_conn_close_ext (conn, 0, NULL, 0);
 	return;
 }
 

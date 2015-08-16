@@ -2318,6 +2318,65 @@ nopoll_bool test_27 (void) {
 }
 
 
+nopoll_bool test_28 (void) {
+
+	noPollConn     * conn;
+	noPollCtx      * ctx;
+	noPollMsg      * msg;
+
+	/* init context */
+	ctx = create_ctx ();
+
+	/* create connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* wait until it is connected */
+	nopoll_conn_wait_until_connection_ready (conn, 5);
+
+	/* send a message to request connection close with a particular message */
+	if (nopoll_conn_send_text (conn, "close with message", 18) != 18) {
+		printf ("ERROR: failed to send close with message..");
+		return nopoll_false;
+	} /* end while */
+
+	/* wait for the reply */
+	while ((msg = nopoll_conn_get_msg (conn)) == NULL) {
+
+		if (! nopoll_conn_is_ok (conn)) {
+			/* connection was closed by remote side */
+			break;
+		} /* end if */
+
+		nopoll_sleep (10000);
+	} /* end if */
+
+	printf ("Test 28: close reason received, statud=%d, message=%s\n", 
+		nopoll_conn_get_close_status (conn),
+		nopoll_conn_get_close_reason (conn));
+	if (nopoll_conn_get_close_status (conn) != 1048) {
+		printf ("ERROR: expected different error code..\n");
+		return nopoll_false;
+	}
+
+	if (! nopoll_cmp (nopoll_conn_get_close_reason (conn), "Hey, this is a very reasonable error message")) {
+		printf ("ERROR: expected different error message..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* close connection */
+	nopoll_conn_close (conn);
+
+	/* release context */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -2604,6 +2663,13 @@ int main (int argc, char ** argv)
 		printf ("Test 27: checking setting protocol  [   OK    ]\n");
 	} else {
 		printf ("Test 27: chekcing setting protocol  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_28 ()) {
+		printf ("Test 28: checking setting protocol  [   OK    ]\n");
+	} else {
+		printf ("Test 28: chekcing setting protocol  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 
