@@ -273,7 +273,7 @@ char * __nopoll_conn_get_client_init (noPollConn * conn, noPollConnOpts * opts)
 	/* get the nonce */
 	if (! nopoll_nonce (nonce, 16)) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to get nonce, unable to produce Sec-WebSocket-Key.");
-		return nopoll_false;
+		return NULL;
 	} /* end if */
 
 	/* now base 64 */
