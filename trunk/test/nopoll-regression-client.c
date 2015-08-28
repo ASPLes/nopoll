@@ -289,7 +289,7 @@ nopoll_bool test_01 (void) {
 	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 	        printf ("ERROR: Expected to find proper client connection status, but found error (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d)..\n",
-			conn, nopoll_conn_socket (conn), NOPOLL_INVALID_SOCKET);
+			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET);
 		return nopoll_false;
 	}
 
@@ -302,7 +302,7 @@ nopoll_bool test_01 (void) {
 	/* ensure connection status is ok */
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR (3): expected to find proper connection status, but found failure.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d)..\n",
-			conn, nopoll_conn_socket (conn), NOPOLL_INVALID_SOCKET);
+			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET);
 		return nopoll_false;
 	}
 
@@ -355,7 +355,7 @@ nopoll_bool test_02 (void) {
 	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
-			conn, nopoll_conn_socket (conn), NOPOLL_INVALID_SOCKET, errno, strerror (errno));
+			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
 		return nopoll_false;
 	}
 
