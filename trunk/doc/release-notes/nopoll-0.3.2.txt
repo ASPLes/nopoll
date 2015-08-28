@@ -1,0 +1,110 @@
+                 --== noPoll toolkit ==--
+                     Enter the ninja
+                          0.3.2
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  - Implemented get close reason and close status when it is reported
+    by remote peer. Added support to close a connection sending a close
+    status and a close reason.
+
+  - Added/Fixed FreeBSD support (ENOTCONN handling). Added FreeBSD 
+    packaging support.
+
+  - Various compilation fixes were resolved (clang) and other minor
+    stable updates.
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Fixed FreeBSD support. ENOTCONN wasn't handled on connection. For
+  some reason socket API is reported ENOTCONN when the should be reporting
+  EINPROGRESS or EWOULDBLOCK
+
+* [fix] Updated log handler reporting so it is triggering when a user handler
+  is configured via nopoll_log_set_handler (even in the case log reporting
+  is disabled).
+
+* [fix] Added new option call --show-only-critical to regression tests client
+  to show only critical messages.
+
+* [fix] Updated noPoll internal handling to support close frames with
+  body content so remote peer status and reason are now available to API
+  consumers. A new couple of functions are now available to these values:
+
+  - nopoll_conn_get_close_reason
+  - nopoll_conn_get_close_status
+
+  Still need more work to check and add a regression test..
+
+* [fix] Updated nopoll_conn_wait_util_connection_ready uses nopoll_conn_is_ok()
+  and the end of the function and the result reported is linked to its results..
+
+
+* [new] Updated noPoll conn API to include a new function to allow closing
+  a connection, sending an error message and an error code along with it:
+
+  - nopoll_conn_close_ext
+
+* [fix] Added regression test (test_28) to check connection close frame
+  with status and reason to check functions added:
+
+  - nopoll_conn_get_close_status 
+  - nopoll_conn_get_close_reason
+
+  Everything working as expected..
+
+* [fix] Added support to provide FreeBSD packages (for now 9.X releases).
+
+* [fix] Fixed warnings reported by clang...gcc didn't notice them :-??
+
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+28th Aug 2015, Madrid (Spain)
+
