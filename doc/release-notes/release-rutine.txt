@@ -16,7 +16,20 @@
   - downloads.html
   - es/downloas.html
 
-* Generar paquetes debian/ubuntu
+* Generar paquetes debian/ubuntu  (core-admin)
+* Actualizar FreeBSD
+  
+  >> ssh freebsd-93-amd64 -l root -X 
+  >> cd /usr/src/nopoll
+  >> svn update
+  >> cf
+  >> make clean
+  >> make
+  >> cd freebsd/
+  >> ./buildfreebsd.sh
+  >> cd /usr/src/freebsd-packages/
+  >> ./upload.sh
+
 * Generar instalador windows
 * Generar bundle para Android:
 
@@ -24,6 +37,7 @@
   >> cd /usr/src
   >> rm nopoll*.zip
   >> rm -rf /usr/src/libnopoll/compilation
+  >> cd /usr/src/libnopoll; svn update; cd /usr/src
   >> ./android-compile-targets.py /usr/src/android-ndk-r10e /usr/src/libnopoll /usr/src/libnopoll/compilation /usr/src/openssl-1.0.2c/compilation
   >> ./prepare-bundle.py nopoll-`cat libnopoll/VERSION` /usr/src/libnopoll/compilation
   >> rsync --bwlimit=400 -avz nopoll*.zip aspl-web@www.aspl.es:www/nopoll/downloads/android/
