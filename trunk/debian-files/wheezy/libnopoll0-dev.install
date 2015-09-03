@@ -1,6 +1,7 @@
 usr/lib/pkgconfig/nopoll.pc
 usr/include/nopoll/nopoll.h
 usr/include/nopoll/nopoll_conn.h
+usr/include/nopoll/nopoll_conn_opts.h
 usr/include/nopoll/nopoll_handlers.h
 usr/include/nopoll/nopoll_decl.h
 usr/include/nopoll/nopoll_private.h
