@@ -47,7 +47,7 @@
 * publicar en freecode.club - http://freshcode.club/projects/nopoll
 * publicar en launchpad.net - https://launchpad.net/nopoll (make an announcement)
 * publicar en softpedia.com - 
-* publicar en https://www.reddit.com/r/opensource  (francisbrosnan  __Reddit1234)
+* publicar en https://www.reddit.com/r/opensource  
 
 * publicar noticia en aspl.es.
 * Publicar noticia en twitter ASPL_es
