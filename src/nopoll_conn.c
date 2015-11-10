@@ -3446,7 +3446,10 @@ void          nopoll_conn_set_on_close (noPollConn            * conn,
  */
 nopoll_bool      nopoll_conn_send_pong (noPollConn * conn)
 {
-	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PONG_FRAME, 0, NULL, 0);
+	if (conn == NULL)
+		return nopoll_false; /* do not pong if wrong reference received */
+
+	return nopoll_conn_send_frame (conn, nopoll_true, conn->role == NOPOLL_ROLE_CLIENT, NOPOLL_PONG_FRAME, 0, NULL, 0);
 }
 
 /** 
