@@ -3343,7 +3343,7 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
  */
 nopoll_bool      nopoll_conn_send_ping (noPollConn * conn)
 {
-	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PING_FRAME, 0, NULL, 0);
+	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PING_FRAME, 0, NULL, 0) > 0;
 }
 
 /** 
