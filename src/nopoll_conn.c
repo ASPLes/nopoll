@@ -898,6 +898,32 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
  * can help you implement a very simple wait until ready operation:
  * \ref nopoll_conn_wait_until_connection_ready (however, it is not
  * recommended for any serious, non-command line programming).
+ *
+ * <b>Is nopoll_conn_new() blocking?</b>
+ *
+ * Partially. It is blocking with a timeout but just for sending the
+ * client init (the initial packet that a WebSocket client must send),
+ * but the function does not block the caller until a reply from the
+ * server is received and the handshake is completed (which is where
+ * the blocking it is likely to happen).
+ *
+ * So, it essence, \ref nopoll_conn_new (and all its variants) is not
+ * blocking (unless you have a problem with network connection causing
+ * send() API to fail to send the WebSocket init message by returning
+ * EWOULD_BLOCK, which is very likely to not happen),
+ * 
+ * In that, the connection (noPollConn) reported by this function have big
+ * chances to be not ready (that's why you have to use \ref nopoll_conn_is_ready
+ * or the blocking one \ref nopoll_conn_wait_until_connection_ready to ensure
+ * you successfully connected),
+ *
+ * <b>Controll connect timeout</b>
+ *
+ * To control timeout for sending the initial message (and to ensure
+ * the engine sends it), you can use the following functions:
+ *
+ *  - \ref nopoll_conn_connect_timeout
+ *  - \ref nopoll_conn_get_connect_timeout
  */
 noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * host_ip, 
@@ -917,6 +943,8 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
  * @brief Creates a new Websocket connection to the provided
  * destination, physically located at host_ip and host_port and
  * allowing to provide a noPollConnOpts object.
+ *
+ * See \ref nopoll_conn_new for more information.
  *
  * @param ctx The noPoll context to which this new connection will be associated.
  *
@@ -974,9 +1002,9 @@ nopoll_bool __nopoll_tls_was_init = nopoll_false;
 /** 
  * @brief Allows to create a client WebSocket connection over TLS.
  *
- * The function works like nopoll_tls_conn_new with the same semantics
- * but providing a way to create a WebSocket session under the
- * supervision of TLS.
+ * The function works like \ref nopoll_conn_new with the same
+ * semantics but providing a way to create a WebSocket session under
+ * TLS supervision. See \ref nopoll_conn_new for more information.
  *
  * @param ctx The context where the operation will take place.
  *
@@ -1115,6 +1143,9 @@ nopoll_bool    nopoll_conn_is_ok (noPollConn * conn)
 /** 
  * @brief Allows to check if the connection is ready to be used
  * (handshake completed).
+ *
+ * Note this function may block the caller in the case the hanshake is
+ * not completed.
  *
  * @param conn The connection to be checked.
  *
