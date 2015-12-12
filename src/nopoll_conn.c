@@ -899,7 +899,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
  * \ref nopoll_conn_wait_until_connection_ready (however, it is not
  * recommended for any serious, non-command line programming).
  *
- * <b>Is nopoll_conn_new() blocking?</b>
+ * <b>Note 1: Is \ref nopoll_conn_new blocking?</b>
  *
  * Partially. It is blocking with a timeout but just for sending the
  * client init (the initial packet that a WebSocket client must send),
@@ -917,7 +917,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
  * or the blocking one \ref nopoll_conn_wait_until_connection_ready to ensure
  * you successfully connected),
  *
- * <b>Controll connect timeout</b>
+ * <b>Note 2: Controll connect timeout</b>
  *
  * To control timeout for sending the initial message (and to ensure
  * the engine sends it), you can use the following functions:
