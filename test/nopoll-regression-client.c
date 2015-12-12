@@ -182,7 +182,7 @@ nopoll_bool test_01_base64 (void) {
 	while (iterator < 10) {
 		size = 1024;
 		if (! nopoll_base64_encode ("This is a test", 14, buffer, &size)) {
-			printf ("ERROR: failed to encode this is a test..\n");
+			printf ("ERROR: failed to encode this is a test, nopoll_base64_encode failed to encode 'This is a test' ..\n");
 			return nopoll_false;
 		} /* end if */
 		
@@ -2419,9 +2419,9 @@ int main (int argc, char ** argv)
 	}
 
 	if (test_01_base64 ()) {
-		printf ("Test 01-bas64: Library bas64 support [   OK   ]\n");
+		printf ("Test 01-base64: Library base64 support [   OK   ]\n");
 	}else {
-		printf ("Test 01-bas64: Library bas64 support [ FAILED ]\n");
+		printf ("Test 01-base64: Library base64 support [ FAILED ]\n");
 		return -1;
 	}
 
