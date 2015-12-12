@@ -184,6 +184,11 @@ int           __nopoll_conn_send_common (noPollConn * conn,
 nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
 							  int          timeout);
 
+void               nopoll_conn_connect_timeout (noPollCtx * ctx,
+						long        microseconds_to_wait);
+
+long               nopoll_conn_get_connect_timeout (noPollCtx * ctx);
+
 /** internal api **/
 void nopoll_conn_complete_handshake (noPollConn * conn);
 
