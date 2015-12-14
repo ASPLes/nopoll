@@ -982,7 +982,7 @@ void nopoll_cleanup_library (void)
  * itself. 
  *
  * After having that library installed in your system (check your OS
- * documentation), download lastest tar.gz noPoll library from: http://code.google.com/p/no-poll
+ * documentation), download lastest tar.gz noPoll library from: http://www.aspl.es/nopoll/downloads
  *
  * Then, to compile the library follow the standard autoconf voodoo:
  *
@@ -1005,6 +1005,17 @@ void nopoll_cleanup_library (void)
  * \code
  * >> cd test/
  * >> ./nopoll-regression-client
+ * \endcode
+ *
+ * <b>Notes about preparing sources if you use SVN/GIT from https://github.com/asples/nopoll</b>
+ *
+ * In the case you want to work directly using SVN latest sources,
+ * just download them from githubt as usual from: https://github.com/asples/nopoll
+ *
+ * After that, run the following command to prepare all compilation files:
+ *
+ * \code
+ * >> ./autogen.sh
  * \endcode
  *
  * If everything looks fine, you can install nopoll into your system with the standard:
