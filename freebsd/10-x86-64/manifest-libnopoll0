@@ -1,0 +1,26 @@
+{
+    "name":"@PACKAGENAME@",
+    "origin":"net/@PACKAGENAME@",
+    "version":"@VERSION@",
+    "comment":"@DESCRIPTION@",
+    "maintainer":"info@aspl.es",
+    "www":"http://www.aspl.es/nopoll/",
+    "abi":"@ABI@",
+    "arch":"@ARCH@",
+    "prefix":"/usr/local",
+    "flatsize":@FLATSIZE@,
+    "licenselogic":"single",
+    "licenses":["LGPL21"],
+    "desc":"@DESCRIPTION@",
+    "categories":["net"],
+    @SHLIBS_PROVIDED@
+    "files":{
+    @LIST_OF_FILES@
+    },
+    "scripts":
+       {
+        "post-install":"/sbin/ldconfig -m /usr/local/lib",
+        "post-deinstall":"/sbin/ldconfig -R"
+       }
+},
+

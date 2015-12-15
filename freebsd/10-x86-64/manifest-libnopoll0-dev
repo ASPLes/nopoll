@@ -1,0 +1,22 @@
+{
+    "name":"@PACKAGENAME@",
+    "origin":"net/@PACKAGENAME@",
+    "version":"@VERSION@",
+    "comment":"@DESCRIPTION@",
+    "maintainer":"info@aspl.es",
+    "www":"http://www.aspl.es/nopoll/",
+    "abi":"@ABI@",
+    "arch":"@ARCH@",
+    "prefix":"/usr/local",
+    "flatsize":@FLATSIZE@,
+    "licenselogic":"single",
+    "licenses":["LGPL21"],
+    "desc":"@DESCRIPTION@",
+    "deps" : {"libnopoll0" : {"origin" : "net/libnopoll0", "version" : "@VERSION@"}},
+    "categories":["net"],
+    @SHLIBS_PROVIDED@
+    "files":{
+    @LIST_OF_FILES@
+    }
+},
+
