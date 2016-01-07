@@ -536,7 +536,7 @@ nopoll_bool test_04 (int chunk_size) {
 			retries ++;
 			if (retries > 100) {
 				printf ("Test 04: nothing found (0 bytes), total read %d, total requested: %ld, for %d retries\n", 
-					total_read, stat_buf.st_size, retries); 
+					total_read, (long) stat_buf.st_size, retries); 
 				return nopoll_false;
 			} /* end if */
 			continue;
@@ -1217,7 +1217,7 @@ nopoll_bool test_12 (void) {
 	nopoll_timeval_substract (&stop, &start, &diff);
 
 	printf ("Test 12: created %d connections in %ld.%ld secs\n", 
-		iterator, diff.tv_sec, diff.tv_usec);
+		iterator, (long) diff.tv_sec, (long) diff.tv_usec);
 	
 	
 	return nopoll_true;
