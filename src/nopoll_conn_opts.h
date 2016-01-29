@@ -57,6 +57,8 @@ void        nopoll_conn_opts_ssl_peer_verify (noPollConnOpts * opts, nopoll_bool
 
 void        nopoll_conn_opts_set_cookie (noPollConnOpts * opts, const char * cookie_content);
 
+void        nopoll_conn_opts_skip_origin_check (noPollConnOpts * opts, nopoll_bool skip_check);
+
 nopoll_bool nopoll_conn_opts_ref (noPollConnOpts * opts);
 
 void        nopoll_conn_opts_unref (noPollConnOpts * opts);

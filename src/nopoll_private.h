@@ -387,6 +387,9 @@ struct _noPollConnOpts {
 
 	/* cookie support */
 	char * cookie;
+
+	/* skip origin check flag */
+	nopoll_bool skip_origin_header_check;
 };
 
 #endif

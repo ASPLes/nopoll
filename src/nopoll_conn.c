@@ -2124,15 +2124,28 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	noPollActionHandler    on_ready;
 	noPollPtr              on_ready_data;
 	const char           * protocol;
+	nopoll_bool            origin_check;
 
 	/* call to check listener handshake */
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking client handshake data..");
+
+	/* update default origin check (Origin: header must be
+	 * defined, event though RFC says SHOULD it should have been
+	 * MUST because other wise, server side cannot check this
+	 * value which is crucial for security reasons */
+	origin_check = conn->origin != NULL;
+
+	/* now, update this origin_check in the case it is not defined
+	 * and origin header skip was enabled */
+	if ( conn->listener && conn->listener->opts && conn->listener->opts->skip_origin_header_check && conn->origin == NULL)
+		origin_check = nopoll_true;
+	
 
 	/* ensure we have all minumum data */
 	if (! conn->handshake->upgrade_websocket ||
 	    ! conn->handshake->connection_upgrade ||
 	    ! conn->handshake->websocket_key ||
-	    ! conn->origin ||
+	    ! origin_check ||  /* see above */
 	    ! conn->handshake->websocket_version) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s didn't provide all websocket handshake values required, closing session (Upgraded: websocket %d, Connection: upgrade%d, Sec-WebSocket-Key: %p, Origin: %p, Sec-WebSocket-Version: %p)",
 			    conn->host, conn->port,

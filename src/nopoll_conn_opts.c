@@ -195,6 +195,31 @@ void        nopoll_conn_opts_set_cookie (noPollConnOpts * opts, const char * coo
 	return;
 }
 
+/** 
+ * @brief Allows to skip origin check for an incoming connection.
+ *
+ * This option is highly not recommended because the Origin header
+ * must be provided by all WebSocket clients so the the server side
+ * can check it.
+ *
+ * In most environments not doing so will make the connection to not succeed.
+ *
+ * Use this option just in development environment.
+ *
+ * @param opts The connection options to configure.
+ *
+ * @param check nopoll_bool Skip header check 
+ *
+ */
+void        nopoll_conn_opts_skip_origin_check (noPollConnOpts * opts, nopoll_bool skip_check)
+{
+	/* configure skip origin header check */
+	if (opts) 
+		opts->skip_origin_header_check = skip_check;
+
+	return;
+}
+
 
 /** 
  * @brief Allows to increase a reference to the connection options

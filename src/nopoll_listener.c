@@ -220,6 +220,9 @@ noPollConn      * nopoll_listener_new_opts (noPollCtx      * ctx,
 	listener->receive = nopoll_conn_default_receive;
 	listener->send    = nopoll_conn_default_send;
 
+	/* configure connection options */
+	listener->opts    = opts;
+
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Listener created, started: %s:%s (socket: %d)", listener->host, listener->port, listener->session);
 
 	return listener;
