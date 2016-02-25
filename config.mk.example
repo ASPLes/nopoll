@@ -21,3 +21,7 @@ export platform_bits     = 64
 # force build with debug
 # export show_debug        = -DSHOW_DEBUG_LOG
 export show_debug        =
+
+# cc compiler to use usually gcc.exe
+# export CC          = gcc.exe
+export CC          = x86_64-w64-mingw32-gcc.exe

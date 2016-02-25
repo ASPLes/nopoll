@@ -9,9 +9,6 @@ include config.mk
 # directory were libraries and tools will be installed 
 export INSTALL_DIR = c:/msys/1.0/home/acinom/nopoll/trunk/install
 
-# cc compiler to use usually gcc.exe
-export CC          = gcc.exe
-
 # general configuration
 # export enable_gcc_debug = -g
 
@@ -39,6 +36,7 @@ export nopoll_dll              = libnopoll
 # strip command
 strip    = strip --strip-unneeded
 
+build: all
 all: prepare_versions_mk build_nopoll
 
 prepare_nshs:

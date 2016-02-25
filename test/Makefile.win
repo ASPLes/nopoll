@@ -7,7 +7,6 @@ else
    DLL        = libnopoll.dll
 endif
 
-CC       = gcc.exe -g -Wall -Werror
 OBJ      = nopoll-regression-client.o  \
 	    nopoll-regression-client.o
 
