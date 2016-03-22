@@ -287,6 +287,31 @@ void nopoll_conn_opts_set_reuse        (noPollConnOpts * opts, nopoll_bool reuse
 	return;
 }
 
+
+/** 
+ * @brief Allows the user to configure the interface to bind the connection to.
+ *
+ * @param opts The connection options object. 
+ *
+ * @param interface The interface to bind to, or NULL for system default.
+ *
+ */
+void nopoll_conn_opts_set_interface    (noPollConnOpts * opts, const char * interface)
+{
+	if (opts == NULL)
+		return;
+
+	if (interface) {
+		/* configure interface */
+		opts->interface = nopoll_strdup (interface);
+	} else {
+		nopoll_free (opts->interface);
+		opts->interface = NULL;
+	} /* end if */
+
+	return;
+}
+
 void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
 {
 	if (opts == NULL)
@@ -311,6 +336,9 @@ void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
 
 	/* cookie */
 	nopoll_free (opts->cookie);
+
+	/* interface */
+	nopoll_free (opts->interface);
 
 	/* release mutex */
 	nopoll_mutex_destroy (opts->mutex);

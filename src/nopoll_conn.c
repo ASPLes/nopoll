@@ -193,6 +193,35 @@ nopoll_bool                 nopoll_conn_set_sock_tcp_nodelay   (NOPOLL_SOCKET so
 	return nopoll_true;
 } /* end */
 
+
+/** 
+ * @brief Allows to configure which network interface to bind to.
+ * 
+ * @param socket The socket to be configured.
+ *
+ * @param options The options defining the interface value to be configured.
+ * 
+ * @return nopoll_true if the operation is completed.
+ */
+nopoll_bool                 nopoll_conn_set_bind_interface (NOPOLL_SOCKET socket,
+							    noPollConnOpts  * options)
+{
+	/* local variables */
+	int result;
+
+	if ((NULL != options) && (NULL != options->interface)) {
+		result = setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE,
+				    options->interface, strlen(options->interface)+1);
+		if (result == NOPOLL_SOCKET_ERROR) {
+			return nopoll_false;
+		}
+	}
+
+	/* properly configured */
+	return nopoll_true;
+} /* end */
+
+
 /** 
  * @internal Allows to create a plain socket connection against the
  * host and port provided.
@@ -203,11 +232,14 @@ nopoll_bool                 nopoll_conn_set_sock_tcp_nodelay   (NOPOLL_SOCKET so
  *
  * @param port The port server to connect to.
  *
+ * @param options The connection options to apply.
+ *
  * @return A connected socket or -1 if it fails. 
  */
-NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
-					const char  * host,
-					const char  * port)
+NOPOLL_SOCKET nopoll_conn_sock_connect_opts (noPollCtx       * ctx,
+					     const char      * host,
+					     const char      * port,
+					     noPollConnOpts  * options)
 {
 	struct hostent     * hostent;
 	struct sockaddr_in   saddr;
@@ -229,6 +261,13 @@ NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
 
 	/* disable nagle */
 	nopoll_conn_set_sock_tcp_nodelay (session, nopoll_true);
+
+	/* bind to specified interface */
+	if( nopoll_true != nopoll_conn_set_bind_interface (session, options) ) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to bind to specified interface");
+		nopoll_close_socket (session);
+		return -1;
+	} /* end if */
 
 	/* prepare socket configuration to operate using TCP/IP
 	 * socket */
@@ -257,6 +296,24 @@ NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx   * ctx,
 }
 
 
+/** 
+ * @internal Allows to create a plain socket connection against the
+ * host and port provided.
+ *
+ * @param ctx The context where the connection happens.
+ *
+ * @param host The host server to connect to.
+ *
+ * @param port The port server to connect to.
+ *
+ * @return A connected socket or -1 if it fails. 
+ */
+NOPOLL_SOCKET nopoll_conn_sock_connect (noPollCtx       * ctx,
+					const char      * host,
+					const char      * port)
+{
+	return nopoll_conn_sock_connect_opts (ctx, host, port, NULL);
+}
 
 
 /** 
@@ -620,7 +677,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 		host_port = "80";
 
 	/* create socket connection in a non block manner */
-	session = nopoll_conn_sock_connect (ctx, host_ip, host_port);
+	session = nopoll_conn_sock_connect_opts (ctx, host_ip, host_port, options);
 	if (session == NOPOLL_INVALID_SOCKET) {
 		/* release connection options */
 		__nopoll_conn_opts_release_if_needed (options);
