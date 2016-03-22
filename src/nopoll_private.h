@@ -204,6 +204,7 @@ struct _noPollConn {
 	 * @internal Host name requested on the connection.
 	 */
 	char           * host_name;
+
 	/** 
 	 * @internal Origin requested on the connection.
 	 */
@@ -390,6 +391,10 @@ struct _noPollConnOpts {
 
 	/* skip origin check flag */
 	nopoll_bool skip_origin_header_check;
+
+	/* network interface to bind to */
+	char * interface;
+
 };
 
 #endif
