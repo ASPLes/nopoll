@@ -148,7 +148,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 		return;
 	} /* end if */
 
-	printf ("Message received: %s\n", content);
+	/* printf ("Message received: %s\n", content); */
 	if (nopoll_ncmp (content, "close with message", 18)) {
 		printf ("Listener: RELEASING connection (closing it) with reason..\n");
 		nopoll_conn_close_ext (conn, 1048, "Hey, this is a very reasonable error message", 44);

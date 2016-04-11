@@ -845,7 +845,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 			/* try and limit max reconnect allowed */
 			iterator++;
 
-			if (iterator > 100) {
+			if (iterator > 1000) {
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Max retry calls=%d to SSL_connect reached, shutting down connection id=%d, errno=%d",
 					    iterator, conn->id, errno);
 				nopoll_free (content);
