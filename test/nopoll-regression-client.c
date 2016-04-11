@@ -678,7 +678,7 @@ nopoll_bool test_04b (void) {
 
 	/* write pending content */
 	if (nopoll_conn_pending_write_bytes (conn) == 0) {
-	  printf ("ERROR: expected to have pending bytes to be written.. but found %d..\n",
+	  printf ("WARNING: expected to have pending bytes to be written.. but found %d..\n",
 		  nopoll_conn_pending_write_bytes (conn));
 	  /* return nopoll_false; */
 	} /* end if */
