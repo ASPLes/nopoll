@@ -69,6 +69,7 @@ nopoll_conn_opts_free
 nopoll_conn_opts_new
 nopoll_conn_opts_ref
 nopoll_conn_opts_set_cookie
+nopoll_conn_opts_set_extra_headers
 nopoll_conn_opts_set_interface
 nopoll_conn_opts_set_reuse
 nopoll_conn_opts_set_ssl_certs

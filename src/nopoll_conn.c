@@ -345,24 +345,34 @@ char * __nopoll_conn_get_client_init (noPollConn * conn, noPollConnOpts * opts)
 	conn->handshake = nopoll_new (noPollHandShake, 1);
 	conn->handshake->expected_accept = nopoll_strdup (key);
 
-	/* send initial handshake                                                                                                                        |cookie |prot  | */
-	return nopoll_strdup_printf ("GET %s HTTP/1.1\r\nHost: %s\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: %s\r\nOrigin: %s\r\n%s%s%s%s%s%s%s%sSec-WebSocket-Version: %d\r\n\r\n", 
-				     conn->get_url, conn->host_name, 
+	/* send initial handshake */
+	return nopoll_strdup_printf ("GET %s HTTP/1.1"
+				     "\r\nHost: %s"
+				     "\r\nUpgrade: websocket"
+				     "\r\nConnection: Upgrade"
+				     "\r\nSec-WebSocket-Key: %s"
+				     "\r\nSec-WebSocket-Version: %d"
+				     "\r\nOrigin: %s"
+				     "%s%s"  /* Cookie */
+				     "%s%s"  /* protocol part */
+				     "%s"    /* extra arbitrary headers */
+				     "\r\n\r\n",
+				     conn->get_url,
+				     conn->host_name,
 				     /* sec-websocket-key */
 				     key,
+				     /* sec-websocket-version */
+				     conn->ctx->protocol_version,
 				     /* Origin */
-				     conn->origin, 
+				     conn->origin,
 				     /* Cookie */
-				     (opts && opts->cookie) ? "Cookie" : "",
-				     (opts && opts->cookie) ? ": " : "",
+				     (opts && opts->cookie) ? "\r\nCookie: " : "",
 				     (opts && opts->cookie) ? opts->cookie : "",
-				     (opts && opts->cookie) ? "\r\n" : "",
 				     /* protocol part */
-				     conn->protocols ? "Sec-WebSocket-Protocol" : "",
-				     conn->protocols ? ": " : "",
+				     conn->protocols ? "\r\nSec-WebSocket-Protocol: " : "",
 				     conn->protocols ? conn->protocols : "",
-				     conn->protocols ? "\r\n" : "",
-				     conn->ctx->protocol_version);
+				     /* extra arbitrary headers */
+				     (opts && opts->extra_headers) ? opts->extra_headers : "");
 }
 
 

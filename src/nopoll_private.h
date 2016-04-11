@@ -395,6 +395,8 @@ struct _noPollConnOpts {
 	/* network interface to bind to */
 	char * interface;
 
+	/* extra HTTP headers to send during the connection */
+	char * extra_headers;
 };
 
 #endif
