@@ -2377,6 +2377,39 @@ nopoll_bool test_28 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_29 (void) {
+
+	noPollConn     * conn;
+	noPollCtx      * ctx;
+	noPollConnOpts * opts;
+
+	/* init context */
+	ctx = create_ctx ();
+
+	/* configure extra headers */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_extra_headers (opts, "\r\nfoo: bar");
+
+	/* create connection */
+	conn = nopoll_conn_new_opts (ctx, opts, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* wait until it is connected */
+	nopoll_conn_wait_until_connection_ready (conn, 5);
+
+	/* close connection */
+	nopoll_conn_close (conn);
+
+	/* release context */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+
 
 int main (int argc, char ** argv)
 {
@@ -2656,21 +2689,28 @@ int main (int argc, char ** argv)
 	if (test_26 ()) {
 		printf ("Test 26: checking echo.websocket.org  [   OK    ]\n");
 	} else {
-		printf ("Test 26: chekcing echo.websocket.org  [ FAILED  ]\n");
+		printf ("Test 26: checking echo.websocket.org  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 
 	if (test_27 ()) {
 		printf ("Test 27: checking setting protocol  [   OK    ]\n");
 	} else {
-		printf ("Test 27: chekcing setting protocol  [ FAILED  ]\n");
+		printf ("Test 27: checking setting protocol  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 
 	if (test_28 ()) {
 		printf ("Test 28: checking setting protocol  [   OK    ]\n");
 	} else {
-		printf ("Test 28: chekcing setting protocol  [ FAILED  ]\n");
+		printf ("Test 28: checking setting protocol  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+ 
+	if (test_29 ()) {
+		printf ("Test 29: checking extra http headers  [   OK    ]\n");
+	} else {
+		printf ("Test 29: checking extra http headers  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

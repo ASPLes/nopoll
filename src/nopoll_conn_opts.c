@@ -195,6 +195,35 @@ void        nopoll_conn_opts_set_cookie (noPollConnOpts * opts, const char * coo
 	return;
 }
 
+/**
+ * @brief Allows to set arbitrary HTTP headers and content to be sent during
+ * the connection handshake.
+ *
+ * @note String must match the format: "\r\nheader:value\r\nheader2:value2" with
+ * no trailing \r\n.
+ *
+ * @param opts The connection option to configure.
+ *
+ * @param header_string Content for the headers. If you pass NULL the
+ * extra headers are unset.
+ */
+void        nopoll_conn_opts_set_extra_headers (noPollConnOpts * opts, const char * header_string)
+{
+	if (opts == NULL)
+		return;
+
+	if (header_string) {
+		/* configure extra_header content to be sent */
+		opts->extra_headers = nopoll_strdup (header_string);
+	} else {
+		nopoll_free (opts->extra_headers);
+		opts->extra_headers = NULL;
+	} /* end if */
+
+	return;
+}
+
+
 /** 
  * @brief Allows to skip origin check for an incoming connection.
  *
@@ -339,6 +368,9 @@ void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
 
 	/* interface */
 	nopoll_free (opts->interface);
+
+	if (opts->extra_headers)
+		nopoll_free (opts->extra_headers);
 
 	/* release mutex */
 	nopoll_mutex_destroy (opts->mutex);
