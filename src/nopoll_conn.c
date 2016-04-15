@@ -2076,6 +2076,12 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 {
 	int iterator = 0;
 	int iterator2 = 0;
+	char * buffer_p;
+
+	if (buffer_size < 3) {
+	        nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expected to find mime header content (but buffer size %d was found)", buffer_size);
+		return nopoll_false;
+	}
 
 	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Processing content: %s", buffer); */
 	
@@ -2083,8 +2089,11 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 	while (iterator < buffer_size && buffer[iterator] && buffer[iterator] != ':')
 		iterator++;
 	if (buffer[iterator] != ':') {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expected to find mime header separator : but it wasn't found (buffer_size=%d, iterator=%d, content: [%s]..",
-			    buffer_size, iterator, buffer);
+	        /* ensure print always ends */
+	        buffer_p = (char *) buffer;
+	        buffer_p[buffer_size -1] = 0;
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expected to find mime header separator : but it wasn't found, buffer_size=%d, iterator=%d, content: [%s]..",
+			    buffer_size, iterator, buffer_p);
 		return nopoll_false;
 	} 
 
@@ -2097,9 +2106,13 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 	while (iterator2 < buffer_size && buffer[iterator2] && buffer[iterator2] != '\n')
 		iterator2++;
 	if (buffer[iterator2] != '\n') {
+	        /* ensure print always ends */
+	        buffer_p = (char *) buffer;
+	        buffer_p[buffer_size -1] = 0;
+
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
 			    "Expected to find mime header value end (13) but it wasn't found (iterator=%d, iterator2=%d, for header: [%s], found value: [%d]), inside content: [%s]..",
-			    iterator, iterator2, (*header), (int)buffer[iterator2], buffer);
+			    iterator, iterator2, (*header), (int)buffer[iterator2], buffer_p);
 		nopoll_free (*header);
 		(*header) = NULL;
 		(*value)  = NULL;
