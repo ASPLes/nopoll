@@ -319,6 +319,17 @@ struct _noPollConn {
 	 * connection that was created due to a listener running.
 	 */
 	noPollConn          * listener;
+
+	/** 
+	 * @internal Flag to track internal header pending 
+	 */
+	nopoll_bool           read_pending_header;
+
+	
+	/**** debug values ****/
+	/* force stop after header: do not use this, it is just for
+	   testing purposes */
+	nopoll_bool  __force_stop_after_header;
 };
 
 struct _noPollIoEngine {

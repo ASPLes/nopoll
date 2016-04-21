@@ -2723,6 +2723,14 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	if (conn->previous_msg) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Reading bytes (previously read %d) from a previous unfinished frame (pending: %d) over conn-id=%d",
 			    conn->previous_msg->payload_size, conn->previous_msg->remain_bytes, conn->id);
+
+		if (conn->read_pending_header) {
+			/* detected pending read header, continue from here */
+			msg                       = conn->previous_msg;
+			conn->previous_msg        = NULL;
+			conn->read_pending_header = nopoll_false;
+			goto read_pending_header;
+		} /* end if */
 		
 		/* build next message holder to continue with this content */
 		if (conn->previous_msg->payload_size > 0) {
@@ -2799,7 +2807,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	*/
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Found data in opened connection id %d..", conn->id);*/ 
 
-	/* get the first 4 bytes from the websocket header */
+	/* get the first 2 bytes from the websocket header */
 	bytes = __nopoll_conn_receive (conn, buffer, 2);
 	if (bytes == 0) {
 		/* connection not ready */
@@ -2865,6 +2873,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		return NULL;
 	} /* end if */
 
+ read_pending_header:
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "interim payload size received: %d", (int) msg->payload_size);
 
 	/* read the rest */
@@ -2876,7 +2885,14 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		   unsigned integer */
 		bytes = __nopoll_conn_receive (conn, buffer + 2, 2);
 		if (bytes != 2) {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Failed to get next 2 bytes to read header from the wire, failed to received content, shutting down id=%d the connection", conn->id);
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Failed to get next 2 bytes to read header from the wire, failed to received content, shutting down id=%d the connection, errno=%d (%s)", conn->id, errno, strerror (errno));
+			if (errno == NOPOLL_EWOULDBLOCK) { 
+				/* connection is not ready at this point */
+				conn->previous_msg = msg;
+				conn->read_pending_header = nopoll_true;
+				return NULL;
+			}
+
 			nopoll_msg_unref (msg);
 			nopoll_conn_shutdown (conn);
 			return NULL; 	
@@ -3823,9 +3839,30 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	/* send content */
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Mask used for this delivery: %d (about to send %d bytes)",
 		    nopoll_get_32bit (send_buffer + header_size - 2), (int) length + header_size);
+
 	/* clear errno status before writting */
 	desp  = 0;
 	tries = 0;
+
+	/***** BEGIN INTERNAL debug code for test_30 : nopoll-regression-client.c ******/
+	if (conn->__force_stop_after_header) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Sending broken header and implement a pause on purpose...");
+
+		/* send just 2 bytes for the header and then implement a very long pause */
+		bytes_written = conn->send (conn, send_buffer, 2);
+		desp          = 2;
+		if (bytes_written != 2) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Requested to write 2 bytes for the header but %d were written",
+				    bytes_written);
+			desp  = 0;
+		} /* end if */
+
+		/* sleep after header ... */
+		nopoll_sleep (5000); /* 5 seconds */
+
+	} /* end if */
+	/****** END INTERNAL debug code for test_30 : nopoll-regression-client.c ******/
+
 	while (nopoll_true) {
 		/* try to write bytes */
 		if (sleep_in_header == 0) {

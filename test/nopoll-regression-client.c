@@ -2409,6 +2409,117 @@ nopoll_bool test_29 (void) {
 	return nopoll_true;
 }
 
+/**** DO NOT INCLUDE THIS HEADER IN PRODUCTION: this header is
+      included in this regression test just for testing purposes. Any
+      code developed using this include might failure in future
+      relases ****/
+#include <nopoll_private.h>
+
+nopoll_bool test_30 (void) {
+
+	noPollConn      * conn;
+	noPollCtx       * ctx;
+	const char      * msg = "This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...This is content to check this regression test 30, content for a reply that send a header that is partially sent...";
+	int              length;
+	noPollMsg      * msg_ref;
+	int              tries;
+
+	/* init context */
+	ctx = create_ctx ();
+
+	/* create connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 30: waiting until connection is ready..\n");
+	/* wait until it is connected */
+	nopoll_conn_wait_until_connection_ready (conn, 5);
+	printf ("Test 30: ok..\n");
+
+	/* send a message to request connection close with a particular message */
+	conn->__force_stop_after_header = nopoll_true;
+
+	printf ("Test 30: sending first message..\n");
+	length = strlen (msg);
+	if (nopoll_conn_send_text (conn, msg, length) != length) {
+		printf ("ERROR: failed to send message..");
+		return nopoll_false;
+	} /* end while */
+
+	/* call to get status */
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: connection failure found after send operation with broken header....\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 30: getting reply to the message..\n");
+	tries = 10;
+	while (tries > 0 ) { 
+		/* get message */
+		msg_ref = nopoll_conn_get_msg (conn);
+		if (msg_ref)
+			break;
+
+		nopoll_sleep (500000);
+		tries--;
+		
+	}
+	if (msg_ref == NULL) {
+		printf ("ERROR: expected to find reply message...but NULL was received..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! nopoll_cmp ((const char *) nopoll_msg_get_payload (msg_ref), msg)) {
+		printf ("ERROR: expected to find message equal content but found something different..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* release message */
+	nopoll_msg_unref (msg_ref);
+
+	printf ("Test 30: send second message..\n");
+	if (nopoll_conn_send_text (conn, msg, length) != length) {
+		printf ("ERROR: failed to send message..");
+		return nopoll_false;
+	} /* end while */
+
+	printf ("Test 30: getting reply to the message (to the second message)..\n");
+	tries = 10;
+	while (tries > 0 ) { 
+		/* get message */
+		msg_ref = nopoll_conn_get_msg (conn);
+		if (msg_ref)
+			break;
+
+		nopoll_sleep (500000);
+		tries--;
+		
+	}
+	if (msg_ref == NULL) {
+		printf ("ERROR: expected to find reply message...but NULL was received..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! nopoll_cmp ((const char *) nopoll_msg_get_payload (msg_ref), msg)) {
+		printf ("ERROR: expected to find message equal content but found something different..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* release message */
+	nopoll_msg_unref (msg_ref);
+
+	/* close connection */
+	nopoll_conn_close (conn);
+
+	/* release context */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 
 int main (int argc, char ** argv)
@@ -2711,6 +2822,13 @@ int main (int argc, char ** argv)
 		printf ("Test 29: checking extra http headers  [   OK    ]\n");
 	} else {
 		printf ("Test 29: checking extra http headers  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_30 ()) {
+		printf ("Test 30: simulate stop in the middle of the header send  [   OK    ]\n");
+	} else {
+		printf ("Test 30: simulate stop in the middle of the header send  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 
