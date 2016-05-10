@@ -1,0 +1,26 @@
+Source: libnopoll0
+Priority: extra
+Maintainer: Francis Brosnan <francis@aspl.es>
+Build-Depends: debhelper (>= 5), autotools-dev, pkg-config, 
+  libssl-dev
+Standards-Version: 3.7.2
+Section: libs
+
+Package: libnopoll0
+Section: libs
+Architecture: any
+Depends: libc6, libssl1.0.0
+Description: WebSocket OpenSource implementation
+  noPoll is a WebSocket implementation designed to integreate well into
+  existing projects that needs support for WebSocket, even in the same
+  native port.
+
+Package: libnopoll0-dev
+Section: libdevel
+Architecture: any
+Depends: libnopoll0 (= ${Source-Version})
+Description: WebSocket OpenSource implementation (dev headers)
+  noPoll is a WebSocket implementation designed to integreate well into
+  existing projects that needs support for WebSocket, even in the same
+  native port.
+
