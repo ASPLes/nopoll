@@ -2415,7 +2415,7 @@ nopoll_bool test_29 (void) {
       relases ****/
 #include <nopoll_private.h>
 
-nopoll_bool test_30 (void) {
+nopoll_bool test_30_common_header_stop (const char * label, int bytes_to_send_before_stop) {
 
 	noPollConn      * conn;
 	noPollCtx       * ctx;
@@ -2434,16 +2434,19 @@ nopoll_bool test_30 (void) {
 		return nopoll_false;
 	} /* end if */
 
-	printf ("Test 30: waiting until connection is ready..\n");
+	printf ("Test %s: waiting until connection is ready..\n", label);
 	/* wait until it is connected */
 	nopoll_conn_wait_until_connection_ready (conn, 5);
-	printf ("Test 30: ok..\n");
+	printf ("Test %s: ok..\n", label);
 
 	/* send a message to request connection close with a particular message */
-	conn->__force_stop_after_header = nopoll_true;
+	conn->__force_stop_after_header = bytes_to_send_before_stop;
 
-	printf ("Test 30: sending first message..\n");
 	length = strlen (msg);
+
+	printf ("Test %s: sending first message (of %d bytes, sending broken header of %d, pausing then, and then sending the rest..)\n",
+		label, length,  bytes_to_send_before_stop);
+		
 	if (nopoll_conn_send_text (conn, msg, length) != length) {
 		printf ("ERROR: failed to send message..");
 		return nopoll_false;
@@ -2455,7 +2458,7 @@ nopoll_bool test_30 (void) {
 		return nopoll_false;
 	} /* end if */
 
-	printf ("Test 30: getting reply to the message..\n");
+	printf ("Test %s: getting reply to the message..\n", label);
 	tries = 10;
 	while (tries > 0 ) { 
 		/* get message */
@@ -2480,13 +2483,16 @@ nopoll_bool test_30 (void) {
 	/* release message */
 	nopoll_msg_unref (msg_ref);
 
-	printf ("Test 30: send second message..\n");
+
+	printf ("Test %s: sending second message (of %d bytes, sending broken header of %d, pausing then, and then sending the rest..)\n",
+		label, length,  bytes_to_send_before_stop);
+	
 	if (nopoll_conn_send_text (conn, msg, length) != length) {
 		printf ("ERROR: failed to send message..");
 		return nopoll_false;
 	} /* end while */
 
-	printf ("Test 30: getting reply to the message (to the second message)..\n");
+	printf ("Test %s: getting reply to the message (to the second message)..\n", label);
 	tries = 10;
 	while (tries > 0 ) { 
 		/* get message */
@@ -2520,7 +2526,35 @@ nopoll_bool test_30 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_30 (void) {
+	/* call to test send 1 byte and stop */
+	return test_30_common_header_stop ("30", 2);
+}
 
+nopoll_bool test_31 (void) {
+	/* call to test send 1 byte and stop */
+	return test_30_common_header_stop ("31", 1);
+}
+
+nopoll_bool test_32 (void) {
+	/* call to test send 1 byte and stop */
+	return test_30_common_header_stop ("32", 3);
+}
+
+nopoll_bool test_33 (void) {
+	/* call to test send 1 byte and stop */
+	return test_30_common_header_stop ("33", 4);
+}
+
+nopoll_bool test_34 (void) {
+	/* call to test send 1 byte and stop */
+	return test_30_common_header_stop ("34", 5);
+}
+
+nopoll_bool test_35 (void) {
+	/* call to test send 1 byte and stop */
+	return test_30_common_header_stop ("35", 8);
+}
 
 int main (int argc, char ** argv)
 {
@@ -2829,6 +2863,41 @@ int main (int argc, char ** argv)
 		printf ("Test 30: simulate stop in the middle of the header send  [   OK    ]\n");
 	} else {
 		printf ("Test 30: simulate stop in the middle of the header send  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_31 ()) {
+		printf ("Test 31: simulate stop in the middle of the header send (II)  [   OK    ]\n");
+	} else {
+		printf ("Test 31: simulate stop in the middle of the header send (II)  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_32 ()) {
+		printf ("Test 32: simulate stop in the middle of the header send (III)  [   OK    ]\n");
+	} else {
+		printf ("Test 32: simulate stop in the middle of the header send (III)  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_33 ()) {
+		printf ("Test 33: simulate stop in the middle of the header send (IV)  [   OK    ]\n");
+	} else {
+		printf ("Test 33: simulate stop in the middle of the header send (IV)  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_34 ()) {
+		printf ("Test 34: simulate stop in the middle of the header send (V)  [   OK    ]\n");
+	} else {
+		printf ("Test 34: simulate stop in the middle of the header send (V)  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_35 ()) {
+		printf ("Test 35: simulate stop in the middle of the header send (VI)  [   OK    ]\n");
+	} else {
+		printf ("Test 35: simulate stop in the middle of the header send (VI)  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

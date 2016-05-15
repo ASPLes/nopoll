@@ -602,6 +602,7 @@ nopoll_bool __nopoll_conn_set_ssl_client_options (noPollCtx * ctx, noPollConn * 
 	} /* end if */
 
 	/* enable default verification paths */
+	/* printf ("conn = %p, conn->ssl_ctx = %p\n", conn, conn->ssl_ctx); */
 	if (SSL_CTX_set_default_verify_paths (conn->ssl_ctx) != 1) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to configure default verification paths, SSL_CTX_set_default_verify_paths () failed");
 		return nopoll_false;
@@ -774,10 +775,15 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 	if (enable_tls) {
 		/* found TLS connection request, enable it */
 		conn->ssl_ctx  = __nopoll_conn_get_ssl_context (ctx, conn, options, nopoll_true);
+		if (conn->ssl_ctx == NULL) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to enable TLS, internal __nopoll_conn_get_ssl_context (ctx=%p, conn=%p, options=%p, nopoll_true) failed",
+				    ctx, conn, options);
+			goto fail_ssl_connection;
+		} /* end if */
 
 		/* check for client side SSL configuration */
 		if (! __nopoll_conn_set_ssl_client_options (ctx, conn, options)) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to configure additional SSL options, unable to continue",
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to configure additional SSL options, unable to continue, conn->ssl_ctx=%p, conn->ssl=%p",
 				    conn->ssl_ctx, conn->ssl);
 			goto fail_ssl_connection;
 		} /* end if */
@@ -2885,11 +2891,21 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		   unsigned integer */
 		bytes = __nopoll_conn_receive (conn, buffer + 2, 2);
 		if (bytes != 2) {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Failed to get next 2 bytes to read header from the wire, failed to received content, shutting down id=%d the connection, errno=%d (%s)", conn->id, errno, strerror (errno));
-			if (errno == NOPOLL_EWOULDBLOCK) { 
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Failed to get next 2 bytes to read header from the wire, but received=%d, failed to received content, shutting down id=%d the connection, errno=%d (%s)",
+				    bytes, conn->id, errno, strerror (errno));
+			if (errno == NOPOLL_EWOULDBLOCK || errno == 0) { 
 				/* connection is not ready at this point */
 				conn->previous_msg = msg;
 				conn->read_pending_header = nopoll_true;
+
+				/* check amount of bytes to reuse them */
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Detected broken WebSocket peer sending header content using different frames, trying to save and resume later");
+				if (bytes > 0) {
+					/* ok, store content read into the pending buffer for next call */
+					memcpy (conn->pending_buf + conn->pending_buf_bytes, buffer + 2, bytes);
+					conn->pending_buf_bytes += bytes;
+				}
+				
 				return NULL;
 			}
 
@@ -2902,6 +2918,8 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		header_size += bytes;
 			
 		msg->payload_size = nopoll_get_16bit (buffer + 2);
+
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received (%d) bytes in header (size %d) for payload size indication, which finally is: %d", bytes, header_size,(int) msg->payload_size);
 		
 	} else if (msg->payload_size == 127) {
 #if defined(NOPOLL_64BIT_PLATFORM)
@@ -3054,7 +3072,7 @@ read_payload:
 
 		/* flag that this message doesn't have FIN = 0 because
 		 * we wasn't able to read it entirely */
-		msg->has_fin = 0;
+		/* msg->has_fin = 0; */
 	} /* end if */
 
 	/* flag the message was being a fragment according to previous flag */
@@ -3844,21 +3862,22 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	desp  = 0;
 	tries = 0;
 
-	/***** BEGIN INTERNAL debug code for test_30 : nopoll-regression-client.c ******/
-	if (conn->__force_stop_after_header) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Sending broken header and implement a pause on purpose...");
+	/***** BEGIN INTERNAL debug code for test_30, test_31, test_32, test_33, test_34, test_35 : nopoll-regression-client.c ******/
+	if ((conn->__force_stop_after_header > 0) && (conn->__force_stop_after_header < (length + header_size))) {
+		
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Sending broken header (just %d bytes) and implement a pause on purpose...", conn->__force_stop_after_header);
 
 		/* send just 2 bytes for the header and then implement a very long pause */
-		bytes_written = conn->send (conn, send_buffer, 2);
-		desp          = 2;
-		if (bytes_written != 2) {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Requested to write 2 bytes for the header but %d were written",
-				    bytes_written);
+		bytes_written = conn->send (conn, send_buffer, conn->__force_stop_after_header);
+		desp          = conn->__force_stop_after_header;
+		if (bytes_written != conn->__force_stop_after_header) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Requested to write %d bytes for the header but %d were written",
+				    conn->__force_stop_after_header, bytes_written);
 			desp  = 0;
 		} /* end if */
 
 		/* sleep after header ... */
-		nopoll_sleep (5000); /* 5 seconds */
+		nopoll_sleep (5000000); /* 5 seconds */
 
 	} /* end if */
 	/****** END INTERNAL debug code for test_30 : nopoll-regression-client.c ******/
