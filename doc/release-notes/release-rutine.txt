@@ -19,7 +19,7 @@
 * Generar paquetes debian/ubuntu  (core-admin)
 * Actualizar FreeBSD
   
-  >> ssh freebsd-93-amd64 -l root -X 
+  >> ssh freebsd-93-amd64 -l root -X  (y tambien ssh freebsd-10-amd64 -l root -X)
   >> cd /usr/src/nopoll
   >> svn update
   >> cf
@@ -52,8 +52,10 @@
 * publicar noticia en aspl.es.
 * Publicar noticia en twitter ASPL_es
 
-* Retuitear como FrancisBrosnanB
+* Retuitear como {4}
 * Enlazar noticia con google plus.
+
+* Cerrar release y hacer un tag release en github.com
 
 
 

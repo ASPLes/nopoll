@@ -197,8 +197,7 @@ int nopoll_vprintf_len (const char * format, va_list args)
  * IMPLEMENTATION NOTE: This function may have a fundamental bug due
  * to the design of va_list arguments under amd64 platforms. In short,
  * a function receiving a va_list argument can't use it twice. In you
- * are running amd64, check your nopoll_config.h did find
- * NOPOLL_HAVE_VASPRINTF.
+ * are running amd64, check your nopoll_config.h did find NOPOLL_HAVE_VASPRINTF.
  */
 char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 {
@@ -1568,13 +1567,13 @@ void nopoll_cleanup_library (void)
  * "install" folder that inside includes the following structure:
  * 
  * \code
- * install/<android-platform>/lib/<arch>/{libfiles}.so
+ * install/<android-platform>/lib/&lt;arch>/{libfiles}.so
  * \endcode
  * 
  * That way, if you need ready to use compiled libraries for android-21, arch mips64, the look at:
  * 
  * \code
- * install/android-21/<arch>/lib/mips64/{libfiles}.so files.
+ * install/android-21/&lt;arch>/lib/mips64/{libfiles}.so files.
  * \endcode
  * 
  * You might wonder why don't use a <android-platform>/<arch>/lib

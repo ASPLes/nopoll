@@ -195,7 +195,7 @@ void        nopoll_conn_opts_set_cookie (noPollConnOpts * opts, const char * coo
 	return;
 }
 
-/**
+/** 
  * @brief Allows to set arbitrary HTTP headers and content to be sent during
  * the connection handshake.
  *
@@ -237,7 +237,7 @@ void        nopoll_conn_opts_set_extra_headers (noPollConnOpts * opts, const cha
  *
  * @param opts The connection options to configure.
  *
- * @param check nopoll_bool Skip header check 
+ * @param skip_check nopoll_bool Skip header check 
  *
  */
 void        nopoll_conn_opts_skip_origin_check (noPollConnOpts * opts, nopoll_bool skip_check)
