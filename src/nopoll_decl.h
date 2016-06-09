@@ -416,7 +416,8 @@ typedef enum {
  * @brief SSL/TLS protocol type to use for the client or listener
  * connection. 
  */
-typedef enum { 
+typedef enum {
+#if defined(NOPOLL_HAVE_SSLv23_ENABLED)	
 	/** 
 	 * @brief Allows to define SSLv23 as SSL protocol used by the
 	 * client or server connection. A TLS/SSL connection
@@ -431,6 +432,8 @@ typedef enum {
 	 * method.
 	 */
 	NOPOLL_METHOD_SSLV3       = 3,
+#endif
+#if defined(NOPOLL_HAVE_TLSv10_ENABLED)
 	/** 
 	 * @brief Allows to define TLSv1 as SSL protocol used by the
 	 * client or server connection. A connection/listener
@@ -438,7 +441,8 @@ typedef enum {
 	 * method.
 	 */
 	NOPOLL_METHOD_TLSV1       = 4,
-#if defined(TLSv1_1_client_method)
+#endif	
+#if defined(NOPOLL_HAVE_TLSv11_ENABLED)
 	/** 
 	 * @brief Allows to define TLSv1.1 as SSL protocol used by the
 	 * client or server connection. A connection/listener
@@ -447,6 +451,31 @@ typedef enum {
 	 */
 	NOPOLL_METHOD_TLSV1_1     = 5
 #endif
+#if defined(NOPOLL_HAVE_TLSv12_ENABLED)
+	,
+	/** 
+	 * @brief Allows to define TLSv1.2 as SSL protocol used by the
+	 * client or server connection. A connection/listener
+	 * established with this method will only understand this
+	 * method.
+	 */
+	NOPOLL_METHOD_TLSV1_2     = 6
+#endif
+#if defined(NOPOLL_HAVE_TLS_FLEXIBLE_ENABLED)
+	,
+	/** 
+	 * @brief Allows to define TLS flexible negotiation where the
+	 * highest version available will be negotiated by both
+	 * ends. If you want a particular TLS version, do not use this
+	 * method. 
+	 *
+	 * Security consideration: by using this method you are
+	 * accepting that the remote peer can downgrade to the lowest
+	 * version of the protocol. In the case you want to use a
+	 * particular version do not use this flexible method.
+	 */
+	NOPOLL_METHOD_TLS_FLEXIBLE     = 7
+#endif		
 } noPollSslProtocol ;
 
 BEGIN_C_DECLS

@@ -1742,6 +1742,7 @@ nopoll_bool test_19 (void) {
 	/* reinit again */
 	ctx = create_ctx ();
 
+#if defined (NOPOLL_HAVE_SSLv23_ENABLED)
 	printf ("Test 19: testing SSLv23 connection...\n");
 
 	/* create options */
@@ -1762,7 +1763,9 @@ nopoll_bool test_19 (void) {
 	
 	/* finish connection */
 	nopoll_conn_close (conn);
+#endif	
 
+#if defined (NOPOLL_HAVE_SSLv23_ENABLED)
 	printf ("Test 19: testing SSLv23 connection with TLSv1 server...\n");
 
 	/* create options */
@@ -1781,7 +1784,9 @@ nopoll_bool test_19 (void) {
 	} /* end if */
 
 	nopoll_conn_close (conn);
+#endif	
 
+#if defined (NOPOLL_HAVE_SSLv23_ENABLED)
 	printf ("Test 19: perfect, got it working..\n");
 
 	/* create options */
@@ -1800,6 +1805,76 @@ nopoll_bool test_19 (void) {
 	printf ("   ... it does not work, but this is expected..\n");
 
 	nopoll_conn_close (conn);
+#endif	
+
+#if defined (NOPOLL_HAVE_TLSv10_ENABLED)
+	printf ("Test 19: testing TLSv1.0 connection...\n");
+
+	/* create options */
+	opts     = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1);
+
+	/* create connection */
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+
+	/* check connection */
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: failed to start listener connection..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! test_sending_and_check_echo (conn, "Test 19", "This is a test...checking SSL with different values..."))
+		return nopoll_false;
+	
+	/* finish connection */
+	nopoll_conn_close (conn);
+#endif
+
+#if defined (NOPOLL_HAVE_TLSv11_ENABLED)
+	printf ("Test 19: testing TLSv1.1 connection...\n");
+
+	/* create options */
+	opts     = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_1);
+
+	/* create connection */
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1238", NULL, NULL, NULL, NULL);
+
+	/* check connection */
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: failed to start listener connection..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! test_sending_and_check_echo (conn, "Test 19", "This is a test...checking SSL with different values..."))
+		return nopoll_false;
+	
+	/* finish connection */
+	nopoll_conn_close (conn);
+#endif
+
+#if defined (NOPOLL_HAVE_TLSv12_ENABLED)
+	printf ("Test 19: testing TLSv1.2 connection...\n");
+
+	/* create options */
+	opts     = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_2);
+
+	/* create connection */
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1240", NULL, NULL, NULL, NULL);
+
+	/* check connection */
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: failed to start listener connection..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! test_sending_and_check_echo (conn, "Test 19", "This is a test...checking SSL with different values..."))
+		return nopoll_false;
+	
+	/* finish connection */
+	nopoll_conn_close (conn);
+#endif
 
 	/* finish */
 	nopoll_ctx_unref (ctx);

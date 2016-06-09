@@ -533,28 +533,66 @@ SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noP
 		return ctx->context_creator (ctx, conn, opts, is_client, ctx->context_creator_data);
 
 	if (opts == NULL) {
-		/* printf ("**** REPORTING TLSv1 ****\n"); */
-		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
+		/* select a default mechanism according to what's
+		 * available, starting from the most common accepted
+		 * solution, which is TLSv1.0 */
+#if defined(NOPOLL_HAVE_TLSv10_ENABLED)
+		/* by default use TLSv1.0 */
+		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ());
+#elif defined(NOPOLL_HAVE_TLSv11_ENABLED)
+		/* if not use TLSv1.1 */
+		return SSL_CTX_new (is_client ? TLSv1_1_client_method () : TLSv1_1_server_method ());
+#elif defined(NOPOLL_HAVE_TLSv12_ENABLED)
+		/* if not use TLSv1.2 */
+		return SSL_CTX_new (is_client ? TLSv1_2_client_method () : TLSv1_2_server_method ());
+#elif defined(NOPOLL_HAVE_SSLv23_ENABLED)
+		/* if not use SSLv3 */
+		return SSL_CTX_new (is_client ? SSLv3_client_method () : SSLv3_server_method ()); 
+#else
+		/* no default method found */
+		return NULL;
+#endif
+		
 	} /* end if */
 
 	switch (opts->ssl_protocol) {
+
+#if defined(NOPOLL_HAVE_TLS_FLEXIBLE_ENABLED)
+	case NOPOLL_METHOD_TLS_FLEXIBLE:
+		return SSL_CTX_new (is_client ? TLS_client_method () : TLS_server_method ());
+#endif		
+		
+#if defined(NOPOLL_HAVE_TLSv10_ENABLED)
 	case NOPOLL_METHOD_TLSV1:
-		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
-#if defined(TLSv1_1_client_method)
+		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ());
+#endif
+		
+#if defined(NOPOLL_HAVE_TLSv11_ENABLED)
 	case NOPOLL_METHOD_TLSV1_1:
-		/* printf ("**** REPORTING TLSv1.1 ****\n"); */
 		return SSL_CTX_new (is_client ? TLSv1_1_client_method () : TLSv1_1_server_method ()); 
 #endif
+		
+#if defined(NOPOLL_HAVE_TLSv12_ENABLED)
+	case NOPOLL_METHOD_TLSV1_2:
+		return SSL_CTX_new (is_client ? TLSv1_2_client_method () : TLSv1_2_server_method ()); 
+#endif
+		
+#if defined(NOPOLL_HAVE_SSLv23_ENABLED)
 	case NOPOLL_METHOD_SSLV3:
 		/* printf ("**** REPORTING SSLv3 ****\n"); */
 		return SSL_CTX_new (is_client ? SSLv3_client_method () : SSLv3_server_method ()); 
 	case NOPOLL_METHOD_SSLV23:
 		/* printf ("**** REPORTING SSLv23 ****\n"); */
-		return SSL_CTX_new (is_client ? SSLv23_client_method () : SSLv23_server_method ()); 
+		return SSL_CTX_new (is_client ? SSLv23_client_method () : SSLv23_server_method ());
+#endif		
 	}
 
+#if defined(NOPOLL_HAVE_TLSv10_ENABLED)
 	/* reached this point, report default TLSv1 method */
-	return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
+	return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ());
+#else
+	return NULL;
+#endif
 }
 
 noPollCtx * __nopoll_conn_ssl_ctx_debug = NULL;
