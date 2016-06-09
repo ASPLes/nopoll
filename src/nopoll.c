@@ -383,7 +383,7 @@ noPollMutexUnlock   __nopoll_mutex_unlock  = NULL;
  */
 noPollPtr   nopoll_mutex_create (void)
 {
-	if (! __nopoll_mutex_create)
+	if (! __nopoll_mutex_create) 
 		return NULL;
 
 	/* call defined handler */

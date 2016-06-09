@@ -98,16 +98,16 @@ noPollCtx * nopoll_ctx_new (void) {
 	/* current list length */
 	result->conn_length = 0;
 
-#if !defined(NOPOLL_OS_WIN32)
-	/* install sigpipe handler */
-	signal (SIGPIPE, __nopoll_ctx_sigpipe_do_nothing);
-#endif
-
 	/* setup default protocol version */
 	result->protocol_version = 13;
 
 	/* create mutexes */
 	result->ref_mutex = nopoll_mutex_create ();
+
+#if !defined(NOPOLL_OS_WIN32)
+	/* install sigpipe handler */
+	signal (SIGPIPE, __nopoll_ctx_sigpipe_do_nothing);
+#endif
 
 	return result;
 }
@@ -747,18 +747,21 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
 
 		/* check the connection reference */
 		if (ctx->conn_list[iterator]) {
+
+			result = ctx->conn_list[iterator];
+			
+			nopoll_mutex_unlock (ctx->ref_mutex);
+			
 			/* call to notify connection */
-			if (foreach (ctx, ctx->conn_list[iterator], user_data)) {
-				/* get a reference to avoid races
-				 * after releasing the mutex */
-				result = ctx->conn_list[iterator];
-
-				/* release */
-				nopoll_mutex_unlock (ctx->ref_mutex);
-
+			if (foreach (ctx, result, user_data)) {
+				
 				/* release here the mutex to protect connection list */
 				return result;
 			} /* end if */
+
+			/* realloc again */
+			nopoll_mutex_lock (ctx->ref_mutex);
+
 		} /* end if */
 		
 		iterator++;

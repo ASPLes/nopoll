@@ -37,18 +37,38 @@
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
 
+#if defined(__NOPOLL_PTHREAD_SUPPORT__)
+/** 
+ * Needed for extended pthread API for recursive functions.
+ */
+#define _GNU_SOURCE 
+
 #include <nopoll.h>
 
-#if defined(__NOPOLL_PTHREAD_SUPPORT__)
 #include <pthread.h>
+
+typedef struct _noPollMutex {
+	pthread_mutex_t mutex;
+} noPollMutex;
+
 noPollPtr __nopoll_regtest_mutex_create (void) {
-	pthread_mutex_t * mutex = nopoll_new (pthread_mutex_t, 1);
-	if (mutex == NULL)
+	pthread_mutex_t     * mutex;
+	pthread_mutexattr_t   attr;
+	int                   error;
+
+	
+	mutex = nopoll_new (pthread_mutex_t, 1);
+	if (mutex == NULL) {
+		printf ("ERROR: failed to allocate memory for mutex..\n");
 		return NULL;
+	}
 
 	/* init the mutex using default values */
-	if (pthread_mutex_init (mutex, NULL) != 0) {
-		return NULL;
+	pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_NORMAL);
+	error = pthread_mutex_init (mutex, &attr);
+	if (error != 0) {
+		printf ("ERROR: pthread_mutex_init () failed errno=%d %s..\n",
+			error, strerror (error));
 	} /* end if */
 
 	return mutex;
@@ -59,10 +79,7 @@ void __nopoll_regtest_mutex_destroy (noPollPtr _mutex) {
 	if (mutex == NULL)
 		return;
 
-	if (pthread_mutex_destroy (mutex) != 0) {
-		/* do some reporting */
-		return;
-	}
+	pthread_mutex_destroy (mutex);
 	nopoll_free (mutex);
 
 	return;
@@ -70,6 +87,11 @@ void __nopoll_regtest_mutex_destroy (noPollPtr _mutex) {
 
 void __nopoll_regtest_mutex_lock (noPollPtr _mutex) {
 	pthread_mutex_t * mutex = _mutex;
+
+	if (mutex == NULL) {
+		printf ("...blocking because NULL mutex received..\n");
+		nopoll_sleep (100000000);
+	}
 
 	/* lock the mutex */
 	if (pthread_mutex_lock (mutex) != 0) {

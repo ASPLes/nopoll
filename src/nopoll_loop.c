@@ -56,17 +56,21 @@ nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 {
 	/* do not add connections that aren't working */
 	if (! nopoll_conn_is_ok (conn)) {
+		
 		/* remove this connection from registry */
 		nopoll_ctx_unregister_conn (ctx, conn);
+
 		return nopoll_false; /* keep foreach, don't stop */
 	}
 
 	/* register the connection socket */
 	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding socket id: %d", conn->session);*/
 	if (! ctx->io_engine->addto (conn->session, ctx, conn, ctx->io_engine->io_object)) {
+
 		/* remove this connection from registry */
 		nopoll_ctx_unregister_conn (ctx, conn);
 		nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "Failed to add socket %d to the watching set", conn->session);
+
 	}
 
 	return nopoll_false; /* keep foreach, don't stop */

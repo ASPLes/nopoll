@@ -1189,18 +1189,11 @@ nopoll_bool    nopoll_conn_ref (noPollConn * conn)
 
 	/* lock the mutex */
 	nopoll_mutex_lock (conn->ref_mutex);
-	if (conn->refs <= 0) {
-		/* unlock the mutex */
-		nopoll_mutex_unlock (conn->ref_mutex);
-		return nopoll_false;
-	}
-	
 	conn->refs++;
-
-	/* release here the mutex */
 	nopoll_mutex_unlock (conn->ref_mutex);
-
-	return nopoll_true;
+		
+	/* report */
+	return conn->refs > 1;
 }
 
 /** 
@@ -1733,6 +1726,8 @@ noPollPtr     nopoll_conn_get_hook (noPollConn * conn)
  */
 void nopoll_conn_unref (noPollConn * conn)
 {
+	int value;
+	
 	if (conn == NULL)
 		return;
 
@@ -1740,15 +1735,15 @@ void nopoll_conn_unref (noPollConn * conn)
 	nopoll_mutex_lock (conn->ref_mutex);
 
 	conn->refs--;
+	value = conn->refs;
+	
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Releasing connection id %d reference, current ref count status is: %d", 
-		    conn->id, conn->refs);
-	if (conn->refs != 0) {
-		/* release here the mutex */
-		nopoll_mutex_unlock (conn->ref_mutex);
-		return;
-	}
+		    conn->id, value);
 	/* release here the mutex */
 	nopoll_mutex_unlock (conn->ref_mutex);
+	
+	if (value != 0) 
+		return;
 
 	/* release message */
 	if (conn->pending_msg)

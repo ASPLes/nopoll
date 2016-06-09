@@ -36,8 +36,8 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#include <nopoll.h>
 #include <nopoll-regression-common.h>
+#include <nopoll.h>
 
 nopoll_bool debug = nopoll_false;
 nopoll_bool show_critical_only = nopoll_false;
@@ -2580,6 +2580,54 @@ nopoll_bool test_35 (void) {
 	return test_30_common_header_stop ("35", 8);
 }
 
+nopoll_bool test_36 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	noPollConn * conn2;
+
+	printf ("Test 36: force connection timeout artificially..\n");
+
+	/* init again */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: not expected connection error but found connection ok..\n");
+		return nopoll_false;
+	}
+
+	/* send content text(utf-8) */
+	if (nopoll_conn_send_text (conn, "set-broken-socket", 17) != 17) {
+		printf ("ERROR: Expected to find proper send operation..\n");
+		return nopoll_false;
+	}
+
+	nopoll_sleep (100000);
+	
+	printf ("Test 36: connecting again to ensure listener is working..\n");
+	
+	/* call to create a connection */
+	conn2 = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn2)) {
+		printf ("ERROR: not expected connection error but found connection ok..\n");
+		return nopoll_false;
+	}
+
+	/* send content text(utf-8) */
+	nopoll_conn_send_text (conn2, "This is a test", 14);
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	nopoll_conn_close (conn2);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -2930,6 +2978,13 @@ int main (int argc, char ** argv)
 		printf ("Test 35: simulate stop in the middle of the header send (VI)  [   OK    ]\n");
 	} else {
 		printf ("Test 35: simulate stop in the middle of the header send (VI)  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_36 ()) {
+		printf ("Test 36: check dead-lock on connection timeout (23/02/2016)  [   OK    ]\n");
+	} else {
+		printf ("Test 36: check dead-lock on connection timeout (23/02/2016) [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

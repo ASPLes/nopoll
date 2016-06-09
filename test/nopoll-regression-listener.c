@@ -36,8 +36,8 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#include <nopoll.h>
 #include <nopoll-regression-common.h>
+#include <nopoll.h>
 
 #include <signal.h>
 
@@ -167,6 +167,14 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 		nopoll_conn_send_text (conn, nopoll_conn_get_cookie (conn), strlen (nopoll_conn_get_cookie (conn)));
 		return;
 	}
+
+	/* printf ("Checking for set-broken socket: %s\n", content); */
+	if (nopoll_ncmp (content, "set-broken-socket", 17)) {
+		printf ("Listener: setting broken socket on conn: %p (socket=%d)\n",
+			conn, nopoll_conn_socket (conn));
+		nopoll_conn_shutdown (conn);
+		return;
+	} /* end if */
 
 	if (nopoll_ncmp (content, "get-connection-close-count", 26)) {
 		printf ("Sending reply to report connection close...\n");

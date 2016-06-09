@@ -97,6 +97,95 @@ fi
 AM_CONDITIONAL(DEFAULT_EPOLL, test "x$default_platform" = "xepoll")
 AM_CONDITIONAL(DEFAULT_POLL, test "x$default_platform" = "xpoll")
 
+dnl
+dnl Thread detection support mostly taken from the apache project 2.2.3.
+dnl
+dnl NOPOLL_PTHREADS_TRY_RUN(actions-if-success)
+dnl
+dnl Try running a program which uses pthreads, executing the
+dnl actions-if-success commands on success.
+dnl
+AC_DEFUN([NOPOLL_PTHREADS_TRY_RUN], [
+AC_TRY_RUN( [
+#include <pthread.h>
+#include <stddef.h>
+
+void *thread_routine(void *data) {
+    return data;
+}
+
+int main() {
+    pthread_t thd;
+    pthread_mutexattr_t mattr;
+    pthread_once_t once_init = PTHREAD_ONCE_INIT;
+    int data = 1;
+    pthread_mutexattr_init(&mattr);
+    return pthread_create(&thd, NULL, thread_routine, &data);
+} ], [nopoll_p_t_r=yes], [nopoll_p_t_r=no], [nopoll_p_t_r=no])
+
+if test $nopoll_p_t_r = yes; then
+  $1
+fi
+
+])dnl
+
+
+dnl
+dnl NOPOLL_PTHREADS_CHECK()
+dnl
+dnl Try to find a way to enable POSIX threads.  Sets the 
+dnl pthreads_working variable to "yes" on success.
+dnl
+AC_DEFUN([NOPOLL_PTHREADS_CHECK],[
+
+AC_CACHE_CHECK([for CFLAGS needed for pthreads], [nopoll_cv_pthreads_cflags],
+[nopoll_ptc_cflags=$CFLAGS
+ for flag in -kthread -pthread -pthreads -mt -mthreads -Kthread -threads; do 
+    CFLAGS=$nopoll_ptc_cflags
+    test "x$flag" != "xnone" && CFLAGS="$CFLAGS $flag"
+    NOPOLL_PTHREADS_TRY_RUN([
+      nopoll_cv_pthreads_cflags="$flag"
+      break
+    ])
+ done
+ CFLAGS=$nopoll_ptc_cflags
+])
+
+# The CFLAGS may or may not be sufficient to ensure that libnopoll
+# depends on the pthreads library: some versions of libtool
+# drop -pthread when passed on the link line; some versions of
+# gcc ignore -pthread when linking a shared object.  So always
+# try and add the relevant library to LIBS too.
+
+AC_CACHE_CHECK([for LIBS needed for pthreads], [nopoll_cv_pthreads_lib], [
+  nopoll_ptc_libs=$LIBS
+  for lib in -lpthread -lpthreads -lc_r; do
+    LIBS="$nopoll_ptc_libs $lib"
+    NOPOLL_PTHREADS_TRY_RUN([
+      nopoll_cv_pthreads_lib=$lib
+      break
+    ])
+  done
+  LIBS=$nopoll_ptc_libs
+])
+
+if test "$pthreads_working" = "yes"; then
+  threads_result="POSIX Threads found"
+else
+  threads_result="POSIX Threads not found"
+fi
+])dnl
+
+dnl call to detect thread activation support
+NOPOLL_PTHREADS_CHECK
+
+PTHREAD_CFLAGS="$nopoll_cv_pthreads_cflags"
+PTHREAD_LIBS="$nopoll_cv_pthreads_lib"
+AC_SUBST(PTHREAD_CFLAGS)
+AC_SUBST(PTHREAD_LIBS)
+
+
+
 AC_ARG_ENABLE(nopoll-log, [  --enable-nopoll-log     Enable building Nopoll with debug log support [default=yes]], enable_nopoll_log="$enableval", enable_nopoll_log=yes)
 AM_CONDITIONAL(ENABLE_NOPOLL_LOG, test "x$enable_nopoll_log" = "xyes")
 

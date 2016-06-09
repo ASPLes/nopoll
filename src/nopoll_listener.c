@@ -205,6 +205,8 @@ noPollConn      * nopoll_listener_new_opts (noPollCtx      * ctx,
 	/* create noPollConn ection object */
 	listener          = nopoll_new (noPollConn, 1);
 	listener->refs    = 1;
+	/* create mutex */
+	listener->ref_mutex = nopoll_mutex_create ();
 	listener->session = session;
 	listener->ctx     = ctx;
 	listener->role    = NOPOLL_ROLE_MAIN_LISTENER;
@@ -380,11 +382,13 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 	nopoll_return_val_if_fail (ctx, ctx && session > 0, NULL);
 	
 	/* create noPollConn ection object */
-	listener          = nopoll_new (noPollConn, 1);
-	listener->refs    = 1;
-	listener->session = session;
-	listener->ctx     = ctx;
-	listener->role    = NOPOLL_ROLE_LISTENER;
+	listener            = nopoll_new (noPollConn, 1);
+	listener->refs      = 1;
+	/* create mutex */
+	listener->ref_mutex = nopoll_mutex_create ();
+	listener->session   = session;
+	listener->ctx       = ctx;
+	listener->role      = NOPOLL_ROLE_LISTENER;
 
 	/* get peer value */
 	memset (&sin, 0, sizeof (struct sockaddr_in));
