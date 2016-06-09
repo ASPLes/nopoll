@@ -37,6 +37,7 @@
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
 #include <nopoll.h>
+#include <nopoll-regression-common.h>
 
 #include <signal.h>
 
@@ -376,6 +377,14 @@ int main (int argc, char ** argv)
 	noPollConnOpts * opts;
 
 	signal (SIGTERM,  __terminate_listener);
+
+#if defined(__NOPOLL_PTHREAD_SUPPORT__)	
+	printf ("INFO: install default threading functions to check noPoll locking code..\n");
+	nopoll_thread_handlers (__nopoll_regtest_mutex_create,
+				__nopoll_regtest_mutex_destroy,
+				__nopoll_regtest_mutex_lock,
+				__nopoll_regtest_mutex_unlock);
+#endif
 
 	/* create the context */
 	ctx = nopoll_ctx_new ();

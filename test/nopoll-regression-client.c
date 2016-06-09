@@ -37,58 +37,7 @@
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
 #include <nopoll.h>
-
-#if defined(__NOPOLL_PTHREAD_SUPPORT__)
-#include <pthread.h>
-noPollPtr __nopoll_regtest_mutex_create (void) {
-	pthread_mutex_t * mutex = nopoll_new (pthread_mutex_t, 1);
-	if (mutex == NULL)
-		return NULL;
-
-	/* init the mutex using default values */
-	if (pthread_mutex_init (mutex, NULL) != 0) {
-		return NULL;
-	} /* end if */
-
-	return mutex;
-}
-
-void __nopoll_regtest_mutex_destroy (noPollPtr _mutex) {
-	pthread_mutex_t * mutex = _mutex;
-	if (mutex == NULL)
-		return;
-
-	if (pthread_mutex_destroy (mutex) != 0) {
-		/* do some reporting */
-		return;
-	}
-	nopoll_free (mutex);
-
-	return;
-}
-
-void __nopoll_regtest_mutex_lock (noPollPtr _mutex) {
-	pthread_mutex_t * mutex = _mutex;
-
-	/* lock the mutex */
-	if (pthread_mutex_lock (mutex) != 0) {
-		/* do some reporting */
-		return;
-	} /* end if */
-	return;
-}
-
-void __nopoll_regtest_mutex_unlock (noPollPtr _mutex) {
-	pthread_mutex_t * mutex = _mutex;
-
-	/* unlock mutex */
-	if (pthread_mutex_unlock (mutex) != 0) {
-		/* do some reporting */
-		return;
-	} /* end if */
-	return;
-}
-#endif
+#include <nopoll-regression-common.h>
 
 nopoll_bool debug = nopoll_false;
 nopoll_bool show_critical_only = nopoll_false;
@@ -1889,7 +1838,7 @@ nopoll_bool test_20 (void) {
 	noPollPtr  * mutex;
 	int          iterator = 0;
 
-
+	printf ("Test 20: checking default API mutex used by the tests..\n");
 	while (iterator < 10) {
 		/* call to create mutex */
 		mutex = __nopoll_regtest_mutex_create ();
@@ -1905,7 +1854,7 @@ nopoll_bool test_20 (void) {
 
 		/* next operation */
 		iterator++;
-	}
+	} /* end while */
 
 	return nopoll_true;
 }
@@ -2663,6 +2612,14 @@ int main (int argc, char ** argv)
 		/* next position */
 		iterator++;
 	}
+
+#if defined(__NOPOLL_PTHREAD_SUPPORT__)	
+	printf ("INFO: install default threading functions to check noPoll locking code..\n");
+	nopoll_thread_handlers (__nopoll_regtest_mutex_create,
+				__nopoll_regtest_mutex_destroy,
+				__nopoll_regtest_mutex_lock,
+				__nopoll_regtest_mutex_unlock);
+#endif
 
 	printf ("INFO: starting tests with pid: %d\n", getpid ());
 	if (test_01_strings ()) {

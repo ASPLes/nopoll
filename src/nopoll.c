@@ -471,21 +471,14 @@ void        nopoll_mutex_destroy (noPollPtr mutex)
  *
  * @param mutex_unlock The handler used to unlock a particular mutex.
  *
- * The function must receive all handlers defined, otherwise no
- * configuration will be done.
+ * The function must receive all handlers defined. In the case NULL
+ * values are provided, they will be uninstalled.
  */
 void        nopoll_thread_handlers (noPollMutexCreate  mutex_create,
 				    noPollMutexDestroy mutex_destroy,
 				    noPollMutexLock    mutex_lock,
 				    noPollMutexUnlock  mutex_unlock)
 {
-	/* check handlers before configuring anything */
-	if (! mutex_create ||
-	    ! mutex_destroy ||
-	    ! mutex_lock ||
-	    ! mutex_unlock)
-		return;
-
 	/* configured received handlers */
 	__nopoll_mutex_create  = mutex_create;
 	__nopoll_mutex_destroy = mutex_destroy;
