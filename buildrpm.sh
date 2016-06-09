@@ -2,6 +2,8 @@
 
 set -x
 
+mkdir rpm/{RPMS,BUILD,BUILDROOT}
+
 echo "Preparing sources"
 rm -rf rpm/SOURCES/*.tar.gz
 rm -rf rpm/BUILD/*
