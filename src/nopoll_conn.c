@@ -546,6 +546,9 @@ SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noP
 		/* if not use TLSv1.2 */
 		return SSL_CTX_new (is_client ? TLSv1_2_client_method () : TLSv1_2_server_method ());
 #elif defined(NOPOLL_HAVE_SSLv23_ENABLED)
+		/* if not use SSLv23 */
+		return SSL_CTX_new (is_client ? SSLv23_client_method () : SSLv23_server_method ()); 
+#elif defined(NOPOLL_HAVE_SSLv3_ENABLED)
 		/* if not use SSLv3 */
 		return SSL_CTX_new (is_client ? SSLv3_client_method () : SSLv3_server_method ()); 
 #else
@@ -577,10 +580,12 @@ SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noP
 		return SSL_CTX_new (is_client ? TLSv1_2_client_method () : TLSv1_2_server_method ()); 
 #endif
 		
-#if defined(NOPOLL_HAVE_SSLv23_ENABLED)
+#if defined(NOPOLL_HAVE_SSLv3_ENABLED)
 	case NOPOLL_METHOD_SSLV3:
 		/* printf ("**** REPORTING SSLv3 ****\n"); */
 		return SSL_CTX_new (is_client ? SSLv3_client_method () : SSLv3_server_method ()); 
+#endif
+#if defined(NOPOLL_HAVE_SSLv23_ENABLED)
 	case NOPOLL_METHOD_SSLV23:
 		/* printf ("**** REPORTING SSLv23 ****\n"); */
 		return SSL_CTX_new (is_client ? SSLv23_client_method () : SSLv23_server_method ());

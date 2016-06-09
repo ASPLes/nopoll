@@ -199,6 +199,16 @@ else
    AC_SUBST(TLS_LIBS)
 fi
 
+AC_CHECK_LIB(ssl,SSLv3_method,  ssl_sslv3_supported=yes, ssl_sslv3_supported=no)
+ssl_sslv3_header=""
+if test x$ssl_sslv3_supported = xyes; then
+   export ssl_sslv3_header="/**
+ * @brief Indicates where we have support for SSL v3.0 support. The SSLv3 protocol is deprecated and should not be used.
+ */
+#define NOPOLL_HAVE_SSLv3_ENABLED (1)"
+fi
+
+
 AC_CHECK_LIB(ssl,SSLv23_method,  ssl_sslv23_supported=yes, ssl_sslv23_supported=no)
 ssl_sslv23_header=""
 if test x$ssl_sslv23_supported = xyes; then
@@ -320,6 +330,8 @@ $have_64bit_support
 
 $ssl_sslv23_header
 
+$ssl_sslv3_header
+
 $ssl_tlsv1_header
 
 $ssl_tlsv11_header
@@ -422,6 +434,7 @@ echo "      select(2) support:           [yes]"
 echo "      poll(2) support:             [$enable_poll]"
 echo "      epoll(2) support:            [$enable_cv_epoll]"
 echo "   OpenSSL TLS protocol versions detected:"
+echo "      SSLv3:   $ssl_sslv3_supported"
 echo "      SSLv23:  $ssl_sslv23_supported"
 echo "      TLSv1.0: $ssl_tlsv1_supported"
 echo "      TLSv1.1: $ssl_tlsv11_supported"

@@ -64,12 +64,15 @@ noPollPtr __nopoll_regtest_mutex_create (void) {
 	}
 
 	/* init the mutex using default values */
+	pthread_mutexattr_init (&attr);
 	pthread_mutexattr_settype (&attr, PTHREAD_MUTEX_NORMAL);
 	error = pthread_mutex_init (mutex, &attr);
 	if (error != 0) {
 		printf ("ERROR: pthread_mutex_init () failed errno=%d %s..\n",
 			error, strerror (error));
 	} /* end if */
+
+	pthread_mutexattr_destroy (&attr);
 
 	return mutex;
 }
