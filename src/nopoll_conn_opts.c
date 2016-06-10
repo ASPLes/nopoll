@@ -322,20 +322,20 @@ void nopoll_conn_opts_set_reuse        (noPollConnOpts * opts, nopoll_bool reuse
  *
  * @param opts The connection options object. 
  *
- * @param interface The interface to bind to, or NULL for system default.
+ * @param _interface The interface to bind to, or NULL for system default.
  *
  */
-void nopoll_conn_opts_set_interface    (noPollConnOpts * opts, const char * interface)
+void nopoll_conn_opts_set_interface    (noPollConnOpts * opts, const char * _interface)
 {
 	if (opts == NULL)
 		return;
 
-	if (interface) {
+	if (_interface) {
 		/* configure interface */
-		opts->interface = nopoll_strdup (interface);
+		opts->_interface = nopoll_strdup (_interface);
 	} else {
-		nopoll_free (opts->interface);
-		opts->interface = NULL;
+		nopoll_free (opts->_interface);
+		opts->_interface = NULL;
 	} /* end if */
 
 	return;
@@ -367,7 +367,7 @@ void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
 	nopoll_free (opts->cookie);
 
 	/* interface */
-	nopoll_free (opts->interface);
+	nopoll_free (opts->_interface);
 
 	if (opts->extra_headers)
 		nopoll_free (opts->extra_headers);

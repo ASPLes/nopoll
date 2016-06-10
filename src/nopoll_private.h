@@ -404,7 +404,7 @@ struct _noPollConnOpts {
 	nopoll_bool skip_origin_header_check;
 
 	/* network interface to bind to */
-	char * interface;
+	char * _interface;
 
 	/* extra HTTP headers to send during the connection */
 	char * extra_headers;

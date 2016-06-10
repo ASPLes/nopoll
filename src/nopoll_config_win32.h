@@ -71,6 +71,21 @@
 #define NOPOLL_OS_WIN32 (1)
 
 
+/**
+ * @brief Indicates where we have support for TLSv1.0 support.
+ */
+#define NOPOLL_HAVE_TLSv10_ENABLED (1)
+
+/**
+ * @brief Indicates where we have support for TLSv1.1 support.
+ */
+#define NOPOLL_HAVE_TLSv11_ENABLED (1)
+
+/**
+ * @brief Indicates where we have support for TLSv1.2 support.
+ */
+#define NOPOLL_HAVE_TLSv12_ENABLED (1)
+
 
 /* @} */
 

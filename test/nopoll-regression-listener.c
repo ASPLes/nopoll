@@ -171,7 +171,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 	/* printf ("Checking for set-broken socket: %s\n", content); */
 	if (nopoll_ncmp (content, "set-broken-socket", 17)) {
 		printf ("Listener: setting broken socket on conn: %p (socket=%d)\n",
-			conn, nopoll_conn_socket (conn));
+			conn, (int) nopoll_conn_socket (conn));
 		nopoll_conn_shutdown (conn);
 		return;
 	} /* end if */
@@ -372,7 +372,9 @@ int main (int argc, char ** argv)
 {
 	noPollConn     * listener;
 	noPollConn     * listener2;
+#if defined(NOPOLL_HAVE_SSLv23_ENABLED)	
 	noPollConn     * listener3;
+#endif
 #if defined(NOPOLL_HAVE_SSLv3_ENABLED)	
 	noPollConn     * listener4;
 #endif	
@@ -444,6 +446,7 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+#if defined(NOPOLL_HAVE_SSLv23_ENABLED)	
 	/* start listener with sslv23 */
 	printf ("Test: starting listener with TLS (SSLv23) at :1236 (all methods)\n");
 	opts     = nopoll_conn_opts_new ();
@@ -453,6 +456,7 @@ int main (int argc, char ** argv)
 		printf ("ERROR: Expected to find proper listener TLS connection status (:1236, SSLv23), but found..\n");
 		return -1;
 	} /* end if */
+#endif
 
 #if defined(NOPOLL_HAVE_SSLv3_ENABLED)	
 	printf ("Test: starting listener with TLS (SSLv3) at :1237\n");
@@ -525,7 +529,9 @@ int main (int argc, char ** argv)
 	/* unref connection */
 	nopoll_conn_close (listener);
 	nopoll_conn_close (listener2);
+#if defined(NOPOLL_HAVE_SSLv23_ENABLED)	
 	nopoll_conn_close (listener3);
+#endif
 #if defined(NOPOLL_HAVE_SSLv3_ENABLED)	
 	nopoll_conn_close (listener4);
 #endif	

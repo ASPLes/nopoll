@@ -65,7 +65,7 @@ void        nopoll_conn_opts_unref (noPollConnOpts * opts);
 
 void nopoll_conn_opts_set_reuse        (noPollConnOpts * opts, nopoll_bool reuse);
 
-void nopoll_conn_opts_set_interface    (noPollConnOpts * opts, const char * interface);
+void nopoll_conn_opts_set_interface    (noPollConnOpts * opts, const char * _interface);
 
 void nopoll_conn_opts_set_extra_headers (noPollConnOpts * opts, const char * extra_headers);
 
