@@ -373,7 +373,9 @@ int main (int argc, char ** argv)
 	noPollConn     * listener;
 	noPollConn     * listener2;
 	noPollConn     * listener3;
+#if defined(NOPOLL_HAVE_SSLv3_ENABLED)	
 	noPollConn     * listener4;
+#endif	
 #if defined(NOPOLL_HAVE_TLSv11_ENABLED)
 	noPollConn     * listener5;
 #endif
@@ -452,6 +454,7 @@ int main (int argc, char ** argv)
 		return -1;
 	} /* end if */
 
+#if defined(NOPOLL_HAVE_SSLv3_ENABLED)	
 	printf ("Test: starting listener with TLS (SSLv3) at :1237\n");
 	opts     = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_SSLV3);
@@ -460,6 +463,7 @@ int main (int argc, char ** argv)
 		printf ("ERROR: Expected to find proper listener TLS connection status (:1237, SSLv3), but found..\n");
 		return -1;
 	} /* end if */
+#endif	
 
 #if defined(NOPOLL_HAVE_TLSv11_ENABLED)
 	printf ("Test: starting listener with TLS (TLSv1.1) at :1238\n");
@@ -522,7 +526,9 @@ int main (int argc, char ** argv)
 	nopoll_conn_close (listener);
 	nopoll_conn_close (listener2);
 	nopoll_conn_close (listener3);
+#if defined(NOPOLL_HAVE_SSLv3_ENABLED)	
 	nopoll_conn_close (listener4);
+#endif	
 #if defined(NOPOLL_HAVE_TLSv12_ENABLED)
 	nopoll_conn_close (listener5);
 #endif

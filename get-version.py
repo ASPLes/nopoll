@@ -3,7 +3,7 @@
 from core_admin_common import command
 import sys
 
-(status, info) = command.run ("LANG=C svn update .")
+(status, info) = command.run ("LANG=C svn update . | grep 'At revision'")
 if status:
     print "ERROR: unable to get subversion version: %s" % info
     sys.exit (-1)
