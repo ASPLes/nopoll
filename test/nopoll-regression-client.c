@@ -1735,7 +1735,7 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_close (conn);
 #endif	
 
-#if defined (NOPOLL_HAVE_SSLv23_ENABLED)
+#if defined (NOPOLL_HAVE_SSLv3_ENABLED)
 	printf ("Test 19: perfect, got it working..\n");
 
 	/* create options */
