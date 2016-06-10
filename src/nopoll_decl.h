@@ -425,6 +425,8 @@ typedef enum {
 	 * TLSv1.1 and TLSv1.2 protocols (\ref NOPOLL_METHOD_SSLV3, \ref NOPOLL_METHOD_TLSV1, ...)
 	 */
 	NOPOLL_METHOD_SSLV23      = 2,
+#endif
+#if defined(NOPOLL_HAVE_SSLv3_ENABLED)	
 	/** 
 	 * @brief Allows to define SSLv3 as SSL protocol used by the
 	 * client or server connection. A connection/listener
