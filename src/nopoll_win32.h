@@ -51,7 +51,7 @@ int           nopoll_win32_nonblocking_enable (NOPOLL_SOCKET socket);
 int           nopoll_win32_blocking_enable    (NOPOLL_SOCKET socket);
 
 /* gettimeofday support on windows */
-int nopoll_win32_gettimeofday (struct timeval *tv, noPollPtr notUsed);
+int           nopoll_win32_gettimeofday (struct timeval *tv, noPollPtr notUsed);
 
 BOOL APIENTRY DllMain                         (HINSTANCE hInst,
 					            DWORD reason,

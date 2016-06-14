@@ -1137,9 +1137,9 @@ nopoll_bool test_12 (void) {
 	gettimeofday (&start, NULL);
 #endif	
 
-	printf ("Test 12: creating 1000 connections...\n");
+	printf ("Test 12: creating 4000 connections...\n");
 	iterator = 0;
-	while (iterator < 1000) {
+	while (iterator < 4000) {
 		/* create a working connection */
 		conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
 		
@@ -2817,7 +2817,7 @@ int main (int argc, char ** argv)
 		printf ("Test 12: create huge amount of connections in a short time [ FAILED ]\n");
 		return -1;
 	}
-	
+
 	if (test_13 ()) {
 		printf ("Test 13: testing certificate storage [   OK    ]\n");
 	} else {

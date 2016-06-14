@@ -207,22 +207,22 @@ nopoll_bool                 nopoll_conn_set_bind_interface (NOPOLL_SOCKET socket
 							    noPollConnOpts  * options)
 {
 	/* local variables */
-	int result = nopoll_false;
+	int result = 0;
 
 	if ((NULL != options) && (NULL != options->_interface)) {
 #if defined(NOPOLL_OS_WIN32) || defined(NOPOLL_OS_WIN64)
 		/* Windows still not supported: send us a patch! */ 
+		return nopoll_false;
 #else
 		result = setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE,
 				    options->_interface, strlen(options->_interface)+1);
-		if (result == NOPOLL_SOCKET_ERROR) {
-			return nopoll_false;
-		}
+		/* check and report result */
+		return result == 0;
 #endif
 	}
 
 	/* properly configured */
-	return result;
+	return nopoll_true;
 } /* end */
 
 

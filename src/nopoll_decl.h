@@ -48,6 +48,54 @@
  * @{
  */
 
+/** 
+ * @brief Set a default I/O wait limit from the default, which is 64
+ * sockets to 4096. Note that this affects \ref nopoll_loop_wait (when
+ * using select() API). If you change this value, you'll have to
+ * recompile noPoll so internal structures will be updated. See the
+ * following document:
+ *
+ *   - https://tangentsoft.net/wskfaq/advanced.html
+ *   (What are the "64 sockets" limitations?)
+ *
+ * For Windows platforms, there are two 64-socket limitations:
+ * 
+ * The Windows event mechanism (e.g. WaitForMultipleObjects()) can
+ * only wait on 64 event objects at a time. Winsock 2 provides the
+ * WSAEventSelect() function which lets you use Windows’ event
+ * mechanism to wait for events on sockets. Because it uses Windows’
+ * event mechanism, you can only wait for events on 64 sockets at a
+ * time. If you want to wait on more than 64 Winsock event objects at
+ * a time, you need to use multiple threads, each waiting on no more
+ * than 64 of the sockets.
+ * 
+ * The select() function is also limited in certain situations to
+ * waiting on 64 sockets at a time. The FD_SETSIZE constant defined in
+ * the Winsock header determines the size of the fd_set structures you
+ * pass to select(). The default value is 64, but if you define this
+ * constant to a different value before including the Winsock header,
+ * it accepts that value instead:
+ *
+ * \code
+ *   // define in your code new limit
+ *   #define FD_SETSIZE 1024
+ *   // then include nopoll.h  (you need to recompile noPoll)
+ *   #include <nopoll.n>
+ * \endcode
+ *
+ * The problem is that modern network stacks are complex, with many
+ * parts coming from various sources, including third parties via
+ * things like Layered Service Providers. When you change this
+ * constant, you’re depending on all these components to play by the
+ * new rules. They’re supposed to, but not all do. The typical symptom
+ * is that they ignore sockets beyond the 64th in larger fd_set
+ * structures. You can get around this limitation with threads, just
+ * as in the event object case.
+ */
+#ifndef FD_SETSIZE
+#define FD_SETSIZE 4096
+#endif
+
 /* include platform specific configuration */
 #include <nopoll_config.h>
 
