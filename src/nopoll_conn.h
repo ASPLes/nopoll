@@ -97,6 +97,8 @@ void           nopoll_conn_set_socket (noPollConn * conn, NOPOLL_SOCKET _socket)
 
 int           nopoll_conn_get_id (noPollConn * conn);
 
+const char * nopoll_conn_get_requested_url (noPollConn * conn);
+
 noPollCtx   * nopoll_conn_ctx    (noPollConn * conn);
 
 noPollRole    nopoll_conn_role   (noPollConn * conn);

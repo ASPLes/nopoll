@@ -1346,6 +1346,22 @@ int           nopoll_conn_get_id (noPollConn * conn)
 	return conn->id;
 }
 
+/**
+ * @brief Allows to get the get_url from the connection
+ *
+ * @param conn The connection from where the url will be obtained
+ *
+ * @return The get_url or /
+ */
+const char * nopoll_conn_get_requested_url (noPollConn * conn)
+{
+        if (conn->get_url == NULL)
+            return "/";
+        else
+            return conn->get_url;
+}
+
+
 /** 
  * @brief Allows to get the noPollCtx context object associated to the
  * connection (or where the connection is working).
