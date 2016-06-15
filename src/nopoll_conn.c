@@ -1351,14 +1351,13 @@ int           nopoll_conn_get_id (noPollConn * conn)
  *
  * @param conn The connection from where the url will be obtained
  *
- * @return The get_url or /
+ * @return The get_url or NULL
  */
 const char * nopoll_conn_get_requested_url (noPollConn * conn)
 {
-        if (conn->get_url == NULL)
-            return "/";
-        else
-            return conn->get_url;
+        if(!conn)
+            return NULL;
+        return (conn->get_url == NULL ? "/" : conn->get_url);
 }
 
 
