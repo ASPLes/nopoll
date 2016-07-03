@@ -1,0 +1,2169 @@
+------------------------------------------------------------------------
+r288 | francis.brosnan.bl.zquez | 2016-06-15 19:21:37 +0200 (mié 15 de jun de 2016) | 3 líneas
+
+Merge pull request #3 from cbucht200/master
+
+Added the ability to retrieve the get_url of a nopoll_conn.
+------------------------------------------------------------------------
+r287 | chris.buchter | 2016-06-15 19:09:42 +0200 (mié 15 de jun de 2016) | 2 líneas
+
+Fixed get_url change to check for NULL conn.
+
+------------------------------------------------------------------------
+r286 | chris.buchter | 2016-06-15 18:43:30 +0200 (mié 15 de jun de 2016) | 2 líneas
+
+Added the ability to retrieve the get_url of a nopoll_conn.
+
+------------------------------------------------------------------------
+r285 | francis.brosnan.bl.zquez | 2016-06-14 10:05:15 +0200 (mar 14 de jun de 2016) | 7 líneas
+
+nopoll:
+* [fix] Updated nopoll.h header to set a default FD_SETSIZE to 4096 
+  so users can have a bigger default values for precompiled binaries. 
+  Added documentation to explain how to change/update this value. 
+  The value is only applied when including project do not define it
+  before hand.
+
+------------------------------------------------------------------------
+r284 | francis.brosnan.bl.zquez | 2016-06-10 17:41:25 +0200 (vie 10 de jun de 2016) | 6 líneas
+
+nopoll:
+* [fix] Several fixings applied to allow compiling noPoll on Windows (Windows 7 64 tested).
+  Renamed parameters using "interface" keyword. Removed conditionally binding interface
+  code so it is not available on windows (until we have support for it). Added header 
+  definitions for nopoll_config_win32/win64.h to include headers for SSL/TLS includes.
+  Fixed compilation errors in regression tests. 
+------------------------------------------------------------------------
+r283 | francis.brosnan.bl.zquez | 2016-06-10 11:23:11 +0200 (vie 10 de jun de 2016) | 4 líneas
+
+nopoll:
+* [fix] Additional fixings to remove support for SSLv3 when not
+  available
+
+------------------------------------------------------------------------
+r282 | francis.brosnan.bl.zquez | 2016-06-10 11:13:41 +0200 (vie 10 de jun de 2016) | 4 líneas
+
+nopoll:
+* [fix] More fixings to ensure noPoll compiles when SSLv3
+  APIs are not available..
+
+------------------------------------------------------------------------
+r281 | francis.brosnan.bl.zquez | 2016-06-10 09:08:12 +0200 (vie 10 de jun de 2016) | 4 líneas
+
+nopoll:
+* [fix] Added additional code to disable NOPOLL_METHOD_SSLV3 when it is not
+  available (reported by Chris Severance)
+
+------------------------------------------------------------------------
+r280 | francis.brosnan.bl.zquez | 2016-06-10 00:38:19 +0200 (vie 10 de jun de 2016) | 5 líneas
+
+nopoll:
+* [fix] added support to detect SSLv3 methods and remove support for it
+  in the case they are not present. Added missing pthread_mutexattr_init/destroy
+  inside regression test.
+
+------------------------------------------------------------------------
+r279 | francis.brosnan.bl.zquez | 2016-06-09 21:40:06 +0200 (jue 09 de jun de 2016) | 3 líneas
+
+nopoll:
+* [fix] More web updates..
+
+------------------------------------------------------------------------
+r278 | francis.brosnan.bl.zquez | 2016-06-09 21:39:18 +0200 (jue 09 de jun de 2016) | 3 líneas
+
+nopoll:
+* [fix] Fixed SVN -> github reference on the web..
+
+------------------------------------------------------------------------
+r277 | francis.brosnan.bl.zquez | 2016-06-09 21:29:12 +0200 (jue 09 de jun de 2016) | 9 líneas
+
+nopoll:
+* [fix] Several to fix dead locks and races when using non-recursive
+  mutexes through nopoll_thread_headers. Fixed dead lock when connection
+  close received while using nopoll_loop_wait API (reported by Ondrej
+  Zaruba). Updated nopoll_conn_ref/unref to fix possible races. Added
+  reg test (test_36) to reproduce and check fix introduced.
+
+
+
+------------------------------------------------------------------------
+r276 | francis.brosnan.bl.zquez | 2016-06-09 20:26:04 +0200 (jue 09 de jun de 2016) | 3 líneas
+
+nopoll:
+* [fix] More updates..
+
+------------------------------------------------------------------------
+r275 | francis.brosnan.bl.zquez | 2016-06-09 20:25:38 +0200 (jue 09 de jun de 2016) | 3 líneas
+
+nopoll:
+* [fix] Fixed SVN references at web page..
+
+------------------------------------------------------------------------
+r274 | francis.brosnan.bl.zquez | 2016-06-09 17:54:11 +0200 (jue 09 de jun de 2016) | 5 líneas
+
+nopoll:
+* [fix] Updated nopoll regression test code to use threading locking
+  code by default to ensure that all code tested is under threading
+  support (which at the end covers non threaded code).
+
+------------------------------------------------------------------------
+r273 | francis.brosnan.bl.zquez | 2016-06-09 15:46:47 +0200 (jue 09 de jun de 2016) | 4 líneas
+
+nopoll:
+* [fix] Updated buildrpm.sh (to create default building directories
+  if not present)
+
+------------------------------------------------------------------------
+r272 | francis.brosnan.bl.zquez | 2016-06-09 15:44:28 +0200 (jue 09 de jun de 2016) | 3 líneas
+
+nopoll:
+* [fix] Removing folders..
+
+------------------------------------------------------------------------
+r271 | francis.brosnan.bl.zquez | 2016-06-09 14:11:30 +0200 (jue 09 de jun de 2016) | 3 líneas
+
+nopoll:
+* [fix] Updated configure.ac to report TLS flexible method detected..
+
+------------------------------------------------------------------------
+r270 | francis.brosnan.bl.zquez | 2016-06-09 13:27:27 +0200 (jue 09 de jun de 2016) | 3 líneas
+
+nopoll:
+* [fix] More files to have support for building packages for Centos..
+
+------------------------------------------------------------------------
+r269 | francis.brosnan.bl.zquez | 2016-06-09 13:24:48 +0200 (jue 09 de jun de 2016) | 3 líneas
+
+nopoll:
+* [fix] Adding missing spec for centos build..
+
+------------------------------------------------------------------------
+r268 | francis.brosnan.bl.zquez | 2016-06-09 13:02:32 +0200 (jue 09 de jun de 2016) | 9 líneas
+
+nopoll:
+* [fix] Several updates to make nopoll compilation process
+  to detect all SSL/TLS methods available and update headers
+  so noPoll internal code can react but also API consumers can
+  also take advantage of these indications. Added support for 
+  TLS1.2 and for TlS flexible configuration (though added
+  security considerations to it). Updated regression test test_19
+  to check TLSv1.2 client and server support.
+
+------------------------------------------------------------------------
+r266 | francis.brosnan.bl.zquez | 2016-05-23 21:47:50 +0200 (lun 23 de may de 2016) | 3 líneas
+
+nopoll:
+* [fix] closing release 0.4.1
+
+------------------------------------------------------------------------
+r265 | francis.brosnan.bl.zquez | 2016-05-15 23:03:44 +0200 (dom 15 de may de 2016) | 10 líneas
+
+nopoll:
+* [fix] Several updates to detect when __nopoll_conn_get_ssl_context fails
+  to report a valid SSL_CTX (fixed updated test_19). 
+
+* [fix] Updated header read handling to support all cases when a
+  splitted/broken header is received. Added regression tests test_31,
+  test_32, test_33, test_34 and test_35 to simulate and support different
+  scenarios where part of the header is received and then the rest...
+
+
+------------------------------------------------------------------------
+r264 | francis.brosnan.bl.zquez | 2016-05-10 10:06:24 +0200 (mar 10 de may de 2016) | 3 líneas
+
+nopoll:
+* [fix] Added initial files to compile jessie..
+
+------------------------------------------------------------------------
+r263 | francis.brosnan.bl.zquez | 2016-05-06 11:45:17 +0200 (vie 06 de may de 2016) | 3 líneas
+
+nopoll:
+* [fix] Adding support for Ubuntu Xenial 16.0
+
+------------------------------------------------------------------------
+r262 | francis.brosnan.bl.zquez | 2016-04-21 10:48:07 +0200 (jue 21 de abr de 2016) | 7 líneas
+
+nopoll:
+* [fix] fixed broken connection problem caused by some WebSocket
+  clients that send headers using different send operations (rather
+  than one single operation) causing the header to be received splitted.
+  Added regression test_30 to reproduce the problem and check fix
+  introduced. Problem reported by Rahul Kale (barco.com)
+
+------------------------------------------------------------------------
+r261 | francis.brosnan.bl.zquez | 2016-04-15 18:12:08 +0200 (vie 15 de abr de 2016) | 4 líneas
+
+nopoll:
+* [fix] Removing printing buffer received when wrong mime
+  headers are received..
+
+------------------------------------------------------------------------
+r260 | francis.brosnan.bl.zquez | 2016-04-15 17:10:58 +0200 (vie 15 de abr de 2016) | 4 líneas
+
+nopoll:
+* [fix] Added additional code to avoid printing unallocated memory
+  when wrong headers are sent and debug code is enable..
+
+------------------------------------------------------------------------
+r259 | francis.brosnan.bl.zquez | 2016-04-11 16:03:27 +0200 (lun 11 de abr de 2016) | 5 líneas
+
+nopoll:
+* [fix] Making max ssl retries (for nopoll_conn) to try for 10 seconds
+  instead of just 1 second (which is too short by default for most of
+  the servers). This only affects client side code
+
+------------------------------------------------------------------------
+r258 | francis.brosnan.bl.zquez | 2016-04-11 15:53:40 +0200 (lun 11 de abr de 2016) | 3 líneas
+
+nopoll:
+* [fix] Changed ERROR for WARNING message in nopoll-regression-client.c
+
+------------------------------------------------------------------------
+r257 | francis.brosnan.bl.zquez | 2016-04-11 15:16:16 +0200 (lun 11 de abr de 2016) | 3 líneas
+
+Merge pull request #2 from schmidtw/add-arbitrary-http-headers
+
+Adding the ability to send arbitrary HTTP headers to a server.  This … (From PR #2 by @schmidtw )
+------------------------------------------------------------------------
+r256 | weston.schmidt | 2016-04-11 08:41:56 +0200 (lun 11 de abr de 2016) | 2 líneas
+
+Adding the ability to send arbitrary HTTP headers to a server.  This doesn't add the ability to process arbitrary headers as a server.
+
+------------------------------------------------------------------------
+r255 | francis.brosnan.bl.zquez | 2016-03-22 16:56:26 +0100 (mar 22 de mar de 2016) | 3 líneas
+
+Merge pull request #1 from schmidtw/outbound-interface
+
+Add binding interface option to connection (by Weston Schmidt). Thanks for reporting and providing a patch for this option,
+------------------------------------------------------------------------
+r254 | weston.schmidt | 2016-03-22 16:29:10 +0100 (mar 22 de mar de 2016) | 2 líneas
+
+Add binding interface option to connection and add nopoll_conn_sock_connect_opts() to not break consumers of nopoll_conn_sock_connect().
+
+------------------------------------------------------------------------
+r253 | francis.brosnan.bl.zquez | 2016-02-25 18:08:56 +0100 (jue 25 de feb de 2016) | 3 líneas
+
+nopoll:
+* [fix] Updated makefiles to control gcc compiler
+  for w64 (windows) platform..
+------------------------------------------------------------------------
+r252 | francis.brosnan.bl.zquez | 2016-02-12 18:36:02 +0100 (vie 12 de feb de 2016) | 3 líneas
+
+nopoll:
+* [fix] Updated web references to include notes about using Raspbian..
+
+------------------------------------------------------------------------
+r251 | francis.brosnan.bl.zquez | 2016-02-10 10:53:52 +0100 (mié 10 de feb de 2016) | 4 líneas
+
+nopoll:
+* [fix] Fixed regression test which shows a false positive error
+  when used under slow systems like raspberry
+
+------------------------------------------------------------------------
+r250 | francis.brosnan.bl.zquez | 2016-01-29 13:30:09 +0100 (vie 29 de ene de 2016) | 6 líneas
+
+nopoll:
+* [fix] Updated noPoll' connection API to include an option to skip
+  Origin header check during connection. API added:
+
+  - nopoll_conn_opts_skip_origin_check
+
+------------------------------------------------------------------------
+r249 | francis.brosnan.bl.zquez | 2016-01-08 10:03:17 +0100 (vie 08 de ene de 2016) | 3 líneas
+
+nopoll:
+* [fix] Added some additional notes to explain freebsd/ directory (README.txt)
+
+------------------------------------------------------------------------
+r248 | francis.brosnan.bl.zquez | 2016-01-07 18:47:13 +0100 (jue 07 de ene de 2016) | 3 líneas
+
+nopoll:
+* [fix] Fixed warnings at nopoll-regression-client.c (FreeBSD 10 i386)
+
+------------------------------------------------------------------------
+r247 | francis.brosnan.bl.zquez | 2015-12-15 17:58:50 +0100 (mar 15 de dic de 2015) | 3 líneas
+
+nopoll:
+* [fix] Adding files to support FreeBSD 10 amd..
+
+------------------------------------------------------------------------
+r246 | francis.brosnan.bl.zquez | 2015-12-15 17:57:13 +0100 (mar 15 de dic de 2015) | 3 líneas
+
+nopoll:
+* [fix] Updated free bsd build scripts to support more archs..
+
+------------------------------------------------------------------------
+r245 | francis.brosnan.bl.zquez | 2015-12-14 13:43:26 +0100 (lun 14 de dic de 2015) | 5 líneas
+
+nopoll:
+* [fix] Updated documentation to properly reference http://www.aspl.es/nopoll/downloads
+  instead of code.google.com. Added reference to ./autogen.sh to prepare sources
+  if SVN/GIT is used.
+
+------------------------------------------------------------------------
+r244 | francis.brosnan.bl.zquez | 2015-12-12 10:31:09 +0100 (sáb 12 de dic de 2015) | 3 líneas
+
+nopoll:
+* [fix] More notes about nopoll_conn_new (connect timeout..)..
+
+------------------------------------------------------------------------
+r243 | francis.brosnan.bl.zquez | 2015-12-12 10:30:15 +0100 (sáb 12 de dic de 2015) | 3 líneas
+
+nopoll:
+* [fix] Updated nopoll_conn.c to include more documentation
+
+------------------------------------------------------------------------
+r242 | francis.brosnan.bl.zquez | 2015-12-12 09:23:45 +0100 (sáb 12 de dic de 2015) | 8 líneas
+
+nopoll:
+* [fix] Moved to the header missing public functions:
+
+   - nopoll_conn_connect_timeout
+   - nopoll_conn_get_connect_timeout
+ 
+  (Reported by Rami Rosenbaum)
+
+------------------------------------------------------------------------
+r241 | francis.brosnan.bl.zquez | 2015-12-12 09:12:48 +0100 (sáb 12 de dic de 2015) | 3 líneas
+
+nopoll:
+* [fix] Corrected signature at nopoll's manual (reported by Neil Kolban)
+
+------------------------------------------------------------------------
+r240 | francis.brosnan.bl.zquez | 2015-11-15 11:10:46 +0100 (dom 15 de nov de 2015) | 4 líneas
+
+nopoll:
+* [fix] Making nopoll_conn_send_ping to return nopoll_true/nopoll_false according
+  to the status..
+
+------------------------------------------------------------------------
+r239 | francis.brosnan.bl.zquez | 2015-11-10 20:03:38 +0100 (mar 10 de nov de 2015) | 4 líneas
+
+nopoll:
+* [fix] Bug reported by Dmex where pong frames aren't properly configured
+  (mask option) when sent by clients..
+
+------------------------------------------------------------------------
+r238 | francis.brosnan.bl.zquez | 2015-10-13 19:38:59 +0200 (mar 13 de oct de 2015) | 3 líneas
+
+nopoll:
+* [fix] Doc updates..
+
+------------------------------------------------------------------------
+r237 | francis.brosnan.bl.zquez | 2015-09-03 20:37:06 +0200 (jue 03 de sep de 2015) | 3 líneas
+
+nopoll:
+* [fix] Copyright updates..
+
+------------------------------------------------------------------------
+r236 | francis.brosnan.bl.zquez | 2015-09-03 20:23:54 +0200 (jue 03 de sep de 2015) | 4 líneas
+
+nopoll:
+* [fix] Fixed debian files to include nopoll_conn_opts.h into the 
+  package libnopoll0-dev
+
+------------------------------------------------------------------------
+r235 | francis.brosnan.bl.zquez | 2015-08-28 17:27:53 +0200 (vie 28 de ago de 2015) | 3 líneas
+
+nopoll:
+* [fix] Closing 0.3.2 release..
+
+------------------------------------------------------------------------
+r234 | francis.brosnan.bl.zquez | 2015-08-28 16:39:55 +0200 (vie 28 de ago de 2015) | 3 líneas
+
+nopoll:
+* [fix] Minor fixings at nopoll-regression-client.c to correct
+  Windows64 compilation errors..
+------------------------------------------------------------------------
+r233 | francis.brosnan.bl.zquez | 2015-08-28 16:03:29 +0200 (vie 28 de ago de 2015) | 3 líneas
+
+nopoll:
+* [fix] Adding more files for release 0.3.2
+
+------------------------------------------------------------------------
+r232 | francis.brosnan.bl.zquez | 2015-08-28 15:59:52 +0200 (vie 28 de ago de 2015) | 3 líneas
+
+nopoll:
+* [fix] Updated VERSION (new release)
+
+------------------------------------------------------------------------
+r231 | francis.brosnan.bl.zquez | 2015-08-20 17:41:30 +0200 (jue 20 de ago de 2015) | 4 líneas
+
+nopoll:
+* [fix] Adding files for FreeBSD 9 to remove directories with :
+
+
+------------------------------------------------------------------------
+r230 | francis.brosnan.bl.zquez | 2015-08-19 16:41:55 +0200 (mié 19 de ago de 2015) | 4 líneas
+
+nopoll:
+* [fix] Fixed warnings reported by clang...gcc didn't notice them :-??
+
+
+------------------------------------------------------------------------
+r229 | francis.brosnan.bl.zquez | 2015-08-18 17:03:24 +0200 (mar 18 de ago de 2015) | 4 líneas
+
+nopoll:
+* [fix] Added support to provide FreeBSD packages (for now 9.X releases).
+
+
+------------------------------------------------------------------------
+r228 | francis.brosnan.bl.zquez | 2015-08-16 19:10:42 +0200 (dom 16 de ago de 2015) | 14 líneas
+
+nopoll:
+* [new] Updated noPoll conn API to include a new function to allow closing
+  a connection, sending an error message and an error code along with it:
+
+  - nopoll_conn_close_ext
+
+* [fix] Added regression test (test_28) to check connection close frame
+  with status and reason to check functions added:
+
+  - nopoll_conn_get_close_status 
+  - nopoll_conn_get_close_reason
+
+  Everything working as expected..
+
+------------------------------------------------------------------------
+r227 | francis.brosnan.bl.zquez | 2015-08-15 12:13:59 +0200 (sáb 15 de ago de 2015) | 14 líneas
+
+nopoll:
+* [fix] Updated noPOll internal handling to support close frames with
+  body content so remote peer status and reason are now available to API
+  consumers. A new couple of functions are now available to these values:
+
+  - nopoll_conn_get_close_reason
+  - nopoll_conn_get_close_status
+
+  Still need more work to check and add a regression test..
+
+* [fix] Updated nopoll_conn_wait_util_connection_ready uses nopoll_conn_is_ok()
+  and the end of the function and the result reported is linked to its results..
+
+
+------------------------------------------------------------------------
+r226 | francis.brosnan.bl.zquez | 2015-08-06 19:13:10 +0200 (jue 06 de ago de 2015) | 13 líneas
+
+nopoll:
+* [fix] Fixed FreeBSD support. ENOTCONN wasn't handled on connection. For
+  some reason socket API is reported ENOTCONN when the should be reporting
+  EINPROGRESS or EWOULDBLOCK
+
+* [fix] Updated log handler reporting so it is triggering when a user handler
+  is configured via nopoll_log_set_handler (even in the case log reporting
+  is disabled).
+
+* [fix] Added new option call --show-only-critical to regression tests client
+  to show only critical messages.
+
+
+------------------------------------------------------------------------
+r225 | francis.brosnan.bl.zquez | 2015-07-22 13:14:58 +0200 (mié 22 de jul de 2015) | 3 líneas
+
+nopoll:
+* [fix] Updated web references to include license programm options..
+
+------------------------------------------------------------------------
+r224 | francis.brosnan.bl.zquez | 2015-07-22 12:15:49 +0200 (mié 22 de jul de 2015) | 3 líneas
+
+nopoll:
+* [fix] Adding references to license program..
+
+------------------------------------------------------------------------
+r223 | francis.brosnan.bl.zquez | 2015-07-22 11:27:39 +0200 (mié 22 de jul de 2015) | 3 líneas
+
+nopoll:
+* [fix] Added reference to windriver using noPoll..
+
+------------------------------------------------------------------------
+r222 | francis.brosnan.bl.zquez | 2015-07-12 22:31:15 +0200 (dom 12 de jul de 2015) | 4 líneas
+
+nopoll:
+* [fix] Updated log reporting using function_name. It's noisy and it doesn't
+  help very much.
+
+------------------------------------------------------------------------
+r221 | francis.brosnan.bl.zquez | 2015-07-08 20:13:54 +0200 (mié 08 de jul de 2015) | 3 líneas
+
+nopoll:
+* [fix] Fixing comment..
+
+------------------------------------------------------------------------
+r220 | francis.brosnan.bl.zquez | 2015-07-08 19:47:53 +0200 (mié 08 de jul de 2015) | 3 líneas
+
+nopoll:
+* [fix] Uploading and closing release 0.3.1
+
+------------------------------------------------------------------------
+r219 | francis.brosnan.bl.zquez | 2015-07-08 18:23:39 +0200 (mié 08 de jul de 2015) | 2 líneas
+
+nopoll:
+* [fix] Updated nopoll.nsi to remove dependency that is not clear...
+------------------------------------------------------------------------
+r218 | francis.brosnan.bl.zquez | 2015-07-08 17:59:48 +0200 (mié 08 de jul de 2015) | 3 líneas
+
+nopoll:
+* [fix] Adding release files (0.3.1.)..
+
+------------------------------------------------------------------------
+r217 | francis.brosnan.bl.zquez | 2015-05-28 15:59:21 +0200 (jue 28 de may de 2015) | 10 líneas
+
+nopoll:
+* [fix] General update to allow setting and handling protocol requested
+  and supported by the client and server. Updated regression test (test_27)
+  to check all changes introduced. API added:
+
+  - nopoll_conn_get_accepted_protocol
+  - nopoll_conn_get_requested_protocol
+  - nopoll_conn_set_accepted_protocol
+
+
+------------------------------------------------------------------------
+r216 | francis.brosnan.bl.zquez | 2015-05-28 14:31:19 +0200 (jue 28 de may de 2015) | 5 líneas
+
+nopoll:
+* [fix] Fixed support for protocol notified by the server, reported by
+  Rahul Kale (barco.com). Added regression test (test_27) to check fix
+  introduced. 
+
+------------------------------------------------------------------------
+r215 | francis.brosnan.bl.zquez | 2015-05-28 13:58:46 +0200 (jue 28 de may de 2015) | 3 líneas
+
+nopoll:
+* [fix] Fixed test_26 test..
+
+------------------------------------------------------------------------
+r214 | francis.brosnan.bl.zquez | 2015-05-28 13:55:02 +0200 (jue 28 de may de 2015) | 4 líneas
+
+nopoll:
+* [fix] Added regression test to check echo.websocket.org Kaazing
+  support (test_26). Everything working without any issue.
+
+------------------------------------------------------------------------
+r213 | francis.brosnan.bl.zquez | 2015-05-26 17:29:57 +0200 (mar 26 de may de 2015) | 3 líneas
+
+nopoll:
+* [fix] Fixed nopoll_conn_opts_new to include (void).
+
+------------------------------------------------------------------------
+r212 | francis.brosnan.bl.zquez | 2015-05-19 09:20:35 +0200 (mar 19 de may de 2015) | 3 líneas
+
+nopoll:
+* [fix] Fixed nopoll.nsi to include libgcc_s_dw2.1.dll into the installer.
+
+------------------------------------------------------------------------
+r211 | francis.brosnan.bl.zquez | 2015-05-19 08:23:07 +0200 (mar 19 de may de 2015) | 4 líneas
+
+nopoll:
+* [fix] Fixed bug when setting cookie (it was setting \n\r rather than
+  \r\n). Reported by Ettore Rizza.
+
+------------------------------------------------------------------------
+r210 | francis.brosnan.bl.zquez | 2015-05-07 21:51:24 +0200 (jue 07 de may de 2015) | 3 líneas
+
+nopoll:
+* [fix] Closing release 0.2.9
+
+------------------------------------------------------------------------
+r209 | francis.brosnan.bl.zquez | 2015-05-07 13:58:35 +0200 (jue 07 de may de 2015) | 3 líneas
+
+nopoll:
+* [fix] Skip settting errno to EWOULD after TLS finished under
+  windows platform.
+------------------------------------------------------------------------
+r208 | francis.brosnan.bl.zquez | 2015-05-07 13:56:20 +0200 (jue 07 de may de 2015) | 3 líneas
+
+nopoll:
+* [fix] Updated version..
+
+------------------------------------------------------------------------
+r207 | francis.brosnan.bl.zquez | 2015-05-07 11:53:37 +0200 (jue 07 de may de 2015) | 4 líneas
+
+nopoll:
+* [fix] Added additional regress iontest (test_25) to check 
+  cookie attack. Nothing was reported because the test..
+
+------------------------------------------------------------------------
+r206 | francis.brosnan.bl.zquez | 2015-05-06 19:05:05 +0200 (mié 06 de may de 2015) | 9 líneas
+
+nopoll:
+* [new] Added support to handle and set cookie configured for
+  every connection. Regression test added to check this (test_24). 
+  API added:
+
+  - nopoll_conn_get_cookie
+  - nopoll_conn_new_opts
+  - nopoll_conn_opts_set_cookie
+
+------------------------------------------------------------------------
+r205 | francis.brosnan.bl.zquez | 2015-04-30 21:40:42 +0200 (jue 30 de abr de 2015) | 7 líneas
+
+nopoll:
+* [fix] Added a subtlety to report a EWOULD errno just after
+  finished TLS handshake to ensure the caller can report NULL
+  but it is not understood as a connection failure by an upper
+  level API. Fixes MyQtt WebSocket over TLS WebSocket integration
+  reported.
+
+------------------------------------------------------------------------
+r204 | francis.brosnan.bl.zquez | 2015-04-28 19:09:07 +0200 (mar 28 de abr de 2015) | 3 líneas
+
+nopoll:
+* [fix] Added missing header for nopoll_conn_set_on_ready.
+
+------------------------------------------------------------------------
+r203 | francis.brosnan.bl.zquez | 2015-04-28 19:03:29 +0200 (mar 28 de abr de 2015) | 7 líneas
+
+nopoll:
+* [fix] Updatd noPollConn API to allow setting an onReady handler to get a notification
+  (mainly for server side) when a connection is ready for I/O because Websocke handshake
+  has finished. API added:
+  
+   - nopoll_conn_set_on_ready
+
+------------------------------------------------------------------------
+r202 | francis.brosnan.bl.zquez | 2015-04-13 12:29:22 +0200 (lun 13 de abr de 2015) | 3 líneas
+
+nopoll:
+* [fix] Updating buildrpm.sh
+
+------------------------------------------------------------------------
+r201 | francis.brosnan.bl.zquez | 2015-04-11 20:18:52 +0200 (sáb 11 de abr de 2015) | 4 líneas
+
+nopoll:
+* [fix] Updated certificates needed by reg test-21. Added script to 
+  generate certificates used by this test.
+
+------------------------------------------------------------------------
+r200 | francis.brosnan.bl.zquez | 2015-04-10 18:08:11 +0200 (vie 10 de abr de 2015) | 3 líneas
+
+nopoll:
+* [fix] More updates on Centos packages.
+
+------------------------------------------------------------------------
+r199 | francis.brosnan.bl.zquez | 2015-04-08 18:40:44 +0200 (mié 08 de abr de 2015) | 3 líneas
+
+nopoll:
+* [fix] Updating build rpm files..
+
+------------------------------------------------------------------------
+r198 | francis.brosnan.bl.zquez | 2015-04-07 11:11:19 +0200 (mar 07 de abr de 2015) | 4 líneas
+
+nopoll:
+* [fix] Several updates to enable support to build rpm packages
+  for noPoll.
+
+------------------------------------------------------------------------
+r197 | francis.brosnan.bl.zquez | 2015-04-01 19:14:03 +0200 (mié 01 de abr de 2015) | 4 líneas
+
+nopoll:
+* [fix] Adding support to create centos packages for noPoll
+  library.
+
+------------------------------------------------------------------------
+r196 | francis.brosnan.bl.zquez | 2015-03-09 12:39:35 +0100 (lun 09 de mar de 2015) | 3 líneas
+
+nopoll:
+* [fix] Documentation updates..
+
+------------------------------------------------------------------------
+r195 | francis.brosnan.bl.zquez | 2015-03-08 14:04:37 +0100 (dom 08 de mar de 2015) | 5 líneas
+
+nopoll:
+* [fix] added explicit references to ssl libraries for 
+  regression test binaries.
+  
+
+------------------------------------------------------------------------
+r194 | francis.brosnan.bl.zquez | 2015-03-02 16:13:23 +0100 (lun 02 de mar de 2015) | 3 líneas
+
+nopoll:
+* [fix] Updated VERSION file to move it to 0.2.9 rev.
+
+------------------------------------------------------------------------
+r193 | francis.brosnan.bl.zquez | 2015-03-02 16:12:21 +0100 (lun 02 de mar de 2015) | 9 líneas
+
+nopoll:
+* [fix] Updated nopoll_conn_accept implementation to be implemented
+  into two reusable functions that can be called depending on the needs.
+  API update:
+
+  - nopoll_conn_accept (accept socket and process WebSocket protocol)
+  - nopoll_conn_accept_socket (just process WebSocket protocol assuming
+    socket was previously accepted).
+
+------------------------------------------------------------------------
+r192 | francis.brosnan.bl.zquez | 2015-03-02 15:03:31 +0100 (lun 02 de mar de 2015) | 5 líneas
+
+[nopoll]
+
+Modificaciones 2 marzo 2015
+
+
+------------------------------------------------------------------------
+r191 | francis.brosnan.bl.zquez | 2015-02-02 14:55:07 +0100 (lun 02 de feb de 2015) | 3 líneas
+
+nopoll:
+* [fix] Adding stacom-software.de references ..
+
+------------------------------------------------------------------------
+r190 | francis.brosnan.bl.zquez | 2015-01-27 11:58:46 +0100 (mar 27 de ene de 2015) | 4 líneas
+
+nopoll:
+* [fix] Added missing nopoll_conn_opts.h reference from nopoll.nsi
+  (windows installer builder). Reported by Jorge Olmos.
+
+------------------------------------------------------------------------
+r189 | francis.brosnan.bl.zquez | 2014-12-22 16:17:40 +0100 (lun 22 de dic de 2014) | 2 líneas
+
+nopoll:
+* [fix] Some changes to compile regression-test on windows7 (64 bits).
+------------------------------------------------------------------------
+r188 | francis.brosnan.bl.zquez | 2014-12-22 15:56:47 +0100 (lun 22 de dic de 2014) | 2 líneas
+
+nopoll:
+* [fix] Fixing some warnings produced by unused variables make nopoll debug is disabled. 
+------------------------------------------------------------------------
+r187 | francis.brosnan.bl.zquez | 2014-12-22 15:35:02 +0100 (lun 22 de dic de 2014) | 3 líneas
+
+nopoll:
+* [fix] Closing release 0.2.8..
+
+------------------------------------------------------------------------
+r186 | francis.brosnan.bl.zquez | 2014-12-20 11:19:33 +0100 (sáb 20 de dic de 2014) | 5 líneas
+
+nopoll:
+* [fix] Added additional documentation on how to use noPoll TLS API to implement
+  server side peer certificate verification, TLS post check and SSL context creator
+  handlers.
+
+------------------------------------------------------------------------
+r185 | francis.brosnan.bl.zquez | 2014-12-16 14:12:42 +0100 (mar 16 de dic de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updated VERSION file..
+
+------------------------------------------------------------------------
+r184 | francis.brosnan.bl.zquez | 2014-12-16 13:59:01 +0100 (mar 16 de dic de 2014) | 4 líneas
+
+nopoll:
+* [fix] Updated nopoll regression client to provide more information in 
+  cases TLS connection fails.
+
+------------------------------------------------------------------------
+r183 | francis.brosnan.bl.zquez | 2014-12-16 13:56:51 +0100 (mar 16 de dic de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updated nopoll regression client..
+
+------------------------------------------------------------------------
+r182 | francis.brosnan.bl.zquez | 2014-12-16 13:53:03 +0100 (mar 16 de dic de 2014) | 3 líneas
+
+nopoll:
+* [fix] Adding some more debug information to nopoll-regrssion-client.c
+
+------------------------------------------------------------------------
+r181 | francis.brosnan.bl.zquez | 2014-12-16 13:47:20 +0100 (mar 16 de dic de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updated VERSION file.
+
+------------------------------------------------------------------------
+r180 | francis.brosnan.bl.zquez | 2014-12-16 13:45:22 +0100 (mar 16 de dic de 2014) | 5 líneas
+
+nopoll:
+* [fix] Added connection close just after receiving close frame to ensure
+  the connection close process is triggered as fast as possible..and also
+  to ensure it is triggered because some clients do not do it.
+
+------------------------------------------------------------------------
+r179 | francis.brosnan.bl.zquez | 2014-12-12 13:26:17 +0100 (vie 12 de dic de 2014) | 3 líneas
+
+nopoll:
+* [fix] More updates to clarify nopoll_conn_is_ok usage.
+
+------------------------------------------------------------------------
+r178 | francis.brosnan.bl.zquez | 2014-12-12 13:24:19 +0100 (vie 12 de dic de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updated nopoll_conn_is_ok documenation to better explain how to use it.
+
+------------------------------------------------------------------------
+r177 | francis.brosnan.bl.zquez | 2014-12-08 20:00:07 +0100 (lun 08 de dic de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updated nopoll version file..
+
+------------------------------------------------------------------------
+r176 | francis.brosnan.bl.zquez | 2014-12-08 19:59:36 +0100 (lun 08 de dic de 2014) | 4 líneas
+
+nopoll:
+* [fix] Added test_23 to check connection close notification for TLS connections.
+  Nothing wrong found. Everything working as expected.
+
+------------------------------------------------------------------------
+r175 | francis.brosnan.bl.zquez | 2014-12-08 18:05:26 +0100 (lun 08 de dic de 2014) | 5 líneas
+
+nopoll:
+* [fix] Added regression test to check connection close handler triggered
+  for regular connections and ssl ones. Nothing wrong found. Everything working. 
+  Reg test added: test_22
+
+------------------------------------------------------------------------
+r174 | francis.brosnan.bl.zquez | 2014-11-26 21:59:32 +0100 (mié 26 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] More api updates..
+
+------------------------------------------------------------------------
+r173 | francis.brosnan.bl.zquez | 2014-11-26 21:53:45 +0100 (mié 26 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] Fixed documentation compilation errors..
+
+------------------------------------------------------------------------
+r172 | francis.brosnan.bl.zquez | 2014-11-26 21:50:00 +0100 (mié 26 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updating VERSION file..
+
+------------------------------------------------------------------------
+r171 | francis.brosnan.bl.zquez | 2014-11-26 21:49:20 +0100 (mié 26 de nov de 2014) | 32 líneas
+
+nopoll:
+* [new] General API update to allow support to control ssl peer
+  verification process. This is now done by the API:
+
+  - nopoll_conn_opts_ssl_peer_verify
+
+  By default listeners do not verify peer certificate but clients
+  do.
+
+  (added reg test 21 to check this new support)
+
+* [new] Added general API update to support server side client 
+  certificate verification by using previous API and allowing to
+  also setup CA certificates and chain. API added:
+
+  - nopoll_conn_opts_set_ssl_certs
+
+  (added reg test 21 to check this new support)
+
+* [fix] General connection options API update to allow handling
+  references so it can be shared among threads and different 
+  connections. API added:
+
+  - nopoll_conn_opts_ref
+  - nopoll_conn_opts_unref
+
+* [fix] Fixed noPoll ssl module to use provided chain certificate
+  by the API caller (upps).
+
+* [fix] General engine update to allow listeners to be controlled
+  by connection options in a particular manner.
+
+------------------------------------------------------------------------
+r170 | francis.brosnan.bl.zquez | 2014-11-24 09:30:28 +0100 (lun 24 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] More updates on client peer SSL veritifcation..
+
+------------------------------------------------------------------------
+r169 | francis.brosnan.bl.zquez | 2014-11-19 19:23:03 +0100 (mié 19 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updated client regression test..
+
+------------------------------------------------------------------------
+r168 | francis.brosnan.bl.zquez | 2014-11-19 19:22:09 +0100 (mié 19 de nov de 2014) | 7 líneas
+
+nopoll:
+* [fix] Adding initial code to implement client side peer certificate
+  verification (test_21). Added API to get listener associated to the
+  client:
+
+  - nopoll_conn_get_listener.
+
+------------------------------------------------------------------------
+r167 | francis.brosnan.bl.zquez | 2014-11-13 16:24:29 +0100 (jue 13 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] Web updates..
+
+------------------------------------------------------------------------
+r166 | francis.brosnan.bl.zquez | 2014-11-11 20:11:42 +0100 (mar 11 de nov de 2014) | 13 líneas
+
+nopoll:
+* [new] Several API updates to allow userland to define a set of
+  functions that can be used to expand and customize the SSL/TLS
+  configuration by allowing to create the context that is going to
+  be used by the noPoll engine and also to allow running SSL post checks
+  with the OpenSSL objects created in those cases. API added:
+
+  - noPollSslContextCreator (handler)
+  - noPollSslPostCheck (handler)
+  - nopoll_ctx_set_ssl_context_creator
+  - nopoll_ctx_set_post_ssl_check
+
+
+------------------------------------------------------------------------
+r165 | francis.brosnan.bl.zquez | 2014-11-11 18:09:22 +0100 (mar 11 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] Closing release 0.2.7
+
+------------------------------------------------------------------------
+r164 | francis.brosnan.bl.zquez | 2014-11-11 15:56:06 +0100 (mar 11 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updating version..
+
+------------------------------------------------------------------------
+r163 | francis.brosnan.bl.zquez | 2014-11-11 15:54:39 +0100 (mar 11 de nov de 2014) | 5 líneas
+
+nopoll:
+* [fix] Applied patch by Emmanuel Puig to fix payload size
+  handling when using extended payload (len == 127). Also fixes
+  when to reads ops happens. Thanks for reporting Emmanuel, fine work!
+
+------------------------------------------------------------------------
+r162 | francis.brosnan.bl.zquez | 2014-11-10 14:08:33 +0100 (lun 10 de nov de 2014) | 4 líneas
+
+nopoll:
+* [fix] Fixed nopoll_conn_log_ssl to avoid buffer overrun when
+  openssl does not provide the format expected.
+
+------------------------------------------------------------------------
+r161 | francis.brosnan.bl.zquez | 2014-11-07 17:12:18 +0100 (vie 07 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] More debug to mime header parsing..
+
+------------------------------------------------------------------------
+r160 | francis.brosnan.bl.zquez | 2014-11-07 17:05:45 +0100 (vie 07 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] More debug to detect wrong mime handling..
+
+------------------------------------------------------------------------
+r159 | francis.brosnan.bl.zquez | 2014-11-07 16:54:32 +0100 (vie 07 de nov de 2014) | 4 líneas
+
+nopoll:
+* [fix] Some updates to better report mime parse errors.... and fixed a possible
+  memory leak at mime handling when error happens.
+
+------------------------------------------------------------------------
+r158 | francis.brosnan.bl.zquez | 2014-11-03 10:22:14 +0100 (lun 03 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] autoconf voodoo updates proposed by Felix Faisant
+
+------------------------------------------------------------------------
+r157 | francis.brosnan.bl.zquez | 2014-11-03 09:48:01 +0100 (lun 03 de nov de 2014) | 3 líneas
+
+nopoll:
+* [fix] Replaced INCLUDES by AM_CPPFLAGS inside Makefile.am files (proposed by Felix Faisant).
+
+------------------------------------------------------------------------
+r156 | francis.brosnan.bl.zquez | 2014-10-31 11:26:51 +0100 (vie 31 de oct de 2014) | 3 líneas
+
+nopoll:
+* [fix] Fixed automake option (--Werror -> -Werror). Reported by Félix.
+
+------------------------------------------------------------------------
+r155 | francis.brosnan.bl.zquez | 2014-10-09 21:00:16 +0200 (jue 09 de oct de 2014) | 3 líneas
+
+nopoll:
+* [fix] Added some additional debug to trace SSL problems..
+
+------------------------------------------------------------------------
+r154 | francis.brosnan.bl.zquez | 2014-10-09 20:25:24 +0200 (jue 09 de oct de 2014) | 3 líneas
+
+nopoll:
+* [fix] Several updates to avoid building TLSv1.1 when it is not present.
+
+------------------------------------------------------------------------
+r153 | francis.brosnan.bl.zquez | 2014-10-03 17:43:59 +0200 (vie 03 de oct de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updated VERSION file..
+
+------------------------------------------------------------------------
+r152 | francis.brosnan.bl.zquez | 2014-10-03 17:42:32 +0200 (vie 03 de oct de 2014) | 3 líneas
+
+nopoll:
+* [fix] More documentation updates..
+
+------------------------------------------------------------------------
+r151 | francis.brosnan.bl.zquez | 2014-10-03 17:39:18 +0200 (vie 03 de oct de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updating VERSION..
+
+------------------------------------------------------------------------
+r150 | francis.brosnan.bl.zquez | 2014-10-03 17:38:48 +0200 (vie 03 de oct de 2014) | 16 líneas
+
+nopoll:
+* [new] General update to make noPoll API to support SSL method
+  configurations so it can support now SSLv3, TLSv1 and TLSv1.1
+  or a combination of them. Added an initial API to allow configuring
+  connection options. API added:
+
+  - nopoll_conn_opts_new
+  - nopoll_conn_opts_set_ssl_protocol
+  - nopoll_conn_opts_set_reuse
+  - nopoll_conn_opts_free
+  - noPollSslProtocol (NOPOLL_METHOD_SSLV23, NOPOLL_METHOD_SSLV3, NOPOLL_METHOD_TLSV1, NOPOLL_METHOD_TLSV1_1)
+  - nopoll_listener_new_opts
+  - nopoll_listener_tls_new_opts
+
+  Added regression test (test 19) to check support added.
+
+------------------------------------------------------------------------
+r149 | francis.brosnan.bl.zquez | 2014-09-28 16:53:24 +0200 (dom 28 de sep de 2014) | 6 líneas
+
+nopoll:
+* [new] Added on ready handler support to notify at server side when the
+  connection is fully ready to start sending content. API added:
+
+  - nopoll_ctx_set_on_ready
+
+------------------------------------------------------------------------
+r148 | francis.brosnan.bl.zquez | 2014-09-26 16:37:32 +0200 (vie 26 de sep de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updating TODO file..
+
+------------------------------------------------------------------------
+r147 | francis.brosnan.bl.zquez | 2014-09-26 16:36:09 +0200 (vie 26 de sep de 2014) | 4 líneas
+
+nopoll:
+* [fix] Fixed regression test to ensure it is properly checked the
+  right reference while starting listeners..
+
+------------------------------------------------------------------------
+r146 | francis.brosnan.bl.zquez | 2014-09-05 14:42:15 +0200 (vie 05 de sep de 2014) | 4 líneas
+
+nopoll:
+* [fix] Updated nopoll_msg_get_payload to return a const unsigned char * 
+  instaed of a const noPollPTr which seems to be causing problems..
+
+------------------------------------------------------------------------
+r145 | francis.brosnan.bl.zquez | 2014-08-27 21:39:43 +0200 (mié 27 de ago de 2014) | 4 líneas
+
+nopoll:
+* [fix] More changes to use NOPOLL_INVALID_SOCKET instead of -1 to better support
+  win32 platform (as reported by Kevin Sucre).
+
+------------------------------------------------------------------------
+r144 | francis.brosnan.bl.zquez | 2014-08-27 19:39:17 +0200 (mié 27 de ago de 2014) | 3 líneas
+
+nopoll:
+* [fix] More version updates..
+
+------------------------------------------------------------------------
+r143 | francis.brosnan.bl.zquez | 2014-08-27 19:25:12 +0200 (mié 27 de ago de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updated VERSION..
+
+------------------------------------------------------------------------
+r142 | francis.brosnan.bl.zquez | 2014-08-27 19:24:46 +0200 (mié 27 de ago de 2014) | 6 líneas
+
+nopoll:
+* [fix] Several modifications to make the library to compilable directly using
+  c++. Updated socket error handling to work on win32 using vs compilers. Fixed
+  some memory error reporting by valgrind at reg tests (nothing wrong at noPoll's 
+  engine). Thanks Keving Sucre for reporting win32 issue.
+
+------------------------------------------------------------------------
+r141 | francis.brosnan.bl.zquez | 2014-08-12 15:27:06 +0200 (mar 12 de ago de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updating references..
+
+------------------------------------------------------------------------
+r140 | francis.brosnan.bl.zquez | 2014-05-25 11:46:21 +0200 (dom 25 de may de 2014) | 3 líneas
+
+nopoll:
+* [fix] Fixed typo error.
+
+------------------------------------------------------------------------
+r139 | francis.brosnan.bl.zquez | 2014-05-18 11:52:33 +0200 (dom 18 de may de 2014) | 3 líneas
+
+nopoll:
+* [fix] Web updates..
+
+------------------------------------------------------------------------
+r138 | francis.brosnan.bl.zquez | 2014-04-09 21:09:00 +0200 (mié 09 de abr de 2014) | 3 líneas
+
+nopoll:
+* [fix] Fixing some web references..
+
+------------------------------------------------------------------------
+r137 | francis.brosnan.bl.zquez | 2014-03-28 17:35:04 +0100 (vie 28 de mar de 2014) | 3 líneas
+
+nopoll:
+* [fix] Adding links to the web page.
+
+------------------------------------------------------------------------
+r136 | francis.brosnan.bl.zquez | 2014-03-13 19:07:00 +0100 (jue 13 de mar de 2014) | 3 líneas
+
+nopoll:
+* [fix] Updating web references..
+
+------------------------------------------------------------------------
+r135 | francis.brosnan.bl.zquez | 2014-03-11 19:46:11 +0100 (mar 11 de mar de 2014) | 4 líneas
+
+nopoll:
+* [fix] Added memset operation at nopoll_listener functions to avoid
+  valgrind warning.
+
+------------------------------------------------------------------------
+r134 | francis.brosnan.bl.zquez | 2014-02-11 17:02:45 +0100 (mar 11 de feb de 2014) | 2 líneas
+
+nopoll:
+* [fix] Added config.mk.example.
+------------------------------------------------------------------------
+r133 | francis.brosnan.bl.zquez | 2014-02-11 17:01:58 +0100 (mar 11 de feb de 2014) | 2 líneas
+
+nopoll:
+* [fix] Removing config.mk version from repo...
+------------------------------------------------------------------------
+r132 | francis.brosnan.bl.zquez | 2014-02-07 11:17:50 +0100 (vie 07 de feb de 2014) | 3 líneas
+
+nopoll:
+* [fix] Fixing win32/wni64 headers to be compatible with vortex..
+
+------------------------------------------------------------------------
+r131 | francis.brosnan.bl.zquez | 2014-01-17 18:42:59 +0100 (vie 17 de ene de 2014) | 3 líneas
+
+nopoll:
+* [fix] Closing release..
+
+------------------------------------------------------------------------
+r130 | francis.brosnan.bl.zquez | 2013-12-26 15:27:04 +0100 (jue 26 de dic de 2013) | 5 líneas
+
+nopoll:
+* [fix] Some modifications at nopoll_connect functions to make them to 
+  implement a I/O waiting mechanism when it is found EWOULD BLOCK and
+  EINPROGRESS. 
+
+------------------------------------------------------------------------
+r129 | francis.brosnan.bl.zquez | 2013-12-12 15:54:51 +0100 (jue 12 de dic de 2013) | 3 líneas
+
+nopoll:
+* [fix] Readme updates..
+
+------------------------------------------------------------------------
+r128 | francis.brosnan.bl.zquez | 2013-12-12 15:54:25 +0100 (jue 12 de dic de 2013) | 3 líneas
+
+nopoll:
+* [fix] Added support to create ubuntu precise pangolin packages..
+
+------------------------------------------------------------------------
+r127 | francis.brosnan.bl.zquez | 2013-10-28 12:05:52 +0100 (lun 28 de oct de 2013) | 7 líneas
+
+nopoll:
+* [fix] Applied Konstantin's patch to make on_msg handler to receive
+   on_msg_data reference from the ctx object when this is the one with
+  the handler defined. Reported and fixed by Konstantin Eremeev. 
+
+  
+
+------------------------------------------------------------------------
+r126 | francis.brosnan.bl.zquez | 2013-10-02 12:50:20 +0200 (mié 02 de oct de 2013) | 3 líneas
+
+nopoll:
+* [fix] Updated project documentation to allow reflecting version.
+
+------------------------------------------------------------------------
+r125 | francis.brosnan.bl.zquez | 2013-10-02 11:59:12 +0200 (mié 02 de oct de 2013) | 3 líneas
+
+nopoll:
+* [fix] Adding some clarifications into the noPoll doc.
+
+------------------------------------------------------------------------
+r124 | francis.brosnan.bl.zquez | 2013-09-30 17:22:22 +0200 (lun 30 de sep de 2013) | 5 líneas
+
+nopoll:
+* [fix] Fixed support to make nopoll_loop_wait to be callable any number
+  of times. Updated nopoll-regression-client.c (test_18) to reproduce bug
+  and check fix introduced. Bug reported by Mario Castelán Castro.
+
+------------------------------------------------------------------------
+r123 | francis.brosnan.bl.zquez | 2013-09-17 15:40:41 +0200 (mar 17 de sep de 2013) | 4 líneas
+
+nopoll:
+* [fix] Added references to wheezy packages. Added references into the
+  web to warn users from using these packages if they are using Core-Admin.
+
+------------------------------------------------------------------------
+r122 | francis.brosnan.bl.zquez | 2013-09-17 15:19:50 +0200 (mar 17 de sep de 2013) | 4 líneas
+
+nopoll:
+* [fix] Fixed an error about unused variables at nopoll.c and added
+  support to create packages for wheezy.
+
+------------------------------------------------------------------------
+r121 | francis.brosnan.bl.zquez | 2013-09-16 21:06:00 +0200 (lun 16 de sep de 2013) | 4 líneas
+
+nopoll:
+* [fix] Closing release 0.2.5.
+
+
+------------------------------------------------------------------------
+r120 | francis.brosnan.bl.zquez | 2013-09-16 20:17:37 +0200 (lun 16 de sep de 2013) | 3 líneas
+
+nopoll:
+* [fix] Some additional modifications to make the regression test to work..
+  ...on windows 32 xp..
+------------------------------------------------------------------------
+r119 | francis.brosnan.bl.zquez | 2013-09-16 19:48:22 +0200 (lun 16 de sep de 2013) | 7 líneas
+
+nopoll:
+* [fix] Added some additional nopoll_base64_encode cleanups to ensure
+  all resources are released under error. Checked call to flush internal BIO.
+* [fix] Fixed compilation warning at nopoll_conn.c (due to unused variable when
+   SHOW_DEBUG_LOG isn't defined).
+* [fix] Updated regression code to detect some cases where listener is not
+   able to send at a particular moment.
+------------------------------------------------------------------------
+r118 | francis.brosnan.bl.zquez | 2013-09-16 19:14:38 +0200 (lun 16 de sep de 2013) | 3 líneas
+
+nopoll:
+* [fix] updated version file.
+
+------------------------------------------------------------------------
+r117 | francis.brosnan.bl.zquez | 2013-09-16 12:07:03 +0200 (lun 16 de sep de 2013) | 5 líneas
+
+nopoll:
+* [fix] Fixed wrong reference to __file__ (was pointing to __LINE__)
+  inside nopoll_log.h (for win32 compilation).
+  Reported by fixed Serge.
+
+------------------------------------------------------------------------
+r116 | francis.brosnan.bl.zquez | 2013-09-06 12:44:39 +0200 (vie 06 de sep de 2013) | 3 líneas
+
+nopoll:
+* [fix] More c++ begin c decls fixings..
+
+------------------------------------------------------------------------
+r115 | francis.brosnan.bl.zquez | 2013-09-06 12:44:02 +0200 (vie 06 de sep de 2013) | 4 líneas
+
+nopoll:
+* [fix] Various modifications to make the project to be compilable
+  with c++ tools. Bug reported by Ali kim
+
+------------------------------------------------------------------------
+r114 | francis.brosnan.bl.zquez | 2013-08-01 19:04:30 +0200 (jue 01 de ago de 2013) | 4 líneas
+
+nopoll:
+* [fix] Renamed private parameter to private_key at nopoll_listener_set_certificate
+  so c++ can get get this compiled. Reported by Mike.
+
+------------------------------------------------------------------------
+r113 | francis.brosnan.bl.zquez | 2013-06-29 19:49:18 +0200 (sáb 29 de jun de 2013) | 3 líneas
+
+nopoll:
+* [fix] Added SSP gcc compiler options by default.
+
+------------------------------------------------------------------------
+r112 | francis.brosnan.bl.zquez | 2013-06-20 11:34:44 +0200 (jue 20 de jun de 2013) | 7 líneas
+
+nopoll:
+* [new] Added new API functions that allows sending binary frames
+  (op code 2). API added:
+
+  - nopoll_conn_send_binary
+  - nopoll_conn_send_binary_fragment
+
+------------------------------------------------------------------------
+r111 | francis.brosnan.bl.zquez | 2013-06-13 11:00:46 +0200 (jue 13 de jun de 2013) | 8 líneas
+
+nopoll:
+* [fix] Updated noPoll Connection API to include support to 
+  notify connection close. API added:
+  
+  - nopoll_conn_set_on_close
+  - noPollOnCloseHandler
+
+
+------------------------------------------------------------------------
+r110 | francis.brosnan.bl.zquez | 2013-06-13 08:58:35 +0200 (jue 13 de jun de 2013) | 5 líneas
+
+nopoll:
+* [fix] Several updates to add additional logging information. Updated
+  conn_id handling to move it into the context (instaed of a global
+  variable which tends to cause races in threaded applications).
+
+------------------------------------------------------------------------
+r109 | francis.brosnan.bl.zquez | 2013-06-07 12:57:38 +0200 (vie 07 de jun de 2013) | 3 líneas
+
+nopoll:
+* [fix] Some compile minor fixings..
+
+------------------------------------------------------------------------
+r108 | francis.brosnan.bl.zquez | 2013-06-07 12:55:50 +0200 (vie 07 de jun de 2013) | 2 líneas
+
+nopoll:
+* [fix] Several modifications to have noPoll working on win64. Nice!
+------------------------------------------------------------------------
+r107 | francis.brosnan.bl.zquez | 2013-06-06 16:12:50 +0200 (jue 06 de jun de 2013) | 3 líneas
+
+nopoll:
+* [fix] Web updates..
+
+------------------------------------------------------------------------
+r106 | francis.brosnan.bl.zquez | 2013-06-06 15:54:45 +0200 (jue 06 de jun de 2013) | 3 líneas
+
+nopoll:
+* [fix] Some fixings to make noPoll to be compilable under windows.
+
+------------------------------------------------------------------------
+r105 | francis.brosnan.bl.zquez | 2013-06-06 15:42:44 +0200 (jue 06 de jun de 2013) | 3 líneas
+
+nopoll:
+* [fix] Updating version..
+
+------------------------------------------------------------------------
+r104 | francis.brosnan.bl.zquez | 2013-06-06 14:26:43 +0200 (jue 06 de jun de 2013) | 2 líneas
+
+nopoll:
+* [fix] Adding missing Makefile.win
+------------------------------------------------------------------------
+r103 | francis.brosnan.bl.zquez | 2013-06-04 16:45:04 +0200 (mar 04 de jun de 2013) | 6 líneas
+
+nopoll:
+* [fix] Implemented several fixings to support reading in a non-blocking
+  manner incomplete frames (that aren't complete because the content didn't
+  arrive yet). Added test 17 to check incomplete frames after header, after
+  mask and/or after partial content. 
+
+------------------------------------------------------------------------
+r102 | francis.brosnan.bl.zquez | 2013-05-14 21:51:09 +0200 (mar 14 de may de 2013) | 3 líneas
+
+nopoll:
+* [fix] More web updates..
+
+------------------------------------------------------------------------
+r101 | francis.brosnan.bl.zquez | 2013-05-14 21:47:19 +0200 (mar 14 de may de 2013) | 3 líneas
+
+nopoll:
+* [fix] Web updates..
+
+------------------------------------------------------------------------
+r100 | francis.brosnan.bl.zquez | 2013-04-30 13:24:24 +0200 (mar 30 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Updated nopoll_conn to implement a micro pause after each failing
+  operation that needs retry to avoid calling to retry too fast.
+
+------------------------------------------------------------------------
+r99 | francis.brosnan.bl.zquez | 2013-04-27 12:12:46 +0200 (sáb 27 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] More web updates..
+
+------------------------------------------------------------------------
+r98 | francis.brosnan.bl.zquez | 2013-04-26 18:27:34 +0200 (vie 26 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Updated log handling to avoid showing logs when
+  ctx reference isn't defined.
+
+------------------------------------------------------------------------
+r97 | francis.brosnan.bl.zquez | 2013-04-26 17:54:08 +0200 (vie 26 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Including Makefile.win files into the source bundle.
+
+------------------------------------------------------------------------
+r96 | francis.brosnan.bl.zquez | 2013-04-26 17:37:11 +0200 (vie 26 de abr de 2013) | 2 líneas
+
+nopoll:
+* [fix] Adding more files to build noPoll win32 package.
+------------------------------------------------------------------------
+r95 | francis.brosnan.bl.zquez | 2013-04-26 17:06:52 +0200 (vie 26 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Added ico file.
+
+------------------------------------------------------------------------
+r94 | francis.brosnan.bl.zquez | 2013-04-26 16:44:08 +0200 (vie 26 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] More modifications to make it possible to compile
+  it on windows and linux at the same time.
+
+------------------------------------------------------------------------
+r93 | francis.brosnan.bl.zquez | 2013-04-26 16:37:00 +0200 (vie 26 de abr de 2013) | 3 líneas
+
+libnopoll:
+* [fix] Several modifications to make the library to work with
+  windows platform.
+------------------------------------------------------------------------
+r92 | francis.brosnan.bl.zquez | 2013-04-26 14:01:34 +0200 (vie 26 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Added some support files for win32 platform.
+
+------------------------------------------------------------------------
+r91 | francis.brosnan.bl.zquez | 2013-04-26 13:52:54 +0200 (vie 26 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Updated nopoll.c to include missing definition required
+  by win32 platform.
+
+------------------------------------------------------------------------
+r90 | francis.brosnan.bl.zquez | 2013-04-26 13:45:48 +0200 (vie 26 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Adding win32.h header
+
+------------------------------------------------------------------------
+r89 | francis.brosnan.bl.zquez | 2013-04-26 12:40:56 +0200 (vie 26 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Closing 0.2.3 release.
+
+------------------------------------------------------------------------
+r88 | francis.brosnan.bl.zquez | 2013-04-26 11:38:12 +0200 (vie 26 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] More document updates..
+
+------------------------------------------------------------------------
+r87 | francis.brosnan.bl.zquez | 2013-04-24 20:40:56 +0200 (mié 24 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Updated code to limit read and write retry operations at the SSL API.
+
+------------------------------------------------------------------------
+r86 | francis.brosnan.bl.zquez | 2013-04-24 11:39:16 +0200 (mié 24 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Fixed retry code at TLS read and TLS write.
+
+------------------------------------------------------------------------
+r85 | francis.brosnan.bl.zquez | 2013-04-23 18:25:56 +0200 (mar 23 de abr de 2013) | 6 líneas
+
+nopoll:
+* [fix] Updated nopoll_conn_flush_writes API to help the caller to
+  properly add bytes written after as a consequence of flushing to 
+  the bytes that were written before (handling those especiall cases where
+  negative values are received).
+
+------------------------------------------------------------------------
+r84 | francis.brosnan.bl.zquez | 2013-04-23 17:31:12 +0200 (mar 23 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Adding more documentation.
+
+------------------------------------------------------------------------
+r83 | francis.brosnan.bl.zquez | 2013-04-23 17:22:34 +0200 (mar 23 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Fixing log...
+
+------------------------------------------------------------------------
+r82 | francis.brosnan.bl.zquez | 2013-04-23 16:41:00 +0200 (mar 23 de abr de 2013) | 9 líneas
+
+nopoll:
+* [new] Added new function to implement write flushing easily. API added:
+
+  - nopoll_conn_flush_writes
+
+  Updated test-04-c regression test to force requirement of a write flush
+  to test this new function. Updated documentation to explain how to use
+  this.
+
+------------------------------------------------------------------------
+r81 | francis.brosnan.bl.zquez | 2013-04-23 15:50:07 +0200 (mar 23 de abr de 2013) | 19 líneas
+
+nopoll:
+* [new] Updated noPoll sending engine to be able to recover from a non-complete
+  send operation where part of the frame wasn't sent but without blocking the caller.
+  Now it is possible to check if the operation was completed and to call to complete
+  it before continue writting. API added:
+
+   - nopoll_conn_complete_pending_write
+   - nopoll_conn_pending_write_bytes
+
+  Added regression test (test-04-b and test-04-c) to check new support added.
+
+* [new] Updated noPoll Conn API to allow setting a on Message handler that only
+  works for the provided connection, overriding the one configured at context level.
+  API added:
+
+  - nopoll_conn_set_on_msg
+
+* [fix] Added documentation explaining how detect and retry write operations.
+
+------------------------------------------------------------------------
+r80 | francis.brosnan.bl.zquez | 2013-04-22 18:32:26 +0200 (lun 22 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Updated nopoll_conn documentation to explain how to handle errors reported 
+  by nopoll_conn_send_text and nopoll_conn_send_text_fragment.
+
+------------------------------------------------------------------------
+r79 | francis.brosnan.bl.zquez | 2013-04-22 18:27:04 +0200 (lun 22 de abr de 2013) | 5 líneas
+
+nopoll:
+* [fix] Fixed error log around logging write errors to the log.
+
+* [fix] Added more documentation to the noPoll manual.
+
+------------------------------------------------------------------------
+r78 | francis.brosnan.bl.zquez | 2013-04-22 16:31:00 +0200 (lun 22 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] More updates.
+
+------------------------------------------------------------------------
+r77 | francis.brosnan.bl.zquez | 2013-04-22 16:25:02 +0200 (lun 22 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Many updates into nopoll web.
+
+------------------------------------------------------------------------
+r76 | francis.brosnan.bl.zquez | 2013-04-21 10:44:53 +0200 (dom 21 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] more updates..
+
+------------------------------------------------------------------------
+r75 | francis.brosnan.bl.zquez | 2013-04-21 10:31:42 +0200 (dom 21 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] More updates into nopoll web..
+
+------------------------------------------------------------------------
+r74 | francis.brosnan.bl.zquez | 2013-04-16 23:06:57 +0200 (mar 16 de abr de 2013) | 5 líneas
+
+nopoll:
+* [fix] Several modifications to better handle frames that are received 
+  in parts (first the header and then content) without breaking and without
+  having to implement an active wait. Added regression test 15 and 16.
+
+------------------------------------------------------------------------
+r73 | francis.brosnan.bl.zquez | 2013-04-16 17:34:39 +0200 (mar 16 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Changed debug level when connection lost event received.
+
+------------------------------------------------------------------------
+r72 | francis.brosnan.bl.zquez | 2013-04-16 17:34:13 +0200 (mar 16 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Adding more debug information..
+
+------------------------------------------------------------------------
+r71 | francis.brosnan.bl.zquez | 2013-04-16 17:21:11 +0200 (mar 16 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Added additional depuration log while handling connection closes when
+  no bytes are received..
+
+------------------------------------------------------------------------
+r70 | francis.brosnan.bl.zquez | 2013-04-16 15:48:49 +0200 (mar 16 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Missing commits.
+
+------------------------------------------------------------------------
+r69 | francis.brosnan.bl.zquez | 2013-04-16 15:48:25 +0200 (mar 16 de abr de 2013) | 20 líneas
+
+nopoll:
+* [fix] Updated noPoll reading engine to be able to read uncomplete
+  frames with internal fragmentation (header indicates bigger content but
+  that's not received after a bit. Updated testConnect.js (regression test
+  to include a function that triggers the behaviour and checks the fix 
+  introduced). 
+
+* [new] Updated internal engine to allow flagging frames received to be 
+  fragments or not so the user can use this information to know if the 
+  frame received is a fragment of a bigger message. Added test_14 reg test
+  to send partially complete frames to get a complete one as a reply. 
+  API added during this tests:
+
+  - nopoll_msg_is_final
+  - nopoll_msg_is_fragment
+  - nopoll_msg_join
+  - nopoll_msg_opcode
+  - nopoll_conn_send_text_fragment
+
+
+------------------------------------------------------------------------
+r68 | francis.brosnan.bl.zquez | 2013-04-12 18:26:28 +0200 (vie 12 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Several updates into the nopoll conn module to report more information
+  when a TLS connection error is found..
+
+------------------------------------------------------------------------
+r67 | francis.brosnan.bl.zquez | 2013-04-11 12:31:54 +0200 (jue 11 de abr de 2013) | 7 líneas
+
+nopoll:
+* [new] Updated core library to allow setting a user level handler that
+  will receive all debug notifications produced by the library. API added:
+
+  - nopoll_log_set_handler
+  - noPollLogHandler (handler)
+
+------------------------------------------------------------------------
+r66 | francis.brosnan.bl.zquez | 2013-04-11 09:17:58 +0200 (jue 11 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Several fixings to ensure nopoll_log calls arguments are all
+  right.
+
+------------------------------------------------------------------------
+r65 | francis.brosnan.bl.zquez | 2013-04-10 20:22:18 +0200 (mié 10 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Limitted SSL_connect calls to avoid keep on iterating
+  for ever..
+
+------------------------------------------------------------------------
+r64 | francis.brosnan.bl.zquez | 2013-04-09 12:54:48 +0200 (mar 09 de abr de 2013) | 5 líneas
+
+nopoll:
+* [fix] Making nopoll_ctx_find_certificate to detect requests with serverName == NULL
+  to pickup the first certificate defined in that case, but after trying to find
+  a default certificate.
+
+------------------------------------------------------------------------
+r63 | francis.brosnan.bl.zquez | 2013-04-09 11:00:53 +0200 (mar 09 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Updated noPoll build process to make doxygen to be optional.
+
+------------------------------------------------------------------------
+r62 | francis.brosnan.bl.zquez | 2013-04-08 22:13:26 +0200 (lun 08 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Several fixings into thread safety handlers.
+
+------------------------------------------------------------------------
+r61 | francis.brosnan.bl.zquez | 2013-04-08 19:31:40 +0200 (lun 08 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Fixed wrong access during unref ctx log. Updated listener
+  log failure level.
+
+------------------------------------------------------------------------
+r60 | francis.brosnan.bl.zquez | 2013-04-08 14:42:56 +0200 (lun 08 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Several modifications to allow getting nopoll compiled in 
+  i686 platforms where the big frame size support isn't available.
+
+------------------------------------------------------------------------
+r59 | francis.brosnan.bl.zquez | 2013-04-08 13:50:08 +0200 (lun 08 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Updated detection to find support for 64bit platform so
+  some code can be disabled..
+
+------------------------------------------------------------------------
+r58 | francis.brosnan.bl.zquez | 2013-04-08 12:29:37 +0200 (lun 08 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Updating VERSION file..
+
+------------------------------------------------------------------------
+r57 | francis.brosnan.bl.zquez | 2013-04-08 12:23:34 +0200 (lun 08 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Updated lenny files.
+
+------------------------------------------------------------------------
+r56 | francis.brosnan.bl.zquez | 2013-04-08 12:22:40 +0200 (lun 08 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] More updates on debian packaging..
+
+------------------------------------------------------------------------
+r55 | francis.brosnan.bl.zquez | 2013-04-08 12:19:07 +0200 (lun 08 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Adding initial files to create debian packages..
+
+------------------------------------------------------------------------
+r54 | francis.brosnan.bl.zquez | 2013-04-07 23:24:05 +0200 (dom 07 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] More documentation updates..
+
+------------------------------------------------------------------------
+r53 | francis.brosnan.bl.zquez | 2013-04-07 23:19:48 +0200 (dom 07 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] More documentation updates..
+
+------------------------------------------------------------------------
+r52 | francis.brosnan.bl.zquez | 2013-04-07 23:13:26 +0200 (dom 07 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Updated noPoll message module to acquire and release an internal
+  mutex to make it thread safe.
+
+------------------------------------------------------------------------
+r51 | francis.brosnan.bl.zquez | 2013-04-07 23:06:15 +0200 (dom 07 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Updated nopoll ctx and nopoll conn modules to lock and 
+  release internal mutex while handling references.
+
+------------------------------------------------------------------------
+r50 | francis.brosnan.bl.zquez | 2013-04-07 22:45:39 +0200 (dom 07 de abr de 2013) | 15 líneas
+
+nopoll:
+* [new] Added initial infraestructure to support thread safety through
+  external handlers. API added:
+
+  - nopoll_mutex_create
+  - nopoll_mutex_lock
+  - nopoll_mutex_unlock
+  - nopoll_mutex_destroy
+  - nopoll_thread_handlers
+  - noPollMutexCreate (handler)
+  - noPollMutexDestroy (handler)
+  - noPollMutexLock (handler)
+  - noPollMutexUnlock (handler)
+
+
+------------------------------------------------------------------------
+r49 | francis.brosnan.bl.zquez | 2013-04-07 17:33:44 +0200 (dom 07 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Adding more documentation..
+
+------------------------------------------------------------------------
+r48 | francis.brosnan.bl.zquez | 2013-04-07 12:43:48 +0200 (dom 07 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] More updates into documentation..
+
+------------------------------------------------------------------------
+r47 | francis.brosnan.bl.zquez | 2013-04-07 12:31:13 +0200 (dom 07 de abr de 2013) | 3 líneas
+
+noPoll:
+* [fix] More updates for the project web page..
+
+------------------------------------------------------------------------
+r46 | francis.brosnan.bl.zquez | 2013-04-07 12:07:22 +0200 (dom 07 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] More updates to the web..
+
+------------------------------------------------------------------------
+r45 | francis.brosnan.bl.zquez | 2013-04-07 11:54:21 +0200 (dom 07 de abr de 2013) | 3 líneas
+
+nopoll:
+* [fix] Adding initial files for the webpage..
+
+------------------------------------------------------------------------
+r44 | francis.brosnan.bl.zquez | 2013-04-05 18:35:37 +0200 (vie 05 de abr de 2013) | 4 líneas
+
+nopoll:
+* [fix] Fixed additional bugs while accepting sockets when using
+  nopoll_conn_accept_complete.
+
+------------------------------------------------------------------------
+r43 | francis.brosnan.bl.zquez | 2013-04-05 16:02:18 +0200 (vie 05 de abr de 2013) | 11 líneas
+
+nopoll:
+* [new] Updated noPollCtx API to allow storing and quering about certificates
+  associated to serverName (Host: header). Added regression test to check all 
+  features added (test_13). Several updates to make the engine to check this
+  new store for certificates used by incoming TLS connections. API added:
+
+  - nopoll_ctx_set_certificate
+  - nopoll_ctx_find_certificate
+
+
+
+------------------------------------------------------------------------
+r42 | francis.brosnan.bl.zquez | 2013-04-05 09:17:23 +0200 (vie 05 de abr de 2013) | 8 líneas
+
+nopoll:
+* [fix] Updated nopoll conn API to split the accept websocket connection
+  function into two parts where there is a function that accepts the socket
+  and another function that completes the configuration process. This will
+  help other libraries to implement port sharing detection. API added:
+
+   - nopoll_conn_accept_complete
+
+------------------------------------------------------------------------
+r41 | francis.brosnan.bl.zquez | 2013-04-02 16:09:47 +0200 (mar 02 de abr de 2013) | 5 líneas
+
+nopoll:
+* [fix] Updated the library to restore __nopoll_tls_was_init when
+  called library cleanup so the library can be later restarted again
+  on the same process.
+
+------------------------------------------------------------------------
+r40 | francis.brosnan.bl.zquez | 2013-03-31 20:08:46 +0200 (dom 31 de mar de 2013) | 10 líneas
+
+nopoll:
+* [fix] Updated nopoll_conn_close to avoid releasing more references
+  when a connection wasn't been watched by noPollCtx. 
+
+* [fix] Updated nopoll conn module to flag the connection as using
+  tls when enabled at server side.
+
+* [fix] Updated listener code to detect and warn when certificate and
+  key files aren't found on the path provided by the user.
+
+------------------------------------------------------------------------
+r39 | francis.brosnan.bl.zquez | 2013-03-19 10:46:55 +0100 (mar 19 de mar de 2013) | 4 líneas
+
+nopoll:
+* [fix] Fixed nopoll_conn_is_tls_on. It wasn't working. Fixed regression test
+  to properly check this. Updated SSL error handling to better show whats happening.
+
+------------------------------------------------------------------------
+r38 | francis.brosnan.bl.zquez | 2013-03-19 09:18:33 +0100 (mar 19 de mar de 2013) | 3 líneas
+
+nopoll:
+* [fix] Fixed documentation problem..
+
+------------------------------------------------------------------------
+r37 | francis.brosnan.bl.zquez | 2013-03-18 23:14:19 +0100 (lun 18 de mar de 2013) | 5 líneas
+
+nopoll:
+* [new] Added support to deny or accept connections based on the origin header.
+
+* [fix] Several modifications to fix the streaming API. 
+
+------------------------------------------------------------------------
+r36 | francis.brosnan.bl.zquez | 2013-03-03 23:25:32 +0100 (dom 03 de mar de 2013) | 5 líneas
+
+nopoll:
+* [fix] Adding missing certificates...and adding new regression test
+  (for the C client): test 08 to check failure while connecting to 
+  TLS port expecting normal connection.
+
+------------------------------------------------------------------------
+r35 | francis.brosnan.bl.zquez | 2013-03-03 21:41:51 +0100 (dom 03 de mar de 2013) | 3 líneas
+
+nopoll:
+* [fix] Minor reg test update..
+
+------------------------------------------------------------------------
+r34 | francis.brosnan.bl.zquez | 2013-03-03 13:49:27 +0100 (dom 03 de mar de 2013) | 3 líneas
+
+nopoll:
+* [fix] More fixings to ensure the library do not leak.
+
+------------------------------------------------------------------------
+r33 | francis.brosnan.bl.zquez | 2013-03-03 13:37:38 +0100 (dom 03 de mar de 2013) | 12 líneas
+
+nopoll:
+* [fix] Major stable update including full working support for TLS
+  websockets (test_06 and test_07). Also added web reg test (test_04 and
+  test_05) working properly in chrome. Nice! API added:
+
+   - nopoll_listener_set_certificate
+
+* [fix] Updated internal code for reading bytes from the wire to have support
+  to read partial pieces that are satisfied on next calls together with data
+  found on that operations. Fixed support to properly detect connection close.
+  
+
+------------------------------------------------------------------------
+r32 | francis.brosnan.bl.zquez | 2013-03-03 02:01:54 +0100 (dom 03 de mar de 2013) | 4 líneas
+
+nopoll:
+* [fix] Added regression test and initial code to support TLS. Still
+  more work required.
+
+------------------------------------------------------------------------
+r31 | francis.brosnan.bl.zquez | 2013-03-02 20:09:59 +0100 (sáb 02 de mar de 2013) | 19 líneas
+
+nopoll:
+* [new] Added initial files to implement a client regression test 
+  on the browsers (using dojo, javascript, etc). Added initial tests
+  and fixings some issues around masking content over 125 bytes. BIG!
+
+* [new] Added new regression test (test_04) to C reg test to check UTF-8
+  content and how it applies to masking. Applied several cleanups to the 
+  code to to ensure both server and client (C) do not leak any memory.
+  Updated API to new function functions:
+
+   - nopoll_conn_ref_count
+   - nopoll_ctx_ref_count
+   - nopoll_loop_stop
+
+* [fix] Updated nopoll_conn_send_text to allow sending content without
+  telling the length, making the function to guess it (only for c-like
+  strings).
+
+
+------------------------------------------------------------------------
+r30 | francis.brosnan.bl.zquez | 2013-03-02 13:05:16 +0100 (sáb 02 de mar de 2013) | 3 líneas
+
+nopoll:
+* [fix] Adding initial code for a regression test run on a browser..
+
+------------------------------------------------------------------------
+r29 | francis.brosnan.bl.zquez | 2013-03-02 12:34:44 +0100 (sáb 02 de mar de 2013) | 3 líneas
+
+nopoll:
+* [fix] Adding icons..
+
+------------------------------------------------------------------------
+r28 | francis.brosnan.bl.zquez | 2013-02-26 21:16:05 +0100 (mar 26 de feb de 2013) | 4 líneas
+
+nopoll:
+* [fix] Fixed pending buffer consumption while using streaming API. Added
+  more regression tests to check it (test-04-a, test-04-b, test-04-c).
+
+------------------------------------------------------------------------
+r27 | francis.brosnan.bl.zquez | 2013-02-26 20:25:47 +0100 (mar 26 de feb de 2013) | 3 líneas
+
+nopoll:
+* [fix] Adding more notes to test..
+
+------------------------------------------------------------------------
+r26 | francis.brosnan.bl.zquez | 2013-02-26 20:24:53 +0100 (mar 26 de feb de 2013) | 3 líneas
+
+nopoll:
+* [fix] Added additional note..
+
+------------------------------------------------------------------------
+r25 | francis.brosnan.bl.zquez | 2013-02-26 20:24:21 +0100 (mar 26 de feb de 2013) | 5 líneas
+
+nopoll:
+* [fix] More fixings. Now clients and servers are able to receive content 
+  with frame header size in the range of 127 - 65536. Updated regression 
+  test (test_04) which now passes.
+
+------------------------------------------------------------------------
+r24 | francis.brosnan.bl.zquez | 2013-02-25 00:00:30 +0100 (lun 25 de feb de 2013) | 6 líneas
+
+nopoll:
+* [fix] Added additional code to support sending and receiving
+  frames bigger than 65535 <. Added new regression test (test-04)
+  but still not working. Added sigpipe handle to avoid having the server
+  closed because connection close...added RFC to the base documentation.
+
+------------------------------------------------------------------------
+r23 | francis.brosnan.bl.zquez | 2013-02-24 17:54:37 +0100 (dom 24 de feb de 2013) | 3 líneas
+
+nopoll:
+* [fix] More notes about elements to be tested..
+
+------------------------------------------------------------------------
+r22 | francis.brosnan.bl.zquez | 2013-02-24 17:54:02 +0100 (dom 24 de feb de 2013) | 7 líneas
+
+nopoll:
+* [new] Updated noPoll Connection API to include a function to read content
+  using an streaming way API (so you don't have to bother with noPollMsg objects).
+  Added regression test to check initial function (test_03). API added:
+
+   - nopoll_conn_read
+
+------------------------------------------------------------------------
+r21 | francis.brosnan.bl.zquez | 2013-02-04 01:11:24 +0100 (lun 04 de feb de 2013) | 6 líneas
+
+nopoll:
+* [fix] More fixings. Now we are able to read and write ws frames without
+  a browser. Added a new regression test to check masking support. Fixed
+  version notified by the nopoll client to be 13 (the RFC one). Fixed
+  octet reading function to detect connection close.
+
+------------------------------------------------------------------------
+r20 | francis.brosnan.bl.zquez | 2013-02-03 17:25:12 +0100 (dom 03 de feb de 2013) | 4 líneas
+
+nopoll:
+* [fix] Several fixings to make client connection work and to pass again
+  first two tests.
+
+------------------------------------------------------------------------
+r19 | francis.brosnan.bl.zquez | 2013-02-03 15:05:02 +0100 (dom 03 de feb de 2013) | 4 líneas
+
+nopoll:
+* [fix] Updated regression client to include additional notes about
+  what we have to test to progress with the library.
+
+------------------------------------------------------------------------
+r18 | francis.brosnan.bl.zquez | 2013-02-03 14:58:10 +0100 (dom 03 de feb de 2013) | 9 líneas
+
+nopoll:
+* [fix] Updated listener engine to handle incoming ping and pong requests
+  so the engine automatically react to these messages without bothering
+  upper levels. API added:
+
+   - nopoll_send_ping
+   - nopoll_send_pong
+
+
+------------------------------------------------------------------------
+r17 | francis.brosnan.bl.zquez | 2013-02-03 14:37:20 +0100 (dom 03 de feb de 2013) | 4 líneas
+
+nopoll:
+* [fix] Nice, now nopoll core library is able to send messages from
+  the server to the browser.
+
+------------------------------------------------------------------------
+r16 | francis.brosnan.bl.zquez | 2013-02-03 12:32:35 +0100 (dom 03 de feb de 2013) | 3 líneas
+
+nopoll:
+* [fix] Updated libnopoll.def
+
+------------------------------------------------------------------------
+r15 | francis.brosnan.bl.zquez | 2013-02-02 21:43:46 +0100 (sáb 02 de feb de 2013) | 4 líneas
+
+nopoll:
+* [fix] More updates, now we are properly decoding messages received
+  from google chrome..
+
+------------------------------------------------------------------------
+r14 | francis.brosnan.bl.zquez | 2013-02-02 19:30:01 +0100 (sáb 02 de feb de 2013) | 4 líneas
+
+nopoll:
+* [fix] More changes. Now we are able to accept connections and content
+  from google chrome web socket version 13.
+
+------------------------------------------------------------------------
+r13 | francis.brosnan.bl.zquez | 2013-02-02 16:40:07 +0100 (sáb 02 de feb de 2013) | 3 líneas
+
+nopoll:
+* [fix] Minor fixings to get project compiled.
+
+------------------------------------------------------------------------
+r12 | francis.brosnan.bl.zquez | 2011-06-22 08:05:07 +0200 (mié 22 de jun de 2011) | 5 líneas
+
+nopoll:
+* [fix] Added initial send API. Still not working. API added:
+ 
+  - nopoll_conn_send_text.
+
+------------------------------------------------------------------------
+r11 | francis.brosnan.bl.zquez | 2011-06-21 08:49:32 +0200 (mar 21 de jun de 2011) | 3 líneas
+
+nopoll:
+* [fix] Working on Websocket framing. Still nothing to show..
+
+------------------------------------------------------------------------
+r10 | francis.brosnan.bl.zquez | 2011-06-20 20:22:18 +0200 (lun 20 de jun de 2011) | 14 líneas
+
+nopoll:
+* [fix] Removed specific gcc options and moved to compiler_options variable
+  which is created if it is detected gcc.
+
+* [new] Added support for base64 based on openssl. Added regression tests to
+  check it. API added:
+
+  - nopoll_base64_decode
+  - nopoll_base64_encode
+
+* [fix] Finished initial working support to produce a random Sec-Websocket-Key
+  value and to check the produced Sec-Websocket-Accept value from listener.
+  Regression tests keep working..Nice!
+
+------------------------------------------------------------------------
+r9 | francis.brosnan.bl.zquez | 2011-06-19 23:02:44 +0200 (dom 19 de jun de 2011) | 6 líneas
+
+nopoll:
+* [fix] Finished first working regression test to connect and disconnect
+  based on draft-09 protocol.
+
+* [fix] Several updates to rename type nopollPtr to noPollPtr.
+
+------------------------------------------------------------------------
+r8 | francis.brosnan.bl.zquez | 2011-06-17 18:04:23 +0200 (vie 17 de jun de 2011) | 10 líneas
+
+nopoll:
+* [fix] Finished initial working support to implement I/O wait
+  (nopoll_loop_wait).
+
+* [fix] Updated regression-client to include additional checkings
+  about the connections registered..
+
+* [fix] Lot of API added and general changes. Working on handling 
+  listener handshake..
+
+------------------------------------------------------------------------
+r7 | francis.brosnan.bl.zquez | 2011-06-16 16:43:53 +0200 (jue 16 de jun de 2011) | 3 líneas
+
+nopoll:
+* [fix] Adding missing TODO file..
+
+------------------------------------------------------------------------
+r6 | francis.brosnan.bl.zquez | 2011-06-16 16:43:25 +0200 (jue 16 de jun de 2011) | 23 líneas
+
+nopoll:
+* [new] Added initial implemenation to handled IO waiting
+  mechanism available (detected). API added:
+
+  - nopoll_loop_wait
+  - nopoll_io_get_engine
+  
+* [new] Updated noPoll context API to include support for
+  reference counting and connection registering (which will
+  allow easy handling). API added:
+
+  - nopoll_ctx_ref
+  - nopoll_ctx_unref
+  - nopoll_ctx_register_conn +
+  - nopoll_ctx_unregister_conn
+
+* [new] Added initial code to register an action handler that
+  is global to the context and called to handle connection 
+  status change notification.
+  
+  - nopoll_ctx_set_action_handler
+  
+
+------------------------------------------------------------------------
+r5 | francis.brosnan.bl.zquez | 2011-06-16 08:39:47 +0200 (jue 16 de jun de 2011) | 18 líneas
+
+nopoll:
+* [new] Updating nopoll connection API to include a function to
+  get connection role, connection host, connection port and to
+  close a connection. API added:
+
+   - nopoll_conn_close
+   - nopoll_conn_role
+   - nopoll_conn_host
+   - nopoll_conn_port
+
+* [new] Updated nopoll ctx API to include a function to release
+  the context. API added:
+
+   - nopoll_ctx_free
+
+* [fix] Adding initial code to implement nopoll regression tests
+  (nopoll-regression-client.c and nopoll-regression-listener.c).
+
+------------------------------------------------------------------------
+r4 | francis.brosnan.bl.zquez | 2011-06-15 20:55:08 +0200 (mié 15 de jun de 2011) | 3 líneas
+
+nopoll:
+* [fix] Adding initial listener implementation..
+
+------------------------------------------------------------------------
+r3 | francis.brosnan.bl.zquez | 2011-06-15 20:54:47 +0200 (mié 15 de jun de 2011) | 3 líneas
+
+nopoll:
+* [fix] More updates, still nothing to show..
+
+------------------------------------------------------------------------
+r2 | francis.brosnan.bl.zquez | 2011-06-15 18:30:11 +0200 (mié 15 de jun de 2011) | 3 líneas
+
+nopoll:
+* [fix] More files required to startup..
+
+------------------------------------------------------------------------
+r1 | francis.brosnan.bl.zquez | 2011-06-15 11:26:17 +0200 (mié 15 de jun de 2011) | 4 líneas
+
+nopoll:
+* [fix] Adding initial files...starting walking, tasting each
+  single step ;-)
+
+------------------------------------------------------------------------

@@ -1355,7 +1355,7 @@ int           nopoll_conn_get_id (noPollConn * conn)
  */
 const char * nopoll_conn_get_requested_url (noPollConn * conn)
 {
-        if(!conn)
+        if (!conn)
             return NULL;
         return (conn->get_url == NULL ? "/" : conn->get_url);
 }
