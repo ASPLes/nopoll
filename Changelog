@@ -1,4 +1,12 @@
 ------------------------------------------------------------------------
+r289 | francis.brosnan.bl.zquez | 2016-07-03 12:24:26 +0200 (dom 03 de jul de 2016) | 5 líneas
+
+nopoll:
+* [fix] Updated default libnopoll.def to include missing declaration. 
+* [fix] Added default Changelog and NEWS file to avoid annoying error
+  by autoconf (reported by Félix Faisant).
+
+------------------------------------------------------------------------
 r288 | francis.brosnan.bl.zquez | 2016-06-15 19:21:37 +0200 (mié 15 de jun de 2016) | 3 líneas
 
 Merge pull request #3 from cbucht200/master

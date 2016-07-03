@@ -18,6 +18,9 @@ print "INFO: Updated vesion to: %s" % version
 
 open ("VERSION", "w").write ("%s\n" % version)
 
+# also update Changelog
+command.run ("svn log > Changelog")
+
 
 
 
