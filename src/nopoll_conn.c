@@ -206,18 +206,22 @@ nopoll_bool                 nopoll_conn_set_sock_tcp_nodelay   (NOPOLL_SOCKET so
 nopoll_bool                 nopoll_conn_set_bind_interface (NOPOLL_SOCKET socket,
 							    noPollConnOpts  * options)
 {
-	/* local variables */
-	int result = 0;
+	/* no local variable here please */
 
 	if ((NULL != options) && (NULL != options->_interface)) {
 #if defined(NOPOLL_OS_WIN32) || defined(NOPOLL_OS_WIN64)
 		/* Windows still not supported: send us a patch! */ 
 		return nopoll_false;
+#elif defined(__APPLE__)
+		/* Mac/OSX: that supports  */
+		/* bind to the interface */
+		return setsockopt (socket, SOL_SOCKET, IP_RECVIF,
+				   options->_interface, strlen(options->_interface) ) == 0;
 #else
-		result = setsockopt(socket, SOL_SOCKET, SO_BINDTODEVICE,
-				    options->_interface, strlen(options->_interface)+1);
-		/* check and report result */
-		return result == 0;
+		/* Linux/Unix case: that supports SO_BINDTODEVICE */
+		/* bind to the interface */
+		return setsockopt (socket, SOL_SOCKET, SO_BINDTODEVICE,
+				   options->_interface, strlen (options->_interface) ) == 0;
 #endif
 	}
 
