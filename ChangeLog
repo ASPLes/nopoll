@@ -1,4 +1,17 @@
 ------------------------------------------------------------------------
+r291 | francis.brosnan.bl.zquez | 2016-07-03 12:37:47 +0200 (dom 03 de jul de 2016) | 4 líneas
+
+nopoll:
+* [fix] Updated nopoll_conn_set_bind_interface to support Mac/OSX case
+  (IP_RECVIF). Fixed wrong if name indication (was adding +1)
+
+------------------------------------------------------------------------
+r290 | francis.brosnan.bl.zquez | 2016-07-03 12:25:40 +0200 (dom 03 de jul de 2016) | 3 líneas
+
+nopoll:
+* [fix] Updated get-version.py script to also update ChangeLog file
+
+------------------------------------------------------------------------
 r289 | francis.brosnan.bl.zquez | 2016-07-03 12:24:26 +0200 (dom 03 de jul de 2016) | 5 líneas
 
 nopoll:
