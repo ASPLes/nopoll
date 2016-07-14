@@ -619,7 +619,7 @@ nopoll_bool test_04b (void) {
 		iterator ++;
 	}  /* end while */
 
-	if (errno != NOPOLL_EWOULDBLOCK && errno != EINPROGRESS) {
+	if (errno != NOPOLL_EWOULDBLOCK && errno != EINPROGRESS && errno != ETIMEDOUT) {
 		printf ("ERROR: expected to find errno=%d, but found errno=%d : %s\n",
 			(int)NOPOLL_EWOULDBLOCK, (int)errno, strerror (errno));
 		return nopoll_false;
@@ -770,8 +770,9 @@ nopoll_bool test_04c (void) {
 			bytes_written = nopoll_conn_flush_writes (conn, 10000000, bytes_written);
 
 			if (bytes_written != length) {
-				printf ("ERROR: Failed to send bytes read from file %d, bytes written were=%d (errno=%d, pending bytes: %d, total bytes: %d)..\n",
-					length, bytes_written, errno, nopoll_conn_pending_write_bytes (conn), total_bytes);
+				printf ("ERROR: Failed to flush bytes read from file %d, bytes written were=%d (errno=%d : %s, pending bytes: %d, total bytes: %d)..\n",
+					length, bytes_written, errno, strerror (errno), nopoll_conn_pending_write_bytes (conn), total_bytes);
+				
 				return nopoll_false;
 			} /* end if */
 		} /* end if */
