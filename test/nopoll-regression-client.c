@@ -2643,7 +2643,8 @@ int main (int argc, char ** argv)
 	printf ("**     >> libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./nopoll-regression-client\n**\n");
 	printf ("**\n");
 	printf ("** Report bugs to:\n**\n");
-	printf ("**     <info@aspl.es> noPoll mailing list\n**\n");
+	printf ("**     <nopoll@lists.aspl.es> noPoll mailing list\n**\n");
+	printf ("**     <info@aspl.es> ASPL's contact \n**\n");
 
 	iterator = 1;
 	while (iterator < argc) {
