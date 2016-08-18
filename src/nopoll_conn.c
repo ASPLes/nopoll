@@ -2214,20 +2214,19 @@ nopoll_bool nopoll_conn_check_mime_header_repeated (noPollConn   * conn,
 
 char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_key)
 {
-	const char * static_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";	
-	char       * accept_key;	
-	int          accept_key_size;
-	int          key_length;
+	const char    * static_guid = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";	
+	char          * accept_key;	
+	int             accept_key_size;
+	int             key_length;
+	unsigned char   buffer[EVP_MAX_MD_SIZE];
+	EVP_MD_CTX      mdctx;
+	const EVP_MD  * md = NULL;
+	unsigned int    md_len = EVP_MAX_MD_SIZE;
 
 	if (websocket_key == NULL)
 		return NULL;
 
 	key_length  = strlen (websocket_key);
-
-	unsigned char   buffer[EVP_MAX_MD_SIZE];
-	EVP_MD_CTX      mdctx;
-	const EVP_MD  * md = NULL;
-	unsigned int    md_len = EVP_MAX_MD_SIZE;
 
 	accept_key_size = key_length + 36 + 1;
 	accept_key      = nopoll_new (char, accept_key_size);
@@ -3167,8 +3166,8 @@ read_payload:
 				    conn->id, msg->payload_size, nopoll_get_16bit (msg->payload), msg->payload + 2);
 
 			/* get values so the user can get them */
-			conn->peer_close_status = nopoll_get_16bit (msg->payload);
-			conn->peer_close_reason = nopoll_strdup (msg->payload + 2);
+			conn->peer_close_status = nopoll_get_16bit ((const char *) msg->payload);
+			conn->peer_close_reason = nopoll_strdup ((const char *) msg->payload + 2);
 		} /* end if */
 
 		/* release message, close the connection and return
