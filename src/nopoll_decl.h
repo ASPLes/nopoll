@@ -156,6 +156,12 @@
 
 #if defined(NOPOLL_OS_WIN32)
 
+/** let's have support for R_OK if it is not defined **/
+#  ifndef R_OK
+#   define R_OK        4
+#  endif
+
+
 /* additional includes for the windows platform */
 
 /* _WIN32_WINNT note: If the application including the header defines
@@ -195,7 +201,7 @@
 /* no link support windows */
 #define S_ISLNK(m) (0)
 
-#endif /* end defined(AXL_OS_WINDOWS) */
+#endif /* end defined(NOPOLL_OS_WINDOWS) */
 
 #if defined(NOPOLL_OS_UNIX)
 #include <sys/types.h>
