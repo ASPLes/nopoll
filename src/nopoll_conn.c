@@ -212,7 +212,7 @@ nopoll_bool                 nopoll_conn_set_bind_interface (NOPOLL_SOCKET socket
 #if defined(NOPOLL_OS_WIN32) || defined(NOPOLL_OS_WIN64)
 		/* Windows still not supported: send us a patch! */ 
 		return nopoll_false;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__FreeBSD__)
 		/* Mac/OSX: that supports  */
 		/* bind to the interface */
 		return setsockopt (socket, SOL_SOCKET, IP_RECVIF,

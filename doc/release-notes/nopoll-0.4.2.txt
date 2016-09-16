@@ -1,0 +1,144 @@
+                  --== noPoll toolkit ==--
+                      Devil's Haircut
+                           0.4.2
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+   - Improved SSL/TLS detection, enabling/disabling code accordingly
+
+   - Bug fixes 
+
+Thanks to
+~~~~~~~~~
+
+  - Ondrej Zaruba (reported nopoll_loop_wait thread dead lock when
+    combined with nopoll_thread_handlers)
+
+  - Chris Severance (reported compilation failures when SSLv3 is not
+    avaiable).
+
+  - github.com/chris.buchter (provided get_url API patch).
+
+  - Félix Faisant (reported missing files and compilation errors)
+
+  - Peter Lecuyer (reported missing R_OK symbol under windows+msvc and
+    wrong variable ordering)
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Several updates to make nopoll compilation process to detect
+  all SSL/TLS methods available and update headers so noPoll internal
+  code can react but also API consumers can also take advantage of
+  these indications. Added support for TLS1.2 and for TlS flexible
+  configuration (though added security considerations to it). Updated
+  regression test test_19 to check TLSv1.2 client and server support.
+
+
+* [fix] Updated nopoll regression test code to use threading locking
+  code by default to ensure that all code tested is under threading
+  support (which at the end covers non threaded code).
+
+* [fix] Several to fix dead locks and races when using non-recursive
+  mutexes through nopoll_thread_handlers. Fixed dead lock when
+  connection close received while using nopoll_loop_wait API (reported
+  by Ondrej Zaruba). Updated nopoll_conn_ref/unref to fix possible
+  races. Added reg test (test_36) to reproduce and check fix
+  introduced.
+
+* [fix] added support to detect SSLv3 methods and remove support for
+  it in the case they are not present. Added missing
+  pthread_mutexattr_init/destroy inside regression test.
+
+* [fix] Added additional code to disable NOPOLL_METHOD_SSLV3 when it
+  is not available (reported by Chris Severance)
+
+* [fix] Several fixings applied to allow compiling noPoll on Windows
+  (Windows 7 64 tested).  Renamed parameters using "interface"
+  keyword. Removed conditionally binding interface code so it is not
+  available on windows (until we have support for it). Added header
+  definitions for nopoll_config_win32/win64.h to include headers for
+  SSL/TLS includes.  Fixed compilation errors in regression tests.
+  
+* [fix] Updated nopoll.h header to set a default FD_SETSIZE to 4096 so
+  users can have a bigger default values for precompiled binaries.
+  Added documentation to explain how to change/update this value.  The
+  value is only applied when including project do not define it before
+  hand.
+
+* [new] Added the ability to retrieve the get_url of a nopoll_conn.
+
+* [new] Fixed get_url change to check for NULL conn.
+
+* [fix] Updated default libnopoll.def to include missing declaration.
+
+* [fix] Added default Changelog and NEWS file to avoid annoying error
+  by autoconf (reported by Félix Faisant).
+
+* [fix] Updated nopoll_conn_set_bind_interface to support Mac/OSX case
+  (IP_RECVIF). Fixed wrong if name indication (was adding +1)
+
+* [fix] Updated nopoll-regression-client.c to also detect errno
+  ETIMEDOUT in test-04b (fixes Mac/os regression test).
+
+* [fix] Minor contact update inside regression tests.
+
+* [fix] Added possible missing R_OK definition to nopoll headers
+  when compiling under windows+msvc (reported by Peter Lecuyer).
+
+* [fix] Reorganized variables at nopoll_conn_produce_accept_key to
+  have them first and then the rest of the code (reported by Peter
+  Lecuyer).
+
+* [fix] Updated nopoll_conn_get_msg to have some castings to avoid 
+  MSVC compilation problems (reported by Peter Lecuyer).
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+24th Aug 2016, Madrid (Spain)
+
