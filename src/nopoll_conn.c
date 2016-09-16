@@ -299,7 +299,11 @@ NOPOLL_SOCKET nopoll_conn_sock_connect_opts (noPollCtx       * ctx,
 
             nopoll_conn_set_sock_tcp_nodelay (session, nopoll_true);
 
-            nopoll_conn_set_bind_interface(session, options);
+            if (nopoll_true != nopoll_conn_set_bind_interface(session, options)) {
+                nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to bind to specified interface");
+                nopoll_close_socket (session);
+                return NOPOLL_INVALID_SOCKET;
+            }
 
                 /* set non blocking status */
             nopoll_conn_set_sock_block (session, nopoll_false);

@@ -204,7 +204,7 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 			printf ("(\e[1;32mdebug\e[0m) ");
 			break;
 		case NOPOLL_LEVEL_INFO:
-			printf ("(info)");
+			printf ("(\e[1;32minfo\e[0m) ");
 			break;
 		case NOPOLL_LEVEL_WARNING:
 			printf ("(\e[1;33mwarning\e[0m) ");
