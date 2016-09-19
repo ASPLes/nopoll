@@ -249,58 +249,92 @@ NOPOLL_SOCKET nopoll_conn_sock_connect_opts (noPollCtx       * ctx,
 					     const char      * port,
 					     noPollConnOpts  * options)
 {
-	struct hostent     * hostent;
-	struct sockaddr_in   saddr;
-	NOPOLL_SOCKET        session;
+	NOPOLL_SOCKET        session = NOPOLL_INVALID_SOCKET;
+	int retVal;
+	char addrstr[100];
+	void *ptr = NULL;
+	struct addrinfo *result, *rp;
+	struct addrinfo hints = {};
+	memset(&hints,0,sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = 0;
+	hints.ai_flags = AI_ADDRCONFIG;
+	/* resolving host name */
+	retVal = getaddrinfo(host, port, &hints, &result);
+	if (retVal != 0){
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to resolve host name %s, error: %s", host, gai_strerror(retVal));
+		return session;
+	} 
 
-	/* resolve hosting name */
-	hostent = gethostbyname (host);
-	if (hostent == NULL) {
-		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "unable to resolve host name %s", host);
-		return -1;
-	} /* end if */
+        for (rp = result; rp != NULL; rp = rp->ai_next)
+        {
+            nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "rp->ai_family %d ", rp->ai_family);
+            nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "rp->ai_socktype %d",  rp->ai_socktype);
+            nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "rp->ai_protocol %d",  rp->ai_protocol);
 
-	/* create the socket and check if it */
-	session      = socket (AF_INET, SOCK_STREAM, 0);
-	if (session == NOPOLL_INVALID_SOCKET) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to create socket");
-		return -1;
-	} /* end if */
+            if(rp->ai_family == AF_INET)
+            {
+                    ptr = &((struct sockaddr_in *) rp->ai_addr)->sin_addr;
+                    inet_ntop (rp->ai_family, ptr, addrstr, 100);
+                    nopoll_log (ctx, NOPOLL_LEVEL_INFO, "IPv4 address of %s is %s \n", host, addrstr);
+            }
+            else if(rp->ai_family == AF_INET6)
+            {
+                    ptr = &((struct sockaddr_in6 *) rp->ai_addr)->sin6_addr;
+                    inet_ntop (rp->ai_family, ptr, addrstr, 100);
+                    nopoll_log (ctx, NOPOLL_LEVEL_INFO, "IPv6 address of %s is %s \n", host, addrstr);
+            }
 
-	/* disable nagle */
-	nopoll_conn_set_sock_tcp_nodelay (session, nopoll_true);
+            session = socket(rp->ai_family, rp->ai_socktype, 0);
+            if (session == NOPOLL_INVALID_SOCKET)
+           {
+               nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to create socket");
+               continue;
+           }
+           else
+           {
+            nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Socket Creation Successful");
+           }
 
-	/* bind to specified interface */
-	if( nopoll_true != nopoll_conn_set_bind_interface (session, options) ) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to bind to specified interface");
-		nopoll_close_socket (session);
-		return -1;
-	} /* end if */
+            nopoll_conn_set_sock_tcp_nodelay (session, nopoll_true);
 
-	/* prepare socket configuration to operate using TCP/IP
-	 * socket */
-        memset(&saddr, 0, sizeof(saddr));
-	saddr.sin_addr.s_addr = ((struct in_addr *)(hostent->h_addr))->s_addr;
-        saddr.sin_family    = AF_INET;
-        saddr.sin_port      = htons((uint16_t) strtod (port, NULL));
+            if (nopoll_true != nopoll_conn_set_bind_interface(session, options)) {
+                nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to bind to specified interface");
+                nopoll_close_socket (session);
+                return NOPOLL_INVALID_SOCKET;
+            }
 
-	/* set non blocking status */
-	nopoll_conn_set_sock_block (session, nopoll_false);
-	
-	/* do a tcp connect */
-        if (connect (session, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
-		if(errno != NOPOLL_EINPROGRESS && errno != NOPOLL_EWOULDBLOCK && errno != NOPOLL_ENOTCONN) { 
-		        shutdown (session, SHUT_RDWR);
-                        nopoll_close_socket (session);
+                /* set non blocking status */
+            nopoll_conn_set_sock_block (session, nopoll_false);
 
-			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to connect to remote host %s:%s errno=%d",
-				    host, port, errno);
-			return -1;
-		} /* end if */
-	} /* end if */
+            if (connect(session, rp->ai_addr, rp->ai_addrlen) < 0)
+            {
+                if( errno != NOPOLL_EINPROGRESS && errno != NOPOLL_EWOULDBLOCK &&
+                    errno != NOPOLL_ENOTCONN && errno != NOPOLL_ETIMEDOUT
+                   )
+                {
+                    shutdown (session, SHUT_RDWR);
+                    nopoll_close_socket (session);
 
-	/* return socket created */
-	return session;
+                    nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to connect to remote host %s:%s errno=%d",
+                                host, port, errno);
+                    freeaddrinfo(result);
+                    return NOPOLL_INVALID_SOCKET;
+                } /* end if */
+
+            }
+            else
+            {
+                nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Socket Connect successful");
+                break;
+            }
+
+        } /* for(.....) */
+
+    freeaddrinfo(result);
+
+    return session;
 }
 
 
