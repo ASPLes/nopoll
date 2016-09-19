@@ -2205,8 +2205,8 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 		iterator2++;
 	if (buffer[iterator2] != '\n') {
 	        nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
-			    "Expected to find mime header value end (13) but it wasn't found (iterator=%d, iterator2=%d, for header: [%s], found value: [%d])..",
-			    iterator, iterator2, (*header), (int)buffer[iterator2]);
+			    "Expected to find mime header value end (13) but it wasn't found (iterator=%d, iterator2=%d, buffer_size=%d, for header: [%s], found value: [%d])..",
+			    iterator, iterator2, buffer_size, (*header), (int)buffer[iterator2]);
 		nopoll_free (*header);
 		(*header) = NULL;
 		(*value)  = NULL;
@@ -2622,7 +2622,9 @@ int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, c
  */
 void nopoll_conn_complete_handshake (noPollConn * conn)
 {
-	char        buffer[1024];
+	/* for NOPOLL_HANDSHAKE_BUFFER_SIZE definition, see
+	   nopoll_decl.h */
+	char        buffer[NOPOLL_HANDSHAKE_BUFFER_SIZE];
 	int         buffer_size;
 	noPollCtx * ctx = conn->ctx;
 
@@ -2640,8 +2642,11 @@ void nopoll_conn_complete_handshake (noPollConn * conn)
 	while (nopoll_true) {
 		/* clear buffer for debugging functions */
 		buffer[0] = 0;
-		/* get next line to process */
-		buffer_size = nopoll_conn_readline (conn, buffer, 1024);
+
+		/* get next line to process: for
+		   NOPOLL_HANDSHAKE_BUFFER_SIZE definition, see
+		   nopoll_decl.h */
+		buffer_size = nopoll_conn_readline (conn, buffer, NOPOLL_HANDSHAKE_BUFFER_SIZE);
 		if (buffer_size == 0 || buffer_size == -1) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unexpected connection close during handshake..closing connection");
 			nopoll_conn_shutdown (conn);
