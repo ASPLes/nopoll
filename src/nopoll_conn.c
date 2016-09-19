@@ -2588,7 +2588,9 @@ int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, c
  */
 void nopoll_conn_complete_handshake (noPollConn * conn)
 {
-	char        buffer[1024];
+	/* for NOPOLL_HANDSHAKE_BUFFER_SIZE definition, see
+	   nopoll_decl.h */
+	char        buffer[NOPOLL_HANDSHAKE_BUFFER_SIZE];
 	int         buffer_size;
 	noPollCtx * ctx = conn->ctx;
 
@@ -2606,8 +2608,11 @@ void nopoll_conn_complete_handshake (noPollConn * conn)
 	while (nopoll_true) {
 		/* clear buffer for debugging functions */
 		buffer[0] = 0;
-		/* get next line to process */
-		buffer_size = nopoll_conn_readline (conn, buffer, 1024);
+
+		/* get next line to process: for
+		   NOPOLL_HANDSHAKE_BUFFER_SIZE definition, see
+		   nopoll_decl.h */
+		buffer_size = nopoll_conn_readline (conn, buffer, NOPOLL_HANDSHAKE_BUFFER_SIZE);
 		if (buffer_size == 0 || buffer_size == -1) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unexpected connection close during handshake..closing connection");
 			nopoll_conn_shutdown (conn);

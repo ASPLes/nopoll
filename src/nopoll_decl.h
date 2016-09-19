@@ -99,6 +99,9 @@
 /* include platform specific configuration */
 #include <nopoll_config.h>
 
+/* max buffer size to process incoming handshake */
+#define NOPOLL_HANDSHAKE_BUFFER_SIZE 8192
+
 /* include this at this place to load GNU extensions */
 #if defined(__GNUC__)
 #  ifndef _GNU_SOURCE
