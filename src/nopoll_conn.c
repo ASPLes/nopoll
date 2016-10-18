@@ -4125,21 +4125,31 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	/* according to message length */
 	if (length < 126) {
 		header[1] |= length;
-	} else if (length < 65535) {
+	} else if (length <= 65535) {
 		/* set the next header length is at least 65535 */
 		header[1] |= 126;
 		header_size += 2;
 		/* set length into the next bytes */
 		nopoll_set_16bit (length, header + 2);
 #if defined(NOPOLL_64BIT_PLATFORM)
-	} else if (length < 9223372036854775807) {
-		/* not supported yet */
-		return -1;
+	} else if (length < 0x8000000000000000) {
+		header[2] = (length & 0xFF00000000000000) >> 56;
+		header[3] = (length & 0x00FF000000000000) >> 48;
+		header[4] = (length & 0x0000FF0000000000) >> 40;
+		header[5] = (length & 0x000000FF00000000) >> 32;
 #else
-	} else {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to send the requested message, this requested is bigger than the value that can be supported by this platform (it should be < 65k)");
-		return -1;
+	} else if (length < 0x80000000) {
+		header[2] = header[3] = header[4] = header[5] = 0;
 #endif
+		header[1] |= 127;
+		header_size += 8;
+		header[6] = (length & 0x00000000FF000000) >> 24;
+		header[7] = (length & 0x0000000000FF0000) >> 16;
+		header[8] = (length & 0x000000000000FF00) >> 8;
+		header[9] = (length & 0x00000000000000FF);
+	} else {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to send the requested message, this requested is bigger than the value that can be supported by this platform");
+		return -1;
 	}
 
 	/* place mask */
