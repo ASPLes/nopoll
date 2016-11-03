@@ -371,7 +371,9 @@ noPollPtr ssl_context_creator (noPollCtx * ctx, noPollConn * conn, noPollConnOpt
 int main (int argc, char ** argv)
 {
 	noPollConn     * listener;
+	noPollConn     * listener_6;
 	noPollConn     * listener2;
+	noPollConn     * listener_62;
 #if defined(NOPOLL_HAVE_SSLv23_ENABLED)	
 	noPollConn     * listener3;
 #endif
@@ -380,6 +382,7 @@ int main (int argc, char ** argv)
 #endif	
 #if defined(NOPOLL_HAVE_TLSv11_ENABLED)
 	noPollConn     * listener5;
+	noPollConn     * listener_65;
 #endif
 	noPollConn     * listener6;
 #if defined(NOPOLL_HAVE_TLSv12_ENABLED)
@@ -426,6 +429,15 @@ int main (int argc, char ** argv)
 
 	printf ("noPoll listener started at: %s:%s (refs: %d)..\n", nopoll_conn_host (listener), nopoll_conn_port (listener), nopoll_conn_ref_count (listener));
 
+	/* call to create a listener */
+	listener_6 = nopoll_listener_new6 (ctx, "::1", "2234");
+	if (! nopoll_conn_is_ok (listener_6)) {
+		printf ("ERROR: Expected to find proper listener connection status, but found (IPv6 -- .1.1)..\n");
+		return -1;
+	} /* end if */
+
+	printf ("noPoll listener started at (IPv6): %s:%s (refs: %d)..\n", nopoll_conn_host (listener_6), nopoll_conn_port (listener_6), nopoll_conn_ref_count (listener_6));
+
 	/* now start a TLS version */
 	printf ("Test: starting listener with TLS (TLSv1) at :1235\n");
 	listener2 = nopoll_listener_tls_new (ctx, "0.0.0.0", "1235");
@@ -436,6 +448,26 @@ int main (int argc, char ** argv)
 
 	/* configure certificates to be used by this listener */
 	if (! nopoll_listener_set_certificate (listener2, "test-certificate.crt", "test-private.key", NULL)) {
+		printf ("ERROR: unable to configure certificates for TLS websocket..\n");
+		return -1;
+	}
+
+	/* register certificates at context level */
+	if (! nopoll_ctx_set_certificate (ctx, NULL, "test-certificate.crt", "test-private.key", NULL)) {
+		printf ("ERROR: unable to setup certificates at context level..\n");
+		return -1;
+	}
+
+	/* now start a TLS version */
+	printf ("Test: starting listener with TLS IPv6 (TLSv1) at :2235\n");
+	listener_62 = nopoll_listener_tls_new6 (ctx, "::1", "2235");
+	if (! nopoll_conn_is_ok (listener_62)) {
+		printf ("ERROR: Expected to find proper listener TLS connection status, but found..\n");
+		return -1;
+	} /* end if */
+
+	/* configure certificates to be used by this listener */
+	if (! nopoll_listener_set_certificate (listener_62, "test-certificate.crt", "test-private.key", NULL)) {
 		printf ("ERROR: unable to configure certificates for TLS websocket..\n");
 		return -1;
 	}
@@ -478,6 +510,16 @@ int main (int argc, char ** argv)
 		printf ("ERROR: Expected to find proper listener TLS connection status (:1238, TLSv1.1), but found..\n");
 		return -1;
 	} /* end if */
+
+	printf ("Test: starting listener with TLS (TLSv1.1) (IPv6) at :2238\n");
+	opts     = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_1);
+	listener_65 = nopoll_listener_tls_new_opts6 (ctx, opts, "::1", "2238");
+	if (! nopoll_conn_is_ok (listener_65)) {
+		printf ("ERROR: Expected to find proper listener TLS connection status (::1:2238, TLSv1.1, IPv6), but found..\n");
+		return -1;
+	} /* end if */
+	
 #endif
 
 #if defined(NOPOLL_HAVE_TLSv12_ENABLED)
@@ -528,7 +570,11 @@ int main (int argc, char ** argv)
 
 	/* unref connection */
 	nopoll_conn_close (listener);
+	nopoll_conn_close (listener_6);  /* ipv6 */
+	
 	nopoll_conn_close (listener2);
+	nopoll_conn_close (listener_62); /* ipv6 */
+	
 #if defined(NOPOLL_HAVE_SSLv23_ENABLED)	
 	nopoll_conn_close (listener3);
 #endif
@@ -537,6 +583,7 @@ int main (int argc, char ** argv)
 #endif	
 #if defined(NOPOLL_HAVE_TLSv12_ENABLED)
 	nopoll_conn_close (listener5);
+	nopoll_conn_close (listener_65);
 #endif
 	nopoll_conn_close (listener6);
 #if defined(NOPOLL_HAVE_TLSv12_ENABLED)

@@ -350,6 +350,78 @@ nopoll_bool test_02 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_02a (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	noPollMsg  * msg;
+	int          iter;
+
+	/* create context */
+	ctx = create_ctx ();
+
+	/* check connections registered */
+	if (nopoll_ctx_conns (ctx) != 0) {
+		printf ("ERROR: expected to find 0 registered connections but found: %d\n", nopoll_ctx_conns (ctx));
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	printf ("Test 02a: connecting IPv6 (::1:2234)..\n");
+	conn = nopoll_conn_new6 (ctx, "::1", "2234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
+			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
+		return nopoll_false;
+	}
+
+	printf ("Test 02a: sending basic content..\n");
+
+	/* send content text(utf-8) */
+	if (nopoll_conn_send_text (conn, "This is a test", 14) != 14) {
+		printf ("ERROR: Expected to find proper send operation..\n");
+		return nopoll_false;
+	}
+
+	/* wait for the reply */
+	iter = 0;
+	while ((msg = nopoll_conn_get_msg (conn)) == NULL) {
+
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR: received websocket connection close during wait reply..\n");
+			return nopoll_false;
+		}
+
+		nopoll_sleep (10000);
+
+		if (iter > 10)
+			break;
+	} /* end if */
+
+	/* check content received */
+	if (! nopoll_cmp ((char*) nopoll_msg_get_payload (msg), "This is a test")) {
+		printf ("ERROR: expected to find message 'This is a test' but something different was received: '%s'..\n",
+			(const char *) nopoll_msg_get_payload (msg));
+		return nopoll_false;
+	} /* end if */
+
+	/* unref message */
+	nopoll_msg_unref (msg);
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+
 nopoll_bool test_03 (void) {
 	noPollCtx  * ctx;
 	noPollConn * conn;
@@ -924,6 +996,54 @@ nopoll_bool test_06 (void) {
 
 	/* call to create a connection */
 	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	}
+
+	/* check if the connection already finished its connection
+	   handshake */
+	while (! nopoll_conn_is_ready (conn)) {
+
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR (4.1 jg72): expected to find proper connection handshake finished, but found connection is broken: session=%d, errno=%d : %s..\n",
+				(int) nopoll_conn_socket (conn), errno, strerror (errno));
+			return nopoll_false;
+		} /* end if */
+
+		/* wait a bit 10ms */
+		nopoll_sleep (10000);
+	} /* end if */
+
+	if (! nopoll_conn_is_tls_on (conn)) {
+		printf ("ERROR (5): expected to find TLS enabled on the connection but found it isn't..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+nopoll_bool test_06a (void) {
+
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+	noPollConnOpts * opts;
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* disable verification */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
+
+	/* call to create a connection */
+	conn = nopoll_conn_tls_new6 (ctx, opts, "::1", "2235", NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1801,6 +1921,28 @@ nopoll_bool test_19 (void) {
 	
 	/* finish connection */
 	nopoll_conn_close (conn);
+
+	printf ("Test 19-a: testing TLSv1.1 (IPv6) connection...\n");
+
+	/* create options */
+	opts     = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_1);
+
+	/* create connection */
+	conn = nopoll_conn_tls_new6 (ctx, opts, "::1", "2238", NULL, NULL, NULL, NULL);
+
+	/* check connection */
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: failed to start listener connection..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! test_sending_and_check_echo (conn, "Test 19a", "This is a test...checking SSL with different values..."))
+		return nopoll_false;
+	
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
 #endif
 
 #if defined (NOPOLL_HAVE_TLSv12_ENABLED)
@@ -2707,6 +2849,13 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+	if (test_02a ()) {	
+		printf ("Test 02a: Simple request/reply (IPv6) [   OK   ]\n");
+	}else {
+		printf ("Test 02a: Simple request/reply (IPv6) [ FAILED ]\n");
+		return -1;
+	}
+
 	/* test streaming api */
 	if (test_03 ()) {	
 		printf ("Test 03: test streaming api [   OK   ]\n");
@@ -2775,6 +2924,13 @@ int main (int argc, char ** argv)
 		printf ("Test 06: testing basic TLS connect [   OK   ]\n");
 	} else {
 		printf ("Test 06: testing basic TLS connect [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_06a ()) {
+		printf ("Test 06a: testing basic TLS connect (IPv6) [   OK   ]\n");
+	} else {
+		printf ("Test 06a: testing basic TLS connect (IPv6) [ FAILED ]\n");
 		return -1;
 	}
 
