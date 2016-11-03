@@ -537,6 +537,21 @@ typedef enum {
 #endif		
 } noPollSslProtocol ;
 
+/** 
+ * @brief Transport indication to be used by various internal and
+ * public APIs
+ */
+typedef enum {
+	/** 
+	 * Use IPv4 transport
+	 */
+	NOPOLL_TRANSPORT_IPV4 = 1,
+	/** 
+	 * Use IPv6 transport
+	 */
+	NOPOLL_TRANSPORT_IPV6 = 2
+} noPollTransport;
+
 BEGIN_C_DECLS
 
 noPollPtr  nopoll_calloc  (size_t count, size_t size);
