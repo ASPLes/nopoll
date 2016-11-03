@@ -229,6 +229,97 @@ nopoll_bool                 nopoll_conn_set_bind_interface (NOPOLL_SOCKET socket
 	return nopoll_true;
 } /* end */
 
+NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
+							noPollTransport   transport,
+							const char      * host,
+							const char      * port,
+							noPollConnOpts  * options)
+{
+
+	struct addrinfo      hints, *res = NULL;
+	NOPOLL_SOCKET        session     = NOPOLL_INVALID_SOCKET;
+
+	/* clear hints structure */
+	memset (&hints, 0, sizeof(struct addrinfo));
+
+	switch (transport) {
+	case NOPOLL_TRANSPORT_IPV4:
+		/* configure hints */
+		hints.ai_family   = AF_INET;
+		hints.ai_socktype = SOCK_STREAM;
+		
+		/* resolve hosting name */
+		if (getaddrinfo (host, port, &hints, &res) != 0) {
+			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "unable to resolve host name %s, errno=%d", host, errno);
+			return -1;
+		} /* end if */
+
+		/* create the socket and check if it */
+		session      = socket (AF_INET, SOCK_STREAM, 0);
+		break;
+	case NOPOLL_TRANSPORT_IPV6:
+		/* configure hints */
+		hints.ai_family   = AF_INET6;
+		hints.ai_socktype = SOCK_STREAM;
+		
+		/* resolve hosting name */
+		if (getaddrinfo (host, port, &hints, &res) != 0) {
+			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "unable to resolve host name %s, errno=%d", host, errno);
+			return -1;
+		} /* end if */
+
+		/* create the socket and check if it */
+		session      = socket (AF_INET6, SOCK_STREAM, 0);
+		break;
+	} /* end switch */
+	
+	if (session == NOPOLL_INVALID_SOCKET) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to create socket");
+
+		/* relase address info */
+		freeaddrinfo (res);
+		return -1;
+	} /* end if */
+
+	/* disable nagle */
+	nopoll_conn_set_sock_tcp_nodelay (session, nopoll_true);
+
+	/* bind to specified interface */
+	if( nopoll_true != nopoll_conn_set_bind_interface (session, options) ) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to bind to specified interface");
+		nopoll_close_socket (session);
+
+		/* relase address info */
+		freeaddrinfo (res);
+		
+		return -1;
+	} /* end if */
+
+	/* set non blocking status */
+	nopoll_conn_set_sock_block (session, nopoll_false);
+	
+	/* do a tcp connect */
+        if (connect (session, res->ai_addr, res->ai_addrlen) < 0) {
+		if(errno != NOPOLL_EINPROGRESS && errno != NOPOLL_EWOULDBLOCK && errno != NOPOLL_ENOTCONN) { 
+		        shutdown (session, SHUT_RDWR);
+                        nopoll_close_socket (session);
+
+			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to connect to remote host %s:%s errno=%d",
+				    host, port, errno);
+
+			/* relase address info */
+			freeaddrinfo (res);
+			
+			return -1;
+		} /* end if */
+	} /* end if */
+
+	/* relase address info */
+	freeaddrinfo (res);
+
+	/* return socket created */
+	return session;
+}
 
 /** 
  * @internal Allows to create a plain socket connection against the
@@ -249,58 +340,8 @@ NOPOLL_SOCKET nopoll_conn_sock_connect_opts (noPollCtx       * ctx,
 					     const char      * port,
 					     noPollConnOpts  * options)
 {
-	struct hostent     * hostent;
-	struct sockaddr_in   saddr;
-	NOPOLL_SOCKET        session;
 
-	/* resolve hosting name */
-	hostent = gethostbyname (host);
-	if (hostent == NULL) {
-		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "unable to resolve host name %s", host);
-		return -1;
-	} /* end if */
-
-	/* create the socket and check if it */
-	session      = socket (AF_INET, SOCK_STREAM, 0);
-	if (session == NOPOLL_INVALID_SOCKET) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to create socket");
-		return -1;
-	} /* end if */
-
-	/* disable nagle */
-	nopoll_conn_set_sock_tcp_nodelay (session, nopoll_true);
-
-	/* bind to specified interface */
-	if( nopoll_true != nopoll_conn_set_bind_interface (session, options) ) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to bind to specified interface");
-		nopoll_close_socket (session);
-		return -1;
-	} /* end if */
-
-	/* prepare socket configuration to operate using TCP/IP
-	 * socket */
-        memset(&saddr, 0, sizeof(saddr));
-	saddr.sin_addr.s_addr = ((struct in_addr *)(hostent->h_addr))->s_addr;
-        saddr.sin_family    = AF_INET;
-        saddr.sin_port      = htons((uint16_t) strtod (port, NULL));
-
-	/* set non blocking status */
-	nopoll_conn_set_sock_block (session, nopoll_false);
-	
-	/* do a tcp connect */
-        if (connect (session, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
-		if(errno != NOPOLL_EINPROGRESS && errno != NOPOLL_EWOULDBLOCK && errno != NOPOLL_ENOTCONN) { 
-		        shutdown (session, SHUT_RDWR);
-                        nopoll_close_socket (session);
-
-			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to connect to remote host %s:%s errno=%d",
-				    host, port, errno);
-			return -1;
-		} /* end if */
-	} /* end if */
-
-	/* return socket created */
-	return session;
+	return __nopoll_conn_sock_connect_opts_internal (ctx, NOPOLL_TRANSPORT_IPV4, host, port, options);
 }
 
 
@@ -705,12 +746,12 @@ nopoll_bool __nopoll_conn_set_ssl_client_options (noPollCtx * ctx, noPollConn * 
 	return nopoll_true;
 }
 
-
 /** 
  * @internal Internal implementation used to do a connect.
  */
 noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 				       noPollConnOpts  * options,
+				       noPollTransport   transport,
 				       nopoll_bool       enable_tls,
 				       const char      * host_ip, 
 				       const char      * host_port, 
@@ -739,7 +780,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 		host_port = "80";
 
 	/* create socket connection in a non block manner */
-	session = nopoll_conn_sock_connect_opts (ctx, host_ip, host_port, options);
+	session = __nopoll_conn_sock_connect_opts_internal (ctx, transport, host_ip, host_port, options);
 	if (session == NOPOLL_INVALID_SOCKET) {
 		/* release connection options */
 		__nopoll_conn_opts_release_if_needed (options);
@@ -859,7 +900,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 		SSL_set_fd (conn->ssl, conn->session);
 
 		/* do the initial connect connect */
-		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "connecting to remote TLS site");
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "connecting to remote TLS site %s:%s", conn->host, conn->port);
 		iterator = 0;
 		while (SSL_connect (conn->ssl) <= 0) {
 		
@@ -988,7 +1029,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 
 /** 
  * @brief Creates a new Websocket connection to the provided
- * destination, physically located at host_ip and host_port.
+ * destination, physically located at host_ip and host_port (IPv4 version).
  *
  * @param ctx The noPoll context to which this new connection will be associated.
  *
@@ -1058,7 +1099,48 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 			      const char * origin)
 {
 	/* call common implementation */
-	return __nopoll_conn_new_common (ctx, NULL, nopoll_false, 
+	return __nopoll_conn_new_common (ctx, NULL, NOPOLL_TRANSPORT_IPV4, nopoll_false, 
+					 host_ip, host_port, host_name, 
+					 get_url, protocols, origin);
+}
+
+/** 
+ * @brief Creates a new Websocket connection to the provided
+ * destination, physically located at host_ip and host_port (IPv6 version).
+ *
+ * See \ref nopoll_conn_new for more information about this
+ * function. Both shares same core.
+ *
+ * @param ctx See \ref nopoll_conn_new
+ *
+ * @param host_ip See \ref nopoll_conn_new
+ *
+ * @param host_port See \ref nopoll_conn_new
+ *
+ * @param host_name See \ref nopoll_conn_new
+ *
+ * @param get_url See \ref nopoll_conn_new
+ *
+ * @param origin See \ref nopoll_conn_new
+ *
+ * @param protocols See \ref nopoll_conn_new
+ *
+ * @return See \ref nopoll_conn_new
+ *
+ * See \ref nopoll_conn_new for more information about this
+ * function. Both shares same core.
+ *
+ */
+noPollConn * nopoll_conn_new6 (noPollCtx  * ctx,
+			       const char * host_ip, 
+			       const char * host_port, 
+			       const char * host_name,
+			       const char * get_url, 
+			       const char * protocols,
+			       const char * origin)
+{
+	/* call common implementation */
+	return __nopoll_conn_new_common (ctx, NULL, NOPOLL_TRANSPORT_IPV6, nopoll_false, 
 					 host_ip, host_port, host_name, 
 					 get_url, protocols, origin);
 }
@@ -1116,7 +1198,7 @@ noPollConn * nopoll_conn_new_opts (noPollCtx       * ctx,
 				   const char      * origin)
 {
 	/* call common implementation */
-	return __nopoll_conn_new_common (ctx, opts, nopoll_false, 
+	return __nopoll_conn_new_common (ctx, opts, NOPOLL_TRANSPORT_IPV4, nopoll_false, 
 					 host_ip, host_port, host_name, 
 					 get_url, protocols, origin);
 }
@@ -1124,7 +1206,7 @@ noPollConn * nopoll_conn_new_opts (noPollCtx       * ctx,
 nopoll_bool __nopoll_tls_was_init = nopoll_false;
 
 /** 
- * @brief Allows to create a client WebSocket connection over TLS.
+ * @brief Allows to create a client WebSocket connection over TLS (IPv4 version).
  *
  * The function works like \ref nopoll_conn_new with the same
  * semantics but providing a way to create a WebSocket session under
@@ -1182,10 +1264,56 @@ noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
 	} /* end if */
 
 	/* call common implementation */
-	return __nopoll_conn_new_common (ctx, options, nopoll_true, 
+	return __nopoll_conn_new_common (ctx, options, NOPOLL_TRANSPORT_IPV4, nopoll_true, 
 					 host_ip, host_port, host_name, 
 					 get_url, protocols, origin);
 }
+
+/** 
+ * @brief Allows to create a client WebSocket connection over TLS (IPv6 version).
+ *
+ * See \ref nopoll_conn_tls_new for more information.
+ *
+ * @param ctx See \ref nopoll_conn_tls_new for more information.
+ *
+ * @param options See \ref nopoll_conn_tls_new for more information.
+ *
+ * @param host_ip See \ref nopoll_conn_tls_new for more information.
+ *
+ * @param host_port See \ref nopoll_conn_tls_new for more information.
+ *
+ * @param host_name See \ref nopoll_conn_tls_new for more information.
+ *
+ * @param get_url See \ref nopoll_conn_tls_new for more information.
+ *
+ * @param origin See \ref nopoll_conn_tls_new for more information.
+ *
+ * @param protocols See \ref nopoll_conn_tls_new for more information.
+ *
+ * @return See \ref nopoll_conn_tls_new for more information.
+ * 
+ */
+noPollConn * nopoll_conn_tls_new6 (noPollCtx  * ctx,
+				   noPollConnOpts  * options,
+				   const char * host_ip, 
+				   const char * host_port, 
+				   const char * host_name,
+				   const char * get_url, 
+				   const char * protocols,
+				   const char * origin)
+{
+	/* init ssl ciphers and engines */
+	if (! __nopoll_tls_was_init) {
+		__nopoll_tls_was_init = nopoll_true;
+		SSL_library_init ();
+	} /* end if */
+
+	/* call common implementation */
+	return __nopoll_conn_new_common (ctx, options, NOPOLL_TRANSPORT_IPV6, nopoll_true, 
+					 host_ip, host_port, host_name, 
+					 get_url, protocols, origin);
+}
+
 
 /** 
  * @brief Allows to acquire a reference to the provided connection.
