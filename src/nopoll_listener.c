@@ -48,19 +48,18 @@
  * @{
  */
 
-/** 
- * @internal Creates a listener socket on the provided port.
+/* 
+ * @internal Implementation used by all sock listener functions.
  */
-NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
-						    const char  * host,
-						    const char  * port)
+NOPOLL_SOCKET     __nopoll_listener_sock_listen_internal      (noPollCtx        * ctx,
+							       noPollTransport    transport,
+							       const char       * host,
+							       const char       * port)
 {
-	struct hostent     * he;
-	struct in_addr     * haddr;
-	struct sockaddr_in   saddr;
 	struct sockaddr_in   sin;
 	NOPOLL_SOCKET        fd;
 	int                  tries;
+	struct addrinfo      hints, *res = NULL;
 
 #if defined(NOPOLL_OS_WIN32)
 	int                  sin_size  = sizeof (sin);
@@ -75,20 +74,56 @@ NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
 	nopoll_return_val_if_fail (ctx, host, -2);
 	nopoll_return_val_if_fail (ctx, port || strlen (port) == 0, -2);
 
-	/* resolve hostname */
-	he = gethostbyname (host);
-        if (he == NULL) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to get hostname by calling gethostbyname");
-		return -1;
-	} /* end if */
+	/* clear hints structure */
+	memset (&hints, 0, sizeof(struct addrinfo));
 
-	haddr = ((struct in_addr *) (he->h_addr_list)[0]);
-	if ((fd = socket(AF_INET, SOCK_STREAM, 0)) <= 2) {
+	/* resolve hostname */
+	switch (transport) {
+	case NOPOLL_TRANSPORT_IPV4:
+		/* configure hints */
+		hints.ai_family   = AF_INET;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags    = AI_PASSIVE | AI_NUMERICHOST;
+		
+		/* resolve hosting name */
+		if (getaddrinfo (host, port, &hints, &res) != 0) {
+			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to resolve host name %s, errno=%d", host, errno);
+			return -1;
+		} /* end if */
+		
+		break;
+	case NOPOLL_TRANSPORT_IPV6:
+		/* configure hints */
+		hints.ai_family   = AF_INET6;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags    = AI_PASSIVE | AI_NUMERICHOST;
+
+		/* check value received */
+		if (memcmp (host, "0.0.0.0", 7) == 0) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received an address (%s) that is not a valid IPv6 address..", host);
+			return -1;
+		} /* end if */
+		
+		/* resolve hosting name */
+		if (getaddrinfo (host, port, &hints, &res) != 0) {
+			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to resolve host name %s, errno=%d", host, errno);
+			return -1;
+		} /* end if */
+		break;
+	} /* end switch */
+
+	/* create socket */
+	fd = socket (res->ai_family, res->ai_socktype, res->ai_protocol);
+	if (fd <= 2) {
 		/* do not allow creating sockets reusing stdin (0),
 		   stdout (1), stderr (2) */
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "failed to create listener socket: %d (errno=%d)", fd, errno);
+		freeaddrinfo (res);
 		return -1;
         } /* end if */
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "socket=%d created for %s:%s", fd, host, port);
+
 
 #if defined(NOPOLL_OS_WIN32)
 	/* Do not issue a reuse addr which causes on windows to reuse
@@ -104,15 +139,11 @@ NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
 	/* get integer port */
 	int_port  = (uint16_t) atoi (port);
 
-	memset(&saddr, 0, sizeof(struct sockaddr_in));
-	saddr.sin_family          = AF_INET;
-	saddr.sin_port            = htons(int_port);
-	memcpy(&saddr.sin_addr, haddr, sizeof(struct in_addr));
-
 	/* call to bind */
 	tries    = 0;
 	while (1) {
-		bind_res = bind(fd, (struct sockaddr *)&saddr,  sizeof (struct sockaddr_in));
+		/* call bind */
+		bind_res = bind(fd, res->ai_addr, res->ai_addrlen);
 		if (bind_res == NOPOLL_SOCKET_ERROR) {
 			/* check if we can retry */
 			tries++;
@@ -128,12 +159,18 @@ NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
 				    "unable to bind address (port:%u already in use or insufficient permissions, errno=%d : %s). Closing socket: %d", 
 				    int_port, errno, strerror (errno), fd);
 			nopoll_close_socket (fd);
+
+			/* release addr info */
+			freeaddrinfo (res);
 			return -1;
 		} /* end if */
 
 		/* reached this point, bind was ok */
 		break;
 	} /* end while */
+
+	/* release addr info */
+	freeaddrinfo (res);
 	
 	if (listen(fd, ctx->backlog) == NOPOLL_SOCKET_ERROR) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "an error have occur while executing listen");
@@ -151,8 +188,69 @@ NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
 }
 
 /** 
+ * @internal Function to create a WebSocket listener
+ */
+noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
+						       noPollTransport  transport,
+						       noPollConnOpts * opts,
+						       const char     * host,
+						       const char     * port)
+{
+	NOPOLL_SOCKET   session;
+	noPollConn    * listener;
+
+	nopoll_return_val_if_fail (ctx, ctx && host, NULL);
+
+	/* call to create the socket */
+	session = __nopoll_listener_sock_listen_internal (ctx, transport, host, port);
+	if (session == NOPOLL_INVALID_SOCKET) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to start listener error was: errno=%d", errno);
+		return NULL;
+	} /* end if */
+
+	/* create noPollConn ection object */
+	listener           = nopoll_new (noPollConn, 1);
+	listener->refs     = 1;
+	/* create mutex */
+	listener->ref_mutex = nopoll_mutex_create ();
+	listener->session   = session;
+	listener->ctx       = ctx;
+	listener->role      = NOPOLL_ROLE_MAIN_LISTENER;
+
+	/* record host and port */
+	listener->host      = nopoll_strdup (host);
+	listener->port      = nopoll_strdup (port);
+
+	/* register connection into context */
+	nopoll_ctx_register_conn (ctx, listener);
+
+	/* configure default handlers */
+	listener->receive   = nopoll_conn_default_receive;
+	listener->send      = nopoll_conn_default_send;
+
+	/* configure connection options */
+	listener->opts      = opts;
+
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Listener created, started: %s:%s (socket: %d, transport: %s)",
+		    listener->host, listener->port, listener->session, (transport == NOPOLL_TRANSPORT_IPV4 ? "IPv4" : "IPv6"));
+
+	return listener;
+}
+
+
+/** 
+ * @internal Creates a listener socket on the provided port.
+ */
+NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
+						    const char  * host,
+						    const char  * port)
+{
+	return __nopoll_listener_sock_listen_internal (ctx, NOPOLL_TRANSPORT_IPV4, host, port);
+}
+
+/** 
  * @brief Creates a new websocket server listener on the provided host
- * name and port. 
+ * name and port (IPv4)
  *
  * @param ctx The context where the operation will take place.
  *
@@ -172,7 +270,28 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 
 /** 
  * @brief Creates a new websocket server listener on the provided host
- * name and port.
+ * name and port (IPv6).
+ *
+ * See \ref nopoll_listener_new for more information.
+ *
+ * @param ctx See \ref nopoll_listener_new for more information.
+ *
+ * @param host See \ref nopoll_listener_new for more information.
+ *
+ * @param port See \ref nopoll_listener_new for more information.
+ *
+ * @return See \ref nopoll_listener_new for more information.
+ */
+noPollConn      * nopoll_listener_new6 (noPollCtx  * ctx,
+					const char * host,
+					const char * port)
+{
+	return __nopoll_listener_new_opts_internal (ctx, NOPOLL_TRANSPORT_IPV6, NULL, host, port);
+}
+
+/** 
+ * @brief Creates a new websocket server listener on the provided host
+ * name and port (IPv4).
  *
  * @param ctx The context where the operation will take place.
  *
@@ -190,50 +309,39 @@ noPollConn      * nopoll_listener_new_opts (noPollCtx      * ctx,
 					    const char     * host,
 					    const char     * port)
 {
-	NOPOLL_SOCKET   session;
-	noPollConn    * listener;
+	/* call common implementation */
+	return __nopoll_listener_new_opts_internal (ctx, NOPOLL_TRANSPORT_IPV4, opts, host, port);
+}
 
-	nopoll_return_val_if_fail (ctx, ctx && host, NULL);
-
-	/* call to create the socket */
-	session = nopoll_listener_sock_listen (ctx, host, port);
-	if (session == NOPOLL_INVALID_SOCKET) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to start listener error was: %d", errno);
-		return NULL;
-	} /* end if */
-
-	/* create noPollConn ection object */
-	listener          = nopoll_new (noPollConn, 1);
-	listener->refs    = 1;
-	/* create mutex */
-	listener->ref_mutex = nopoll_mutex_create ();
-	listener->session = session;
-	listener->ctx     = ctx;
-	listener->role    = NOPOLL_ROLE_MAIN_LISTENER;
-
-	/* record host and port */
-	listener->host    = nopoll_strdup (host);
-	listener->port    = nopoll_strdup (port);
-
-	/* register connection into context */
-	nopoll_ctx_register_conn (ctx, listener);
-
-	/* configure default handlers */
-	listener->receive = nopoll_conn_default_receive;
-	listener->send    = nopoll_conn_default_send;
-
-	/* configure connection options */
-	listener->opts    = opts;
-
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Listener created, started: %s:%s (socket: %d)", listener->host, listener->port, listener->session);
-
-	return listener;
+/** 
+ * @brief Creates a new websocket server listener on the provided host
+ * name and port (IPv6).
+ *
+ * See \ref nopoll_listener_new_opts for more information.
+ *
+ * @param ctx See \ref nopoll_listener_new_opts
+ *
+ * @param opts See \ref nopoll_listener_new_opts
+ *
+ * @param host See \ref nopoll_listener_new_opts
+ *
+ * @param port See \ref nopoll_listener_new_opts
+ *
+ * @return See \ref nopoll_listener_new_opts
+ */
+noPollConn      * nopoll_listener_new_opts6 (noPollCtx      * ctx,
+					     noPollConnOpts * opts,
+					     const char     * host,
+					     const char     * port)
+{
+	/* call common implementation */
+	return __nopoll_listener_new_opts_internal (ctx, NOPOLL_TRANSPORT_IPV6, opts, host, port);
 }
 
 /** 
  * @brief Allows to create a new WebSocket listener but expecting the
  * incoming connection to be under TLS supervision. The function works
- * like \ref nopoll_listener_new (providing wss:// services).
+ * like \ref nopoll_listener_new (providing wss:// services) (IPv4 version).
  *
  * @param ctx The context where the operation will take place.
  *
@@ -251,11 +359,56 @@ noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
 	return nopoll_listener_tls_new_opts (ctx, NULL, host, port);
 }
 
+/** 
+ * @brief Allows to create a new WebSocket listener but expecting the
+ * incoming connection to be under TLS supervision. The function works
+ * like \ref nopoll_listener_new (providing wss:// services) (IPv6 version).
+ *
+ * See \ref nopoll_listener_tls_new for more information.
+ *
+ * @param ctx See \ref nopoll_listener_tls_new for more information.
+ *
+ * @param host See \ref nopoll_listener_tls_new for more information.
+ *
+ * @param port See \ref nopoll_listener_tls_new for more information.
+ *
+ * @return See \ref nopoll_listener_tls_new for more information.
+ */
+noPollConn      * nopoll_listener_tls_new6 (noPollCtx  * ctx,
+					    const char * host,
+					    const char * port)
+{
+	return nopoll_listener_tls_new_opts6 (ctx, NULL, host, port);
+}
+
+
+/** 
+ * @internal Common implementation 
+ */
+noPollConn      * __nopoll_listener_tls_new_opts_internal (noPollCtx      * ctx,
+							   noPollTransport  transport,
+							   noPollConnOpts * opts,
+							   const char     * host,
+							   const char     * port)
+{
+	noPollConn * listener;
+
+	/* call to get listener from base function */
+	listener = __nopoll_listener_new_opts_internal (ctx, transport, opts, host, port);
+	if (! listener)
+		return listener;
+
+	/* setup TLS support */
+	listener->tls_on = nopoll_true;
+	listener->opts   = opts;
+
+	return listener;
+}
 
 /** 
  * @brief Allows to create a new WebSocket listener but expecting the
  * incoming connection to be under TLS supervision. The function works
- * like \ref nopoll_listener_new (providing wss:// services).
+ * like \ref nopoll_listener_new (providing wss:// services) (IPv4 version).
  *
  * @param ctx The context where the operation will take place.
  *
@@ -274,18 +427,33 @@ noPollConn      * nopoll_listener_tls_new_opts (noPollCtx      * ctx,
 						const char     * host,
 						const char     * port)
 {
-	noPollConn * listener;
+	return __nopoll_listener_tls_new_opts_internal (ctx, NOPOLL_TRANSPORT_IPV4, opts, host, port);
+}
 
-	/* call to get listener from base function */
-	listener = nopoll_listener_new (ctx, host, port);
-	if (! listener)
-		return listener;
 
-	/* setup TLS support */
-	listener->tls_on = nopoll_true;
-	listener->opts   = opts;
-
-	return listener;
+/** 
+ * @brief Allows to create a new WebSocket listener but expecting the
+ * incoming connection to be under TLS supervision. The function works
+ * like \ref nopoll_listener_new (providing wss:// services) (IPv6 version).
+ *
+ * See \ref nopoll_listener_tls_new_opts for more information.
+ *
+ * @param ctx See \ref nopoll_listener_tls_new_opts for more information.
+ *
+ * @param opts See \ref nopoll_listener_tls_new_opts for more information.
+ *
+ * @param host See \ref nopoll_listener_tls_new_opts for more information.
+ *
+ * @param port See \ref nopoll_listener_tls_new_opts for more information.
+ *
+ * @return See \ref nopoll_listener_tls_new_opts for more information.
+ */
+noPollConn      * nopoll_listener_tls_new_opts6 (noPollCtx      * ctx,
+						 noPollConnOpts * opts,
+						 const char     * host,
+						 const char     * port)
+{
+	return __nopoll_listener_tls_new_opts_internal (ctx, NOPOLL_TRANSPORT_IPV6, opts, host, port);
 }
 
 /** 

@@ -51,19 +51,37 @@ noPollConn      * nopoll_listener_new (noPollCtx  * ctx,
 				       const char * host,
 				       const char * port);
 
+noPollConn      * nopoll_listener_new6 (noPollCtx  * ctx,
+					const char * host,
+					const char * port);
+
 noPollConn      * nopoll_listener_new_opts (noPollCtx      * ctx,
 					    noPollConnOpts * opts,
 					    const char     * host,
 					    const char     * port);
 
+noPollConn      * nopoll_listener_new_opts6 (noPollCtx      * ctx,
+					     noPollConnOpts * opts,
+					     const char     * host,
+					     const char     * port);
+
 noPollConn      * nopoll_listener_tls_new (noPollCtx  * ctx,
 					   const char * host,
 					   const char * port);
+
+noPollConn      * nopoll_listener_tls_new6 (noPollCtx  * ctx,
+					    const char * host,
+					    const char * port);
 
 noPollConn      * nopoll_listener_tls_new_opts (noPollCtx      * ctx,
 						noPollConnOpts * opts,
 						const char     * host,
 						const char     * port);
+
+noPollConn      * nopoll_listener_tls_new_opts6 (noPollCtx      * ctx,
+						 noPollConnOpts * opts,
+						 const char     * host,
+						 const char     * port);
 
 nopoll_bool       nopoll_listener_set_certificate (noPollConn * listener,
 						   const char * certificate,
