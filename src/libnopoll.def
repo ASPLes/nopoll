@@ -8,10 +8,14 @@ __nopoll_conn_opts_release_if_needed
 __nopoll_conn_receive
 __nopoll_conn_send_common
 __nopoll_conn_set_ssl_client_options
+__nopoll_conn_sock_connect_opts_internal
 __nopoll_conn_ssl_ctx_debug
 __nopoll_conn_ssl_verify_callback
 __nopoll_conn_tls_handle_error
 __nopoll_ctx_sigpipe_do_nothing
+__nopoll_listener_new_opts_internal
+__nopoll_listener_sock_listen_internal
+__nopoll_listener_tls_new_opts_internal
 __nopoll_log
 __nopoll_mutex_create
 __nopoll_mutex_destroy
@@ -65,6 +69,7 @@ nopoll_conn_is_tls_on
 nopoll_conn_log_ssl
 nopoll_conn_mask_content
 nopoll_conn_new
+nopoll_conn_new6
 nopoll_conn_new_opts
 nopoll_conn_opts_free
 nopoll_conn_opts_new
@@ -107,6 +112,7 @@ nopoll_conn_sock_connect
 nopoll_conn_sock_connect_opts
 nopoll_conn_socket
 nopoll_conn_tls_new
+nopoll_conn_tls_new6
 nopoll_conn_tls_receive
 nopoll_conn_tls_send
 nopoll_conn_unref
@@ -147,11 +153,15 @@ nopoll_is_white_space
 nopoll_listener_accept
 nopoll_listener_from_socket
 nopoll_listener_new
+nopoll_listener_new6
 nopoll_listener_new_opts
+nopoll_listener_new_opts6
 nopoll_listener_set_certificate
 nopoll_listener_sock_listen
 nopoll_listener_tls_new
+nopoll_listener_tls_new6
 nopoll_listener_tls_new_opts
+nopoll_listener_tls_new_opts6
 nopoll_log_color_enable
 nopoll_log_color_is_enabled
 nopoll_log_enable
