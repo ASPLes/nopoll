@@ -70,6 +70,7 @@ nopoll_conn_log_ssl
 nopoll_conn_mask_content
 nopoll_conn_new
 nopoll_conn_new6
+nopoll_conn_new_with_socket
 nopoll_conn_new_opts
 nopoll_conn_opts_free
 nopoll_conn_opts_new
@@ -113,6 +114,7 @@ nopoll_conn_sock_connect_opts
 nopoll_conn_socket
 nopoll_conn_tls_new
 nopoll_conn_tls_new6
+nopoll_conn_tls_new_with_socket
 nopoll_conn_tls_receive
 nopoll_conn_tls_send
 nopoll_conn_unref

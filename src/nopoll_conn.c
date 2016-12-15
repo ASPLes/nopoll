@@ -753,6 +753,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 				       noPollConnOpts  * options,
 				       noPollTransport   transport,
 				       nopoll_bool       enable_tls,
+				       int               socket,
 				       const char      * host_ip, 
 				       const char      * host_port, 
 				       const char      * host_name,
@@ -779,8 +780,10 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 	if (host_port == NULL)
 		host_port = "80";
 
+	session = socket;
 	/* create socket connection in a non block manner */
-	session = __nopoll_conn_sock_connect_opts_internal (ctx, transport, host_ip, host_port, options);
+	if (session == NOPOLL_INVALID_SOCKET)
+		session = __nopoll_conn_sock_connect_opts_internal (ctx, transport, host_ip, host_port, options);
 	if (session == NOPOLL_INVALID_SOCKET) {
 		/* release connection options */
 		__nopoll_conn_opts_release_if_needed (options);
@@ -1100,6 +1103,7 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
 {
 	/* call common implementation */
 	return __nopoll_conn_new_common (ctx, NULL, NOPOLL_TRANSPORT_IPV4, nopoll_false, 
+					 NOPOLL_INVALID_SOCKET,
 					 host_ip, host_port, host_name, 
 					 get_url, protocols, origin);
 }
@@ -1141,6 +1145,7 @@ noPollConn * nopoll_conn_new6 (noPollCtx  * ctx,
 {
 	/* call common implementation */
 	return __nopoll_conn_new_common (ctx, NULL, NOPOLL_TRANSPORT_IPV6, nopoll_false, 
+					 NOPOLL_INVALID_SOCKET,
 					 host_ip, host_port, host_name, 
 					 get_url, protocols, origin);
 }
@@ -1199,7 +1204,54 @@ noPollConn * nopoll_conn_new_opts (noPollCtx       * ctx,
 {
 	/* call common implementation */
 	return __nopoll_conn_new_common (ctx, opts, NOPOLL_TRANSPORT_IPV4, nopoll_false, 
+					 NOPOLL_INVALID_SOCKET,
 					 host_ip, host_port, host_name, 
+					 get_url, protocols, origin);
+}
+
+/**
+ * @brief Creates a new Websocket connection using a socket
+ * with a preestablished connection.
+ *
+ * @param ctx The noPoll context to which this new connection will be associated.
+ *
+ * @param options Optional configuration object. See \ref nopoll_conn_opts_new and \ref nopoll_conn_opts_set_ssl_protocol (for example).
+ *
+ * @param socket Socket FD with an already established connection.
+ *
+ * @param host_ip The websocket server address to connect to.
+ *
+ * @param host_port The websocket server port to connect to. If NULL
+ * is provided, port 80 is used.
+ *
+ * @param host_name This is the Host: header value that will be
+ * sent. This header is used by the websocket server to activate the
+ * right virtual host configuration. If null is provided, Host: will
+ * use host_ip value.
+ *
+ * @param get_url As part of the websocket handshake, an url is passed
+ * to the remote server inside a GET method. This parameter allows to
+ * configure this. If NULL is provided, then / will be used.
+ *
+ * @param origin Websocket origin to be notified to the server.
+ *
+ * @param protocols Optional protocols requested to be activated for
+ * this connection (an string of list of strings separated by a white
+ * space).
+ */
+noPollConn * nopoll_conn_new_with_socket (noPollCtx  * ctx,
+				   noPollConnOpts  * options,
+				   int             socket,
+				   const char      * host_ip,
+				   const char      * host_port,
+				   const char      * host_name,
+				   const char      * get_url,
+				   const char      * protocols,
+				   const char      * origin)
+{
+	/* call common implementation */
+	return __nopoll_conn_new_common (ctx, options, NOPOLL_TRANSPORT_IPV4, nopoll_false,
+					 socket, host_ip, host_port, host_name,
 					 get_url, protocols, origin);
 }
 
@@ -1265,6 +1317,7 @@ noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
 
 	/* call common implementation */
 	return __nopoll_conn_new_common (ctx, options, NOPOLL_TRANSPORT_IPV4, nopoll_true, 
+					 NOPOLL_INVALID_SOCKET,
 					 host_ip, host_port, host_name, 
 					 get_url, protocols, origin);
 }
@@ -1310,7 +1363,76 @@ noPollConn * nopoll_conn_tls_new6 (noPollCtx  * ctx,
 
 	/* call common implementation */
 	return __nopoll_conn_new_common (ctx, options, NOPOLL_TRANSPORT_IPV6, nopoll_true, 
+					 NOPOLL_INVALID_SOCKET,
 					 host_ip, host_port, host_name, 
+					 get_url, protocols, origin);
+}
+
+/**
+ * @brief Allows to create a client WebSocket connection over TLS using a preestablished socket.
+ *
+ * The function works like \ref nopoll_conn_tls_new with the same
+ * semantics but providing a way to create a WebSocket session under
+ * TLS supervision with a preestablished socket. See \ref nopoll_conn_tls_new
+ * and \ref nopoll_conn_new_with_socket for more information.
+ *
+ * @param ctx The context where the operation will take place.
+ *
+ * @param options Optional configuration object. See \ref nopoll_conn_opts_new and \ref nopoll_conn_opts_set_ssl_protocol (for example).
+ *
+ * @param socket Socket FD with an already established connection.
+ *
+ * @param host_ip The websocket server address to connect to.
+ *
+ * @param host_port The websocket server port to connect to. If NULL
+ * is provided, port 443 is used.
+ *
+ * @param host_name This is the Host: header value that will be
+ * sent. This header is used by the websocket server to activate the
+ * right virtual host configuration. If null is provided, Host: will
+ * use host_ip value.
+ *
+ * @param get_url As part of the websocket handshake, an url is passed
+ * to the remote server inside a GET method. This parameter allows to
+ * configure this. If NULL is provided, then / will be used.
+ *
+ * @param origin Websocket origin to be notified to the server.
+ *
+ * @param protocols Optional protocols requested to be activated for
+ * this connection (an string of list of strings separated by a white
+ * space). If the server accepts the connection you can use \ref
+ * nopoll_conn_get_accepted_protocol to get the protocol accepted by
+ * the server.
+ *
+ * @return A reference to the connection created or NULL if it
+ * fails. Keep in mind the connection reported may not be connected at
+ * the time is returned by this function. You can use \ref
+ * nopoll_conn_is_ready and \ref nopoll_conn_is_ok to ensure it can be
+ * used. There is also a helper function (NOTE it is blocking) that
+ * can help you implement a very simple wait until ready operation:
+ * \ref nopoll_conn_wait_until_connection_ready (however, it is not
+ * recommended for any serious, non-command line programming).
+ *
+ */
+noPollConn * nopoll_conn_tls_new_with_socket (noPollCtx  * ctx,
+				  noPollConnOpts  * options,
+				  int          socket,
+				  const char * host_ip,
+				  const char * host_port,
+				  const char * host_name,
+				  const char * get_url,
+				  const char * protocols,
+				  const char * origin)
+{
+	/* init ssl ciphers and engines */
+	if (! __nopoll_tls_was_init) {
+		__nopoll_tls_was_init = nopoll_true;
+		SSL_library_init ();
+	} /* end if */
+
+	/* call common implementation */
+	return __nopoll_conn_new_common (ctx, options, NOPOLL_TRANSPORT_IPV4, nopoll_true,
+					 socket, host_ip, host_port, host_name,
 					 get_url, protocols, origin);
 }
 
