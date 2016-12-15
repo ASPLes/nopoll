@@ -69,6 +69,16 @@ noPollConn * nopoll_conn_new_opts (noPollCtx       * ctx,
 				   const char      * protocols,
 				   const char      * origin);
 
+noPollConn * nopoll_conn_new_with_socket (noPollCtx  * ctx,
+			      noPollConnOpts  * opts,
+			      int          socket,
+			      const char * host_ip,
+			      const char * host_port,
+			      const char * host_name,
+			      const char * get_url,
+			      const char * protocols,
+			      const char * origin);
+
 noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
 				  noPollConnOpts * options,
 				  const char * host_ip, 
@@ -86,6 +96,16 @@ noPollConn * nopoll_conn_tls_new6 (noPollCtx  * ctx,
 				   const char * get_url, 
 				   const char * protocols,
 				   const char * origin);
+
+noPollConn * nopoll_conn_tls_new_with_socket (noPollCtx  * ctx,
+				  noPollConnOpts * options,
+				  int          socket,
+				  const char * host_ip,
+				  const char * host_port,
+				  const char * host_name,
+				  const char * get_url,
+				  const char * protocols,
+				  const char * origin);
 
 noPollConn   * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener);
 
