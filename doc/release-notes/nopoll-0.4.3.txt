@@ -1,0 +1,109 @@
+                  --== noPoll toolkit ==--
+                  Tenacious D vs The Devil
+                           0.4.3
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  - Added IPv6 support
+
+  - Updated DNS code to use thread safe and newer getaddrinfo
+
+Thanks to
+~~~~~~~~~
+
+  - Javier Celaya & Sergio Lopez (provided patch for connection
+    functions reusing already connected socket).
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Added buffer size indication when cookie ending char fails..
+
+* [fix] Increased default nopoll buffer size to process incoming
+  handshakes from 1024 to 8192. Created variable to better control
+  this from nopoll_decl.h
+
+* [fix] Several updates applied to nopoll-conn module to add client
+  support for IPv6. Added two new APIs and reorganized internal code
+  to share as much as possible:
+
+  - nopoll_conn_new6
+  - nopoll_conn_tls_new6
+
+* [fix] Updated DNS/host resolution code to use getaddrinfo (),
+  removing all calls to gethostbyname (to avoid possible race
+  conditions).
+
+* [fix] Updated nopoll-listener module to include support for
+  IPv6. Added several new APIs:
+
+   - nopoll_listener_new6
+   - nopoll_listener_new_opts6
+   - nopoll_listener_tls_new6
+   - nopoll_listener_tls_new_opts6
+
+* [fix] Updated nopoll-listener module to replace code calling to
+  gethostbyname by newer, thread safe, getaddrinfo...
+
+* [fix] Updated noPoll regression test to check new funcitons for IPv6
+  support. Everything working and valgrind checked..
+
+* [fix] Added new definition to support Transports (ipv4 and ipv6)..
+
+* [fix] Fixed minor changes to build nopoll for freebsd..
+
+* [fix] API to open websocket with existing socket (sergio.lopez). Add
+  two functions, nopoll_conn_new_with_socket and
+  nopoll_conn_tls_new_with_socket, to open a websocket connection over
+  an already existing socket.
+
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+15th Dec 2016, Madrid (Spain)
+

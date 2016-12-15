@@ -1,0 +1,169 @@
+                 --== noPoll toolkit ==--
+                   God save the queen 
+                  (sex pixtol's style)
+                          0.4.1
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  - Added official packages for Ubuntu Xenial 16.04, Debian Jessie,
+    FreeBSD 10.X and Raspbian Wheezy
+
+  - Moved connect timeout API to public
+
+Thanks to
+~~~~~~~~~
+
+  - Dmex reported pong frames aren't properly masked (fixed)
+
+  - Neil Kolban (reported wrong signature issues at the documentation)
+
+  - Rami Rosenbaum (reported missing headers for conn timeout)
+
+  - Weston Schmidt (added support for binding to a particular
+    interface, added support to send arbitrary HTTP headers)
+
+  - Rahul Kale (reported an issue with splitted headers).
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Fixed debian files to include nopoll_conn_opts.h into the
+  package libnopoll0-dev
+
+* [fix] Bug reported by Dmex where pong frames aren't properly
+  configured (mask option) when sent by clients..
+
+* [fix] Making nopoll_conn_send_ping to return
+  nopoll_true/nopoll_false according to the status..
+
+* [fix] Corrected signature at nopoll's manual (reported by Neil
+  Kolban)
+
+* [fix] Moved to the header missing public functions:
+
+   - nopoll_conn_connect_timeout
+   - nopoll_conn_get_connect_timeout
+ 
+  (Reported by Rami Rosenbaum)
+
+* [fix] Updated nopoll_conn.c to include more documentation
+
+* [fix] More notes about nopoll_conn_new (connect timeout..)..
+
+* [fix] Updated documentation to properly reference
+  http://www.aspl.es/nopoll/downloads instead of
+  code.google.com. Added reference to ./autogen.sh to prepare sources
+  if SVN/GIT is used.
+
+* [fix] Updated free bsd build scripts to support more archs..
+
+* [fix] Adding files to support FreeBSD 10 amd..
+
+* [fix] Fixed warnings at nopoll-regression-client.c (FreeBSD 10 i386)
+
+* [fix] Added some additional notes to explain freebsd/ directory
+  (README.txt)
+
+* [fix] Updated noPoll' connection API to include an option to skip
+  Origin header check during connection. API added:
+
+  - nopoll_conn_opts_skip_origin_check
+
+* [fix] Fixed regression test which shows a false positive error when
+  used under slow systems like raspberry
+
+* [fix] Updated web references to include notes about using Raspbian..
+
+* [fix] Updated makefiles to control gcc compiler for w64 (windows)
+  platform..
+
+
+* [new ] Add binding interface option to connection and add
+  nopoll_conn_sock_connect_opts() to not break consumers of
+  nopoll_conn_sock_connect().
+
+* [new] Adding the ability to send arbitrary HTTP headers to a server.
+  This doesn't add the ability to process arbitrary headers as a
+  server.
+
+* [fix] Changed ERROR for WARNING message in
+  nopoll-regression-client.c
+
+* [fix] Making max ssl retries (for nopoll_conn) to try for 10 seconds
+  instead of just 1 second (which is too short by default for most of
+  the servers). This only affects client side code
+
+* [fix] Added additional code to avoid printing unallocated memory
+  when wrong headers are sent and debug code is enable..
+
+* [fix] Removing printing buffer received when wrong mime
+  headers are received..
+
+* [fix] fixed broken connection problem caused by some WebSocket
+  clients that send headers using different send operations (rather
+  than one single operation) causing the header to be received
+  splitted.  Added regression test_30 to reproduce the problem and
+  check fix introduced. Problem reported by Rahul Kale (barco.com)
+
+* [fix] Adding support for Ubuntu Xenial 16.0
+
+* [fix] Added initial files to compile jessie..
+
+* [fix] Several updates to detect when __nopoll_conn_get_ssl_context
+  fails to report a valid SSL_CTX (fixed updated test_19).
+
+* [fix] Updated header read handling to support all cases when a
+  splitted/broken header is received. Added regression tests test_31,
+  test_32, test_33, test_34 and test_35 to simulate and support
+  different scenarios where part of the header is received and then
+  the rest...
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+23th May 2016, Madrid (Spain)
+
