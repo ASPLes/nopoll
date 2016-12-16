@@ -38,7 +38,7 @@ dnl      Email address:
 dnl         info@aspl.es - http://www.aspl.es/nopoll
 dnl
 AC_INIT(nopoll, m4_esyscmd([cat VERSION | tr -d '\n']))
-export NOPOLL_VERSION=`cat VERSION`
+export NOPOLL_VERSION=`cat $srcdir/VERSION`
 AC_SUBST(NOPOLL_VERSION)
 
 AM_INIT_AUTOMAKE
@@ -422,7 +422,6 @@ doc/nopoll.doxygen
 test/Makefile
 nopoll.pc])
 
-export NOPOLL_VERSION=`cat VERSION`
 sed -i "s/__NOPOLL_VERSION__/$NOPOLL_VERSION/g" doc/nopoll.doxygen
 sed -i "s/@NOPOLL_VERSION@/$NOPOLL_VERSION/g" doc/nopoll.doxygen
 
