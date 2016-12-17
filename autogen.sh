@@ -50,4 +50,4 @@ autoheader --warnings=error
 automake --add-missing -Werror;
 autoconf --force --warnings=error;
 
-./configure $@ --enable-maintainer-mode
+test -n "$NOCONFIGURE" || ./configure $@ --enable-maintainer-mode

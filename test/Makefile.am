@@ -5,7 +5,7 @@ if ENABLE_NOPOLL_LOG
 LOG = -DSHOW_DEBUG_LOG
 endif
 
-AM_CPPFLAGS = -DTEST_DIR=$(top_srcdir)/test -I$(top_srcdir)/src/ $(compiler_options) $(LOG) -DVERSION=\""$(NOPOLL_VERSION)"\" -D__NOPOLL_PTHREAD_SUPPORT__=1 $(PTHREAD_CFLAGS)
+AM_CPPFLAGS = -DTEST_DIR=$(top_srcdir)/test -I$(top_srcdir)/src/ -I$(top_builddir)/src/ $(compiler_options) $(LOG) -DVERSION=\""$(NOPOLL_VERSION)"\" -D__NOPOLL_PTHREAD_SUPPORT__=1 $(PTHREAD_CFLAGS)
 
 # replace with bin_PROGRAMS to check performance
 noinst_PROGRAMS = nopoll-regression-client nopoll-regression-listener
