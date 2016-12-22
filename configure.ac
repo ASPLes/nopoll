@@ -413,6 +413,12 @@ if test x$enable_nopoll_doc = xyes ; then
 fi
 AM_CONDITIONAL(ENABLE_NOPOLL_DOC, test "x$DOXYGEN" = "xyes")
 
+case $host in
+  *-*-mingw*)
+    WS2_LIBS="-lws2_32"
+    AC_SUBST(WS2_LIBS)
+    ;;
+esac
 
 AC_OUTPUT([
 Makefile

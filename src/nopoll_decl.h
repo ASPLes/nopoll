@@ -168,13 +168,17 @@
 /* additional includes for the windows platform */
 
 /* _WIN32_WINNT note: If the application including the header defines
- * the _WIN32_WINNT, it must include the bit defined by the value
- * 0x400. */
+ * the _WIN32_WINNT, it must include the bits defined by the value
+ * 0x501. */
 #ifndef _WIN32_WINNT
-#  define _WIN32_WINNT 0x400
+#  define _WIN32_WINNT 0x501
+#elif _WIN32_WINNT < 0x501
+#  undef _WIN32_WINNT
+#  define _WIN32_WINNT 0x501
 #endif
 #include <winsock2.h>
 #include <windows.h>
+#include <ws2tcpip.h>
 #include <fcntl.h>
 #include <io.h>
 #include <process.h>

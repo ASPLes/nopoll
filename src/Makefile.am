@@ -43,7 +43,7 @@ libnopollinclude_HEADERS = \
 
 libnopoll_la_LDFLAGS = -no-undefined -export-symbols-regex '^(nopoll|__nopoll|_nopoll).*'
 
-libnopoll_la_LIBADD = $(TLS_LIBS)
+libnopoll_la_LIBADD = $(TLS_LIBS) $(WS2_LIBS)
 
 libnopoll.def: update-def
 
