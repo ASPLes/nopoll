@@ -2944,9 +2944,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 #if defined(SHOW_DEBUG_LOG)
 	long        result;
 #endif
-#if defined(NOPOLL_64BIT_PLATFORM)
 	unsigned char *len;
-#endif
 
 	if (conn == NULL)
 		return NULL;
@@ -3237,7 +3235,6 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received (%d) bytes in header (size %d) for payload size indication, which finally is: %d", bytes, header_size,(int) msg->payload_size);
 		
 	} else if (msg->payload_size == 127) {
-#if defined(NOPOLL_64BIT_PLATFORM)
 		/* read more content (next 8 bytes) */
 		if ((bytes = __nopoll_conn_receive (conn, buffer, 8)) != 8) {
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, 
@@ -3249,20 +3246,23 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 
                 len = (unsigned char*)buffer;
 		msg->payload_size = 0;
+#if defined(NOPOLL_64BIT_PLATFORM)
 		msg->payload_size |= ((long)(len[0]) << 56);
 		msg->payload_size |= ((long)(len[1]) << 48);
 		msg->payload_size |= ((long)(len[2]) << 40);
 		msg->payload_size |= ((long)(len[3]) << 32);
+#else
+		if (len[0] || len[1] || len[2] || len[3]) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "noPoll doesn't support messages bigger than 2GB on this plataform (support for 64bit not found)");
+			nopoll_msg_unref (msg);
+			nopoll_conn_shutdown (conn);
+			return NULL;
+		}
+#endif
 		msg->payload_size |= ((long)(len[4]) << 24);
 		msg->payload_size |= ((long)(len[5]) << 16);
 		msg->payload_size |= ((long)(len[6]) << 8);
 		msg->payload_size |= len[7];
-#else
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "noPoll doesn't support messages bigger than 65k on this plataform (support for 64bit not found)");
-		nopoll_msg_unref (msg);
-		nopoll_conn_shutdown (conn);
-		return NULL;
-#endif
 	} /* end if */
 
 	if (msg->op_code == NOPOLL_PONG_FRAME) {
@@ -4125,21 +4125,31 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	/* according to message length */
 	if (length < 126) {
 		header[1] |= length;
-	} else if (length < 65535) {
+	} else if (length <= 65535) {
 		/* set the next header length is at least 65535 */
 		header[1] |= 126;
 		header_size += 2;
 		/* set length into the next bytes */
 		nopoll_set_16bit (length, header + 2);
 #if defined(NOPOLL_64BIT_PLATFORM)
-	} else if (length < 9223372036854775807) {
-		/* not supported yet */
-		return -1;
+	} else if (length < 0x8000000000000000) {
+		header[2] = (length & 0xFF00000000000000) >> 56;
+		header[3] = (length & 0x00FF000000000000) >> 48;
+		header[4] = (length & 0x0000FF0000000000) >> 40;
+		header[5] = (length & 0x000000FF00000000) >> 32;
 #else
-	} else {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to send the requested message, this requested is bigger than the value that can be supported by this platform (it should be < 65k)");
-		return -1;
+	} else if (length < 0x80000000) {
+		header[2] = header[3] = header[4] = header[5] = 0;
 #endif
+		header[1] |= 127;
+		header_size += 8;
+		header[6] = (length & 0x00000000FF000000) >> 24;
+		header[7] = (length & 0x0000000000FF0000) >> 16;
+		header[8] = (length & 0x000000000000FF00) >> 8;
+		header[9] = (length & 0x00000000000000FF);
+	} else {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to send the requested message, this requested is bigger than the value that can be supported by this platform");
+		return -1;
 	}
 
 	/* place mask */
