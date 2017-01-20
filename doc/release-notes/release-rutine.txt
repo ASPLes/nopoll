@@ -19,16 +19,19 @@
 * Generar paquetes debian/ubuntu  (core-admin)
 * Actualizar FreeBSD
   
-  >> ssh freebsd-93-amd64 -l root -X  (y tambien ssh freebsd-10-amd64 -l root -X)
-  >> cd /usr/src/nopoll
-  >> svn update
-  >> cf
-  >> make clean
-  >> make
-  >> cd freebsd/
-  >> ./buildfreebsd.sh
-  >> cd /usr/src/freebsd-packages/
-  >> ./upload.sh
+  >> ssh freebsd-93-amd64 -l aspl -X
+  >> su -
+  >> cd /usr/src
+  >> ./compile-package-and-upload-nopoll.sh
+  >> ./compile-package-and-upload-libaxl.sh
+  >> ./compile-package-and-upload-vortex.sh
+
+  >> ssh freebsd-10-amd64 -l aspl -X 
+  >> su -
+  >> cd /usr/src
+  >> ./compile-package-and-upload-nopoll.sh
+  >> ./compile-package-and-upload-libaxl.sh
+  >> ./compile-package-and-upload-vortex.sh
 
 * Generar instalador windows
 * Generar bundle para Android:
