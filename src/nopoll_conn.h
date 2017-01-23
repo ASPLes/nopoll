@@ -196,7 +196,7 @@ noPollConn  * nopoll_conn_get_listener (noPollConn * conn);
 
 nopoll_bool      nopoll_conn_send_ping (noPollConn * conn);
 
-nopoll_bool      nopoll_conn_send_pong (noPollConn * conn);
+nopoll_bool      nopoll_conn_send_pong (noPollConn * conn, long length, noPollPtr content);
 
 void          nopoll_conn_set_on_msg (noPollConn              * conn,
 				      noPollOnMessageHandler    on_msg,

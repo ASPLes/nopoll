@@ -3287,16 +3287,6 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			    conn->id, msg->payload_size);
 	} /* end if */
 
-	if (msg->op_code == NOPOLL_PING_FRAME) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PING received over connection id=%d, replying PONG", conn->id);
-		nopoll_msg_unref (msg);
-
-		/* call to send pong */
-		nopoll_conn_send_pong (conn);
-
-		return NULL;
-	} /* end if */
-
 	/* get more bytes */
 	if (msg->is_masked) {
 		bytes = __nopoll_conn_receive (conn, (char *) msg->mask, 4);
@@ -3736,6 +3726,14 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 
 		/* get the message content into the buffer */
 		if (msg) {
+			if (msg->op_code == NOPOLL_PING_FRAME) {
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PING received over connection id=%d, replying PONG", conn->id);
+				/* call to send pong */
+				nopoll_conn_send_pong (conn, nopoll_msg_get_payload_size (msg), (noPollPtr)nopoll_msg_get_payload (msg));
+				nopoll_msg_unref (msg);
+				continue;
+			} /* end if */
+
 			/* get the amount of bytes we can read */
 			amount = nopoll_msg_get_payload_size (msg);
 			total_pending = bytes - total_read;
@@ -3910,12 +3908,12 @@ void          nopoll_conn_set_on_close (noPollConn            * conn,
  * @param nopoll_true if the operation was sent without any error,
  * otherwise nopoll_false is returned.
  */
-nopoll_bool      nopoll_conn_send_pong (noPollConn * conn)
+nopoll_bool      nopoll_conn_send_pong (noPollConn * conn, long length, noPollPtr content)
 {
 	if (conn == NULL)
 		return nopoll_false; /* do not pong if wrong reference received */
 
-	return nopoll_conn_send_frame (conn, nopoll_true, conn->role == NOPOLL_ROLE_CLIENT, NOPOLL_PONG_FRAME, 0, NULL, 0);
+	return nopoll_conn_send_frame (conn, nopoll_true, conn->role == NOPOLL_ROLE_CLIENT, NOPOLL_PONG_FRAME, length, content, 0);
 }
 
 /** 
