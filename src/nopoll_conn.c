@@ -3937,14 +3937,12 @@ nopoll_bool      nopoll_conn_send_pong (noPollConn * conn)
 int nopoll_conn_complete_pending_write (noPollConn * conn)
 {
 	int    bytes_written = 0;
-	char * reference;
-	int    pending_bytes;
 
 	if (conn == NULL || conn->pending_write == NULL)
 		return 0;
 
 	/* simple implementation */
-	bytes_written = conn->send (conn, conn->pending_write, conn->pending_write_bytes);
+	bytes_written = conn->send (conn, conn->pending_write + conn->pending_write_desp, conn->pending_write_bytes);
 	if (bytes_written == conn->pending_write_bytes) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Completed pending write operation with bytes=%d", bytes_written);
 		nopoll_free (conn->pending_write);
@@ -3954,11 +3952,8 @@ int nopoll_conn_complete_pending_write (noPollConn * conn)
 
 	if (bytes_written > 0) {
 		/* bytes written but not everything */
-		pending_bytes = conn->pending_write_bytes - bytes_written;
-		reference     = nopoll_new (char, pending_bytes);
-		memcpy (reference, conn->pending_write + bytes_written, pending_bytes);
-		nopoll_free (conn->pending_write);
-		conn->pending_write = reference;
+		conn->pending_write_bytes -= bytes_written;
+		conn->pending_write_desp += bytes_written;
 		return bytes_written;
 	}
 
@@ -4091,7 +4086,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 #endif
 
 	/* check for pending send operation */
-	if (nopoll_conn_complete_pending_write (conn) != 0)
+	if (nopoll_conn_complete_pending_write (conn) < 0)
 		return -1;
 
 	/* clear header */
@@ -4284,23 +4279,17 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 
 	/* check pending bytes for the next operation */
 	if (conn->pending_write_bytes > 0) {
-		conn->pending_write = nopoll_new (char, conn->pending_write_bytes);
-		memcpy (conn->pending_write, send_buffer + length + header_size - conn->pending_write_bytes, conn->pending_write_bytes);
-		
+		conn->pending_write = send_buffer;
+		conn->pending_write_desp = desp;
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Stored %d bytes starting from %d out of %d bytes (header size: %d)", 
-			    conn->pending_write_bytes, length + header_size - conn->pending_write_bytes, length + header_size, header_size);
+			    conn->pending_write_bytes, desp, length + header_size, header_size);
+	} else {
+		/* release memory */
+		nopoll_free (send_buffer);
 	} /* end if */
-	
-		    
-	/* release memory */
-	nopoll_free (send_buffer);
 
-	/* report at least what was written */
-	if (desp - header_size > 0)
-		return desp - header_size;
-
-	/* report last operation */
-	return bytes_written;
+	/* report that everything was written */
+	return length;
 }
 
 /** 
