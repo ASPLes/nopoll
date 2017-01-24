@@ -920,6 +920,9 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 					    conn->id, conn);
 				break;
 			case SSL_ERROR_SYSCALL:
+				/* Check ENOTCONN on SSL_connect error (only happening on windows). See:
+				 * https://github.com/ASPLes/nopoll/pull/19
+				 */
 				if (errno == NOPOLL_ENOTCONN) {
 					nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "the socket is not yet connected, retrying, conn-id=%d (%p)",
 					            conn->id, conn);
