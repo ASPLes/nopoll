@@ -920,6 +920,11 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 					    conn->id, conn);
 				break;
 			case SSL_ERROR_SYSCALL:
+				if (errno == NOPOLL_ENOTCONN) {
+					nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "the socket is not yet connected, retrying, conn-id=%d (%p)",
+					            conn->id, conn);
+					break;
+				}
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "syscall error while doing TLS handshake, ssl error (code:%d), conn-id: %d (%p), errno: %d, session: %d",
 					    ssl_error, conn->id, conn, errno, conn->session);
 				nopoll_conn_log_ssl (conn);
