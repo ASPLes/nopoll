@@ -1088,7 +1088,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
  * send() API to fail to send the WebSocket init message by returning
  * EWOULD_BLOCK, which is very likely to not happen),
  * 
- * In that, the connection (noPollConn) reported by this function have big
+ * Because of that, the connection (\ref noPollConn) reported by this function have big
  * chances to be not ready (that's why you have to use \ref nopoll_conn_is_ready
  * or the blocking one \ref nopoll_conn_wait_until_connection_ready to ensure
  * you successfully connected),
