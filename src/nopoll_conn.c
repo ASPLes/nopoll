@@ -2513,13 +2513,42 @@ char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_k
 	
 }
 
+nopoll_bool __nopoll_conn_call_on_ready_if_defined (noPollCtx * ctx, noPollConn * conn)
+{
+	noPollActionHandler    on_ready;
+	noPollPtr              on_ready_data;
+
+	if (ctx == NULL || conn == NULL)
+		return nopoll_false; /* this should never happen */
+
+	if (ctx->on_ready || conn->on_ready) {
+		/* set on ready handler, first considering conn->on_ready and then ctx->on_ready */
+		on_ready      = conn->on_ready;
+		on_ready_data = conn->on_ready_data;
+		if (! on_ready) {
+			on_ready      = ctx->on_ready;
+			on_ready_data = ctx->on_ready_data;
+		} /* end if */
+
+		if (on_ready &&  ! on_ready (ctx, conn, on_ready_data)) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Peer from %s:%s was denied by application level (on ready handler: %p), clossing session", 
+				    conn->host, conn->port, on_ready);
+			nopoll_conn_shutdown (conn);
+			return nopoll_false;
+		}
+	} /* end if */
+
+	/* reached this point, return ok status (even if we have or no
+	   on ready function defined) */
+	return nopoll_true;
+
+}
+
 nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPollConn * conn)
 {
 	char                 * reply;
 	int                    reply_size;
 	char                 * accept_key;
-	noPollActionHandler    on_ready;
-	noPollPtr              on_ready_data;
 	const char           * protocol;
 	nopoll_bool            origin_check;
 
@@ -2613,22 +2642,8 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 
 	/* now call the user app level to accept the websocket
 	   connection */
-	if (ctx->on_ready || conn->on_ready) {
-		/* set on ready handler, first considering conn->on_ready and then ctx->on_ready */
-		on_ready      = conn->on_ready;
-		on_ready_data = conn->on_ready_data;
-		if (! on_ready) {
-			on_ready      = ctx->on_ready;
-			on_ready_data = ctx->on_ready_data;
-		} /* end if */
-
-		if (on_ready &&  ! on_ready (ctx, conn, on_ready_data)) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s was denied by application level (on ready handler: %p), clossing session", 
-				    conn->host, conn->port, on_ready);
-			nopoll_conn_shutdown (conn);
-			return nopoll_false;
-		}
-	} /* end if */
+	if (! __nopoll_conn_call_on_ready_if_defined (ctx, conn))
+		return nopoll_false;
 	
 	return nopoll_true; /* signal handshake was completed */
 }
@@ -2661,6 +2676,11 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sec-Websocket-Accept matches expected value..nopoll_conn_complete_handshake_check_client (%p, %p)=%d",
 		    ctx, conn, result);
+
+	/* now call the user app level to accept the websocket
+	   connection */
+	if (! __nopoll_conn_call_on_ready_if_defined (ctx, conn))
+		return nopoll_false;
 
 	return result;
 }
