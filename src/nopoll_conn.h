@@ -192,6 +192,8 @@ int           nopoll_conn_flush_writes           (noPollConn * conn, long timeou
 
 int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nopoll_bool block, long int timeout);
 
+int           nopoll_conn_read_pending (noPollConn * conn);
+
 noPollConn  * nopoll_conn_get_listener (noPollConn * conn);
 
 nopoll_bool      nopoll_conn_send_ping (noPollConn * conn);

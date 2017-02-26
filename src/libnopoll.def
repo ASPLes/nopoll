@@ -89,6 +89,7 @@ nopoll_conn_pending_write_bytes
 nopoll_conn_port
 nopoll_conn_produce_accept_key
 nopoll_conn_read
+nopoll_conn_read_pending
 nopoll_conn_readline
 nopoll_conn_ref
 nopoll_conn_ref_count

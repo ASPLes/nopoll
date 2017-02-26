@@ -3647,6 +3647,29 @@ int           nopoll_conn_send_binary_fragment (noPollConn * conn, const char * 
  * use the buffer as a nul-terminated string because the function
  * doesn't add the final \0 to the content read.
  *
+ * <b>More calls to nopoll_conn_read might be needed</b><br>
+ *
+ * Because \ref nopoll_conn_read calls to \ref nopoll_conn_get_msg to
+ * get content to satisfy buffer read requested, it might happen that
+ * the actual amount of bytes requested by this function (\ref
+ * nopoll_conn_read) is smaller than the number of bytes that can be
+ * satisfied (because \ref nopoll_conn_get_msg reported a \ref
+ * noPollMsg with bigger content).
+ *
+ * In such case, these bytes will be reported on next call to
+ * nopoll_conn_read. 
+ *
+ * However, it might also happen that the socket is being watched (by
+ * select(), poll(), epoll(), similar mechanism) and because all bytes
+ * have been read and are retained in a \ref noPollMsg inside the
+ * provided \ref noPollConn) this might cause a block until a forced
+ * nopoll_conn_read happens again (because the socket does not report
+ * any content to be read and nopoll_conn_read is not called).
+ *
+ * In such scenarios, if you want to avoid such lockings, please use
+ * \ref nopoll_conn_read_pending to do more calls to \ref nopoll_conn_read
+ *
+ *
  */
 int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nopoll_bool block, long int timeout)
 {
@@ -3765,7 +3788,8 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 			/* get the amount of bytes we can read */
 			amount = nopoll_msg_get_payload_size (msg);
 			total_pending = bytes - total_read;
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "(New Frame) received %d bytes (pending requested %d bytes, desp: %d)", amount, total_pending, desp);
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "(New Frame) bytes received %d (requested %d, read %d, total_pending %d bytes, desp: %d)",
+				    amount, bytes, total_read, total_pending, desp);
 			if (amount > total_pending) {
 				/* save here the difference between
 				 * what we have read and remaining data */
@@ -3822,6 +3846,26 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 	if (total_read == 0 && ! block)
 		return -1;
 	return total_read;
+}
+
+/** 
+ * @brief Allows to check if the are pending bytes to be read on the
+ * provided connection and that are retained in internal buffers so
+ * the socket associated will not report pending content.
+ *
+ * See \ref nopoll_conn_read documentation to know more about this
+ * function. This API is not useful if you are not using \ref
+ * nopoll_conn_read (stream oriented APi).
+ *
+ * @param conn The connection where the operation takes place
+ *
+ * @return The amount of bytes pendings to be read (and a confirmation
+ * that bytes are pending to be read) or 0 if nothing is pending. 
+ */
+int nopoll_conn_read_pending (noPollConn * conn) {
+        if (conn == NULL || conn->pending_msg == NULL)
+	        return 0;
+	return conn->pending_diff;
 }
 
 /** 
