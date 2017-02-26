@@ -180,7 +180,7 @@ nopoll_bool  nopoll_msg_is_final (noPollMsg * msg)
 	if (msg == NULL)
 		return nopoll_false;
 
-	return msg->has_fin;
+	return msg->remain_bytes == 0 && msg->has_fin;
 }
 
 /** 

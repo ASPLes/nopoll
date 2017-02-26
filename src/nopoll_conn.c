@@ -3384,9 +3384,10 @@ read_payload:
 		return NULL;		
 	} /* end if */
 
-	if (bytes != msg->payload_size) {
-		/* record we've got content pending to be read */
-		msg->remain_bytes = msg->payload_size - bytes;
+
+	/* record we've got content pending to be read */
+	msg->remain_bytes = msg->payload_size - bytes;	
+	if (msg->remain_bytes > 0) {
 
 		/* set connection in remaining data to read */
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Received fewer bytes than expected (bytes: %d < payload size: %d)", 
