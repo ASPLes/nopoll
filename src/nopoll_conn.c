@@ -2968,7 +2968,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	int         bytes;
 	noPollMsg * msg;
 	int         ssl_error;
-	int         header_size;
+	int         header_size = 2;
 #if defined(SHOW_DEBUG_LOG)
 	long        result;
 #endif
