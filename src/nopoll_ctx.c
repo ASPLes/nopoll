@@ -335,7 +335,7 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 			/* acquire a reference to the conection */
 			nopoll_conn_unref (conn);
 
-			break;
+			return; 
 		} /* end if */
 		
 		iterator++;
