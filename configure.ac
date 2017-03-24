@@ -55,7 +55,7 @@ compiler_options=""
 STRICT_PROTOTYPES=""
 echo "Detected compiler: $compiler"
 if test "$compiler" = "gcc" ; then
-   compiler_options="-Wstrict-prototypes -Wall -Werror -ansi -fstack-protector-all -Wstack-protector"
+   compiler_options="-Wstrict-prototypes -Wall -Werror -ansi"
    echo "Detected gcc compiler: $compiler, adding options: $compiler_options"
 fi
 AC_SUBST(compiler_options)
@@ -184,7 +184,16 @@ PTHREAD_LIBS="$nopoll_cv_pthreads_lib"
 AC_SUBST(PTHREAD_CFLAGS)
 AC_SUBST(PTHREAD_LIBS)
 
-
+my_save_cflags="$CFLAGS"
+CFLAGS="-fstack-protector-all -Wstack-protector"
+AC_MSG_CHECKING([whether CC supports -fstack-protector-all -Wstack-protector])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([])],
+    [AC_MSG_RESULT([yes])]
+    [AM_CFLAGS="-fstack-protector-all -Wstack-protector"],
+    [AC_MSG_RESULT([no])]
+)
+CFLAGS="$my_save_cflags"
+AC_SUBST([AM_CFLAGS])
 
 AC_ARG_ENABLE(nopoll-log, [  --enable-nopoll-log     Enable building Nopoll with debug log support [default=yes]], enable_nopoll_log="$enableval", enable_nopoll_log=yes)
 AM_CONDITIONAL(ENABLE_NOPOLL_LOG, test "x$enable_nopoll_log" = "xyes")
