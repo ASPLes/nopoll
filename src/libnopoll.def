@@ -18,6 +18,7 @@ __nopoll_listener_new_opts_internal
 __nopoll_listener_sock_listen_internal
 __nopoll_listener_tls_new_opts_internal
 __nopoll_log
+__nopoll_msg_join
 __nopoll_mutex_create
 __nopoll_mutex_destroy
 __nopoll_mutex_lock
@@ -108,6 +109,7 @@ nopoll_conn_set_bind_interface
 nopoll_conn_set_hook
 nopoll_conn_set_on_close
 nopoll_conn_set_on_msg
+nopoll_conn_set_on_ping_msg
 nopoll_conn_set_on_ready
 nopoll_conn_set_sock_block
 nopoll_conn_set_sock_tcp_nodelay
@@ -134,6 +136,7 @@ nopoll_ctx_set_certificate
 nopoll_ctx_set_on_accept
 nopoll_ctx_set_on_msg
 nopoll_ctx_set_on_open
+nopoll_ctx_set_on_ping_msg
 nopoll_ctx_set_on_ready
 nopoll_ctx_set_post_ssl_check
 nopoll_ctx_set_protocol_version
@@ -174,6 +177,7 @@ nopoll_log_color_is_enabled
 nopoll_log_enable
 nopoll_log_is_enabled
 nopoll_log_set_handler
+nopoll_loop_ended
 nopoll_loop_init
 nopoll_loop_process
 nopoll_loop_process_data

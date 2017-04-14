@@ -203,6 +203,9 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 		case NOPOLL_LEVEL_DEBUG:
 			printf ("(\e[1;32mdebug\e[0m) ");
 			break;
+		case NOPOLL_LEVEL_INFO:
+			printf ("(\e[1;32minfo\e[0m) ");
+			break;
 		case NOPOLL_LEVEL_WARNING:
 			printf ("(\e[1;33mwarning\e[0m) ");
 			break;
@@ -214,6 +217,9 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 		switch (level) {
 		case NOPOLL_LEVEL_DEBUG:
 			printf ("(debug)");
+			break;
+		case NOPOLL_LEVEL_INFO:
+			printf ("(info)");
 			break;
 		case NOPOLL_LEVEL_WARNING:
 			printf ("(warning)");

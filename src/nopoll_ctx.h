@@ -87,6 +87,10 @@ void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
 					 noPollOnMessageHandler   on_msg,
 					 noPollPtr                user_data);
 
+void           nopoll_ctx_set_on_ping_msg    (noPollCtx              * ctx,
+					 noPollOnMessageHandler   on_ping_msg,
+					 noPollPtr                user_data);
+
 void           nopoll_ctx_set_ssl_context_creator (noPollCtx                * ctx,
 						   noPollSslContextCreator    context_creator,
 						   noPollPtr                  user_data);
