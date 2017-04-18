@@ -526,23 +526,22 @@ int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 {
 	int res;
 	nopoll_bool needs_retry;
-	int         tries = 0;
 
 	/* call to read content */
-	while (tries < 50) {
-	        res = SSL_read (conn->ssl, buffer, buffer_size);
-		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: received %d bytes..", res); */
+	res = SSL_read (conn->ssl, buffer, buffer_size);
+	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: received %d bytes..", res); */
 
-		/* call to handle error */
-		res = __nopoll_conn_tls_handle_error (conn, res, "SSL_read", &needs_retry);
-		
-		if (! needs_retry)
-		        break;
-
-		/* next operation */
-		tries++;
-	}
+	/* call to handle error */
+	res = __nopoll_conn_tls_handle_error (conn, res, "SSL_read", &needs_retry);
 	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "  SSL: after procesing error %d bytes..", res); */
+	if (res == -2) {
+#if defined(NOPOLL_OS_UNIX)
+		errno = NOPOLL_EWOULDBLOCK;
+#elif defined(NOPOLL_OS_WIN32)
+		WSASetLastError(NOPOLL_EWOULDBLOCK);
+#endif
+	}
+
 	return res;
 }
 
@@ -553,24 +552,22 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 {
 	int         res;
 	nopoll_bool needs_retry;
-	int         tries = 0;
 
 	/* call to read content */
-	while (tries < 50) {
-	        res = SSL_write (conn->ssl, buffer, buffer_size);
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: sent %d bytes (requested: %d)..", res, buffer_size); 
+	res = SSL_write (conn->ssl, buffer, buffer_size);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "SSL: sent %d bytes (requested: %d)..", res, buffer_size); 
 
-		/* call to handle error */
-		res = __nopoll_conn_tls_handle_error (conn, res, "SSL_write", &needs_retry);
-		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "   SSL: after processing error, sent %d bytes (requested: %d)..",  res, buffer_size); */
-
-		if (! needs_retry)
-		        break;
-
-		/* next operation */
-		nopoll_sleep (tries * 10000);
-		tries++;
+	/* call to handle error */
+	res = __nopoll_conn_tls_handle_error (conn, res, "SSL_write", &needs_retry);
+	/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "   SSL: after processing error, sent %d bytes (requested: %d)..",  res, buffer_size); */
+	if (res == -2) {
+#if defined(NOPOLL_OS_UNIX)
+		errno = NOPOLL_EWOULDBLOCK;
+#elif defined(NOPOLL_OS_WIN32)
+		WSASetLastError(NOPOLL_EWOULDBLOCK);
+#endif
 	}
+
 	return res;
 }
 
