@@ -2286,6 +2286,8 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 	/* memset (buffer, 0, maxlen * sizeof (char )); */
 #if defined(NOPOLL_OS_UNIX)
 	errno = 0;
+#elif defined(NOPOLL_OS_WIN32)
+	WSASetLastError(0);
 #endif
 	if ((nread = conn->receive (conn, buffer, maxlen)) == NOPOLL_SOCKET_ERROR) {
 		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning errno=%d (%s)", errno, strerror (errno)); */
@@ -3046,6 +3048,8 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		errno = NOPOLL_EWOULDBLOCK; /* simulate there is no data available to stop
 					       here. If there is no data indeed, on next
 					       call it will not fail */
+#elif defined(NOPOLL_OS_WIN32)
+		WSASetLastError(NOPOLL_EWOULDBLOCK); /* simulate there is no data available */
 #endif
 		return NULL;
 		
