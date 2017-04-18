@@ -3157,7 +3157,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	} /* end if */
 
 	if (conn->previous_msg) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Reading bytes (previously read %d) from a previous unfinished frame (pending: %d) over conn-id=%d",
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reading bytes (previously read %d) from a previous unfinished frame (pending: %d) over conn-id=%d",
 			    conn->previous_msg->payload_size, conn->previous_msg->remain_bytes, conn->id);
 
 		if (conn->read_pending_header) {
@@ -3247,7 +3247,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	bytes = __nopoll_conn_receive (conn, buffer, 2);
 	if (bytes == 0) {
 		/* connection not ready */
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Connection id=%d without data, errno=%d : %s, returning no message", 
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Connection id=%d without data, errno=%d : %s, returning no message",
 			    conn->id, errno, strerror (errno));
 		return NULL;
 	}
@@ -3263,7 +3263,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		memcpy (conn->pending_buf + conn->pending_buf_bytes, buffer, bytes);
 		conn->pending_buf_bytes += bytes;
 		
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, 
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG,
 			    "Expected to receive complete websocket frame header but found only %d bytes over conn-id=%d, saving to reuse later",
 			    bytes, conn->id);
 		return NULL;
@@ -3424,7 +3424,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			/* release message because it not available here */
 			nopoll_msg_unref (msg);
 			if (bytes >= 0 && nopoll_conn_is_ok (conn)) {
-				nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, 
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG,
 					    "Expected to receive incoming mask after header (4 bytes) but found %d bytes on conn-id=%d, saving %d for future operations ", 
 					    bytes, conn->id, conn->pending_buf_bytes);
 				return NULL;
@@ -3499,7 +3499,7 @@ read_payload:
 	if (msg->remain_bytes > 0) {
 
 		/* set connection in remaining data to read */
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Received fewer bytes than expected (bytes: %d < payload size: %d)", 
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received fewer bytes than expected (bytes: %d < payload size: %d)",
 			    bytes, (int) msg->payload_size);
 		msg->payload_size = bytes;
 
