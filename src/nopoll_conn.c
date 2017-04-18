@@ -3773,8 +3773,14 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 			} /* end if */
 
 			if (! block) {
-				if (total_read == 0 && ! block) 
+				if (total_read == 0 && ! block) {
+#if defined(NOPOLL_OS_UNIX)
+					errno = NOPOLL_EWOULDBLOCK; /* simulate there is no data available */
+#elif defined(NOPOLL_OS_WIN32)
+					WSASetLastError(NOPOLL_EWOULDBLOCK); /* simulate there is no data available */
+#endif
 					return -1;
+                                }
 				return total_read;
 			} /* end if */
 			
