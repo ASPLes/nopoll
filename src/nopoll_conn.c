@@ -297,11 +297,11 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 	} /* end if */
 
 	/* set non blocking status */
-	nopoll_conn_set_sock_block (session, nopoll_false);
+	nopoll_log (ctx, NOPOLL_LEVEL_INFO,"Create socket with blocking-mode");
+	nopoll_conn_set_sock_block (session, nopoll_true);
 	
 	/* do a tcp connect */
         if (connect (session, res->ai_addr, res->ai_addrlen) < 0) {
-		if(errno != NOPOLL_EINPROGRESS && errno != NOPOLL_EWOULDBLOCK && errno != NOPOLL_ENOTCONN) { 
 		        shutdown (session, SHUT_RDWR);
                         nopoll_close_socket (session);
 
@@ -312,7 +312,10 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 			freeaddrinfo (res);
 			
 			return -1;
-		} /* end if */
+	}
+	else
+	{
+		nopoll_log (ctx, NOPOLL_LEVEL_INFO,"socket connect successfull");
 	} /* end if */
 
 	/* relase address info */
