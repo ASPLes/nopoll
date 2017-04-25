@@ -297,7 +297,7 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 	} /* end if */
 
 	/* set non blocking status */
-	nopoll_log (ctx, NOPOLL_LEVEL_INFO,"Create socket with blocking-mode");
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG,"Create socket with blocking-mode");
 	nopoll_conn_set_sock_block (session, nopoll_true);
 	
 	/* do a tcp connect */
@@ -315,7 +315,7 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 	}
 	else
 	{
-		nopoll_log (ctx, NOPOLL_LEVEL_INFO,"socket connect successfull");
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG,"socket connect successfull");
 	} /* end if */
 
 	/* relase address info */
