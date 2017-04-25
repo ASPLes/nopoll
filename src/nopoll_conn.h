@@ -111,6 +111,8 @@ noPollConn   * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener);
 
 noPollConn   * nopoll_conn_accept_socket (noPollCtx * ctx, noPollConn * listener, NOPOLL_SOCKET session);
 
+void  nopoll_conn_set_on_ping_msg (noPollConn * conn, noPollOnMessageHandler    on_ping_msg, noPollPtr user_data);
+
 nopoll_bool    nopoll_conn_accept_complete (noPollCtx      * ctx, 
 					    noPollConn     * listener, 
 					    noPollConn     * conn, 
@@ -224,7 +226,7 @@ int           __nopoll_conn_send_common (noPollConn * conn,
 					 noPollOpCode frame_type);
 
 nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
-							  int          timeout);
+							  int          timeout, char * message);
 
 void               nopoll_conn_connect_timeout (noPollCtx * ctx,
 						long        microseconds_to_wait);

@@ -334,8 +334,8 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 
 			/* acquire a reference to the conection */
 			nopoll_conn_unref (conn);
-
-			return; 
+            nopoll_log (ctx, NOPOLL_LEVEL_INFO, "Returning, unlock of mutex is not required ");
+			return;
 		} /* end if */
 		
 		iterator++;
@@ -646,6 +646,19 @@ void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
 	/* set new handler */
 	ctx->on_msg      = on_msg;
 	ctx->on_msg_data = user_data;
+
+	return;
+}
+
+void           nopoll_ctx_set_on_ping_msg    (noPollCtx              * ctx,
+					 noPollOnMessageHandler   on_ping_msg,
+					 noPollPtr                user_data)
+{
+	nopoll_return_if_fail (ctx, ctx);
+
+	/* set new handler */
+	ctx->on_ping_msg      = on_ping_msg;
+	ctx->on_ping_msg_data = user_data;
 
 	return;
 }
