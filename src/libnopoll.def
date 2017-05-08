@@ -1,6 +1,7 @@
 EXPORTS
 __nopoll_conn_accept_complete_common
 __nopoll_conn_call_on_ready_if_defined
+__nopoll_conn_complete_pending_write_reduce_header
 __nopoll_conn_get_client_init
 __nopoll_conn_get_ssl_context
 __nopoll_conn_new_common

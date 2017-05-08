@@ -3523,6 +3523,16 @@ int           __nopoll_conn_send_common (noPollConn * conn, const char * content
  * failure, also check errno variable to know more what went wrong.
  *
  * See \ref nopoll_manual_retrying_write_operations to know more about error codes and when it is possible to retry write operations.
+ * 
+ * The function returns the number of bytes sent, being @length the 
+ * max amount of bytes that can be reported as sent by
+ * this funciton. This means value reported by this function do not
+ * includes headers.  The funciton also returns the following general indications:
+ *
+ *   N : number of bytes sent (user land bytes sent, without including web socket headers).
+ *   0 : no bytes sent (see errno indication). See also \ref nopoll_conn_complete_pending_write
+ *  -1 : failure found
+ *  -2 : retry operation needed (NOPOLL_EWOULDBLOCK)
  */
 int           nopoll_conn_send_text (noPollConn * conn, const char * content, long length)
 {
@@ -3551,6 +3561,16 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
  *
  * See \ref nopoll_manual_retrying_write_operations to know more about
  * error codes and when it is possible to retry write operations.
+ *
+ * The function returns the number of bytes sent, being @length the 
+ * max amount of bytes that can be reported as sent by
+ * this funciton. This means value reported by this function do not
+ * includes headers.  The funciton also returns the following general indications:
+ *
+ *   N : number of bytes sent (user land bytes sent, without including web socket headers).
+ *   0 : no bytes sent (see errno indication). See also \ref nopoll_conn_complete_pending_write
+ *  -1 : failure found
+ *  -2 : retry operation needed (NOPOLL_EWOULDBLOCK)
  */
 int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * content, long length)
 {
@@ -3576,6 +3596,16 @@ int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * co
  * know more what went wrong.
  *
  * See \ref nopoll_manual_retrying_write_operations to know more about error codes and when it is possible to retry write operations.
+ *
+ * The function returns the number of bytes sent, being @length the 
+ * max amount of bytes that can be reported as sent by
+ * this funciton. This means value reported by this function do not
+ * includes headers.  The funciton also returns the following general indications:
+ *
+ *   N : number of bytes sent (user land bytes sent, without including web socket headers).
+ *   0 : no bytes sent (see errno indication). See also \ref nopoll_conn_complete_pending_write
+ *  -1 : failure found
+ *  -2 : retry operation needed (NOPOLL_EWOULDBLOCK)
  */
 int           nopoll_conn_send_binary (noPollConn * conn, const char * content, long length)
 {
@@ -3604,6 +3634,16 @@ int           nopoll_conn_send_binary (noPollConn * conn, const char * content, 
  *
  * See \ref nopoll_manual_retrying_write_operations to know more about
  * error codes and when it is possible to retry write operations.
+ *
+ * The function returns the number of bytes sent, being @length the 
+ * max amount of bytes that can be reported as sent by
+ * this funciton. This means value reported by this function do not
+ * includes headers.  The funciton also returns the following general indications:
+ *
+ *   N : number of bytes sent (user land bytes sent, without including web socket headers).
+ *   0 : no bytes sent (see errno indication). See also \ref nopoll_conn_complete_pending_write
+ *  -1 : failure found
+ *  -2 : retry operation needed (NOPOLL_EWOULDBLOCK) 
  */
 int           nopoll_conn_send_binary_fragment (noPollConn * conn, const char * content, long length)
 {
@@ -3996,6 +4036,23 @@ nopoll_bool      nopoll_conn_send_pong (noPollConn * conn, long length, noPollPt
 	return nopoll_conn_send_frame (conn, nopoll_true, conn->role == NOPOLL_ROLE_CLIENT, NOPOLL_PONG_FRAME, length, content, 0);
 }
 
+int __nopoll_conn_complete_pending_write_reduce_header (noPollConn * conn, int bytes_written)
+{
+        /* now check if the last write operation includes
+	   headers added by noPoll, to remove that size from
+	   reported value. Reported value should only include
+	   in its counting bytes requested by the upper level
+	   application not upper level application plus bytes
+	   added by noPoll */
+        while (conn->pending_write_added_header > 0 && bytes_written > 0) {
+	        bytes_written --;
+		conn->pending_write_added_header--;
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Reduced added header (bytes_written=%d, conn->pending_write_added_header=%d)", 
+			    bytes_written, conn->pending_write_added_header);
+	} /* end if */
+	return bytes_written;
+}
+
 /** 
  * @brief Allows to call to complete last pending write process that may be
  * pending from a previous uncompleted write operation. The function
@@ -4025,14 +4082,18 @@ int nopoll_conn_complete_pending_write (noPollConn * conn)
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Completed pending write operation with bytes=%d", bytes_written);
 		nopoll_free (conn->pending_write);
 		conn->pending_write = NULL;
-		return bytes_written;
+
+		/* reduce/remove bytes written due to header */
+		return __nopoll_conn_complete_pending_write_reduce_header (conn, bytes_written);
 	} /* end if */
 
 	if (bytes_written > 0) {
 		/* bytes written but not everything */
 		conn->pending_write_bytes -= bytes_written;
 		conn->pending_write_desp += bytes_written;
-		return bytes_written;
+
+		/* reduce/remove bytes written due to header */
+		return __nopoll_conn_complete_pending_write_reduce_header (conn, bytes_written);
 	}
 
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Found complete write operation didn't finish well, result=%d, errno=%d, conn-id=%d",
@@ -4146,6 +4207,17 @@ int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_resu
  * @param length The frame payload length.
  *
  * @param content Pointer to the data to be sent in the frame.
+ *
+ * @return The function returns the number of bytes sent, being @length the 
+ * max amount of bytes that can be reported as sent by
+ * this funciton. This means value reported by this function do not
+ * includes headers.  The funciton also returns the following general indications:
+ *
+ *   N : number of bytes sent (user land bytes sent, without including web socket headers).
+ *   0 : no bytes sent (see errno indication). See also \ref nopoll_conn_complete_pending_write
+ *  -1 : failure found
+ *  -2 : retry operation needed (NOPOLL_EWOULDBLOCK)
+ *
  */
 int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool masked,
 			    noPollOpCode op_code, long length, noPollPtr content, long sleep_in_header)
@@ -4155,6 +4227,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	int                header_size;
 	char             * send_buffer;
 	int                bytes_written = 0;
+	int                bytes_sent    = 0;
 	char               mask[4];
 	unsigned int       mask_value = 0;
 	int                desp = 0;
@@ -4164,8 +4237,9 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 #endif
 
 	/* check for pending send operation */
-	if (nopoll_conn_complete_pending_write (conn) < 0)
-		return -1;
+	bytes_written = nopoll_conn_complete_pending_write (conn);
+	if (bytes_written < 0)
+		return bytes_written;
 
 	/* clear header */
 	memset (header, 0, 14);
@@ -4339,6 +4413,25 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	/* record pending write bytes */
 	conn->pending_write_bytes = length + header_size - desp;
 
+	/* record the header to be accurate when reporting the amount
+	   of bytes written: we have to avoid confusming two things:
+
+	   - Bytes written by the protocol (length + headers)
+	   - Bytes requested by the upper level application to be written (just length)
+	   
+	   By recording the following value, we try to make
+	   nopoll_conn_complete_pending_write to report amount of
+	   upper level bytes written (without headers, which is
+	   something created by noPoll and not requested by the upper
+	   level application).
+	*/
+	conn->pending_write_added_header = header_size;
+
+	/* record and report useful userland payload's bytes sent  */
+	bytes_sent = 0;
+	if ((desp - header_size) > 0)
+	        bytes_sent = (desp - header_size);
+	
 #if defined(SHOW_DEBUG_LOG)
 	level = NOPOLL_LEVEL_DEBUG;
 	if (desp != (length + header_size))
@@ -4347,12 +4440,12 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		level = NOPOLL_LEVEL_WARNING;
 
 	nopoll_log (conn->ctx, level, 
-		    "Write operation finished with with last result=%d, bytes_written=%d, requested=%d, remaining=%d (conn-id=%d)",
+		    "Write operation finished with with last result=%d (bytes_written), bytes-sent=%d, desp=%d, header_size=%d, requested=%d (length), remaining=%d (conn->pending_write_bytes), errno=%d (conn-id=%d)",
 		    /* report want we are going to report: result */
-		    bytes_written <= 0 ? bytes_written : desp - header_size,
-		    /* bytes written */
-		    desp - header_size, 
-		    length, conn->pending_write_bytes, conn->id);
+		    bytes_written,
+		    /* bytes sent */
+		    bytes_sent, desp, header_size,
+		    length, conn->pending_write_bytes, errno, conn->id);
 #endif
 
 	/* check pending bytes for the next operation */
@@ -4366,8 +4459,14 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		nopoll_free (send_buffer);
 	} /* end if */
 
-	/* report that everything was written */
-	return length;
+	/* if no byte was sent and errno is set to non-blocking error
+	   operation that indicates a retry, report -2 */
+	if (bytes_sent == 0 && errno == NOPOLL_EWOULDBLOCK) 
+	        return -2;
+
+	/* report what was was written (which can be everything, part,
+	   anything or error) */
+	return bytes_sent;
 }
 
 /** 

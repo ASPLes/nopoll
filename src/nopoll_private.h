@@ -309,6 +309,7 @@ struct _noPollConn {
 	char                * pending_write;
 	int                   pending_write_bytes;
 	int                   pending_write_desp;
+        int                   pending_write_added_header;
 
 	/** 
 	 * @internal Internal reference to the connection options.
