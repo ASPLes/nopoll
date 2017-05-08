@@ -1940,13 +1940,10 @@ void          nopoll_conn_close_ext  (noPollConn  * conn, int status, const char
 	refs = nopoll_conn_ref_count (conn);
 	nopoll_ctx_unregister_conn (conn->ctx, conn);
 
-	/* avoid calling next unref in the case not enough references
-	 * are found */
-	if (refs <= 1)
-		return;
-
 	/* call to unref connection */
-	nopoll_conn_unref (conn);
+	if (refs > 0) {
+            nopoll_conn_unref (conn);
+        }
 
 	return;	
 }
