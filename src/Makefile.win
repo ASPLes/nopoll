@@ -52,7 +52,7 @@ $(DLL).dll: $(OBJ)
 	@echo "Creating library.."
 	$(CC) -m$(MODE) -shared -Wl,--out-implib,$(IMPORT_DLL) $(export_all_symbols) $(OBJ) -o $(DLL).dll $(LIBS)
 	@echo "Building libnopoll.lib file.."
-	lib.exe /def:libnopoll.def
+	lib.exe /machine:$(link_machine) /def:libnopoll.def
 	cp $(DLL).dll $(release_dir)
 	cp libnopoll.exp $(release_dir)/$(DLL).exp
 	cp libnopoll.lib $(release_dir)/$(DLL).lib

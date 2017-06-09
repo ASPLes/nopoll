@@ -66,7 +66,9 @@ NOPOLL_SOCKET     __nopoll_listener_sock_listen_internal      (noPollCtx        
 	int                  unit      = 1; 
 	socklen_t            sin_size  = sizeof (sin);
 #endif	
+#if defined(SHOW_DEBUG_LOG)
 	uint16_t             int_port;
+#endif
 	int                  bind_res;
 
 	nopoll_return_val_if_fail (ctx, ctx,  -2);
@@ -135,8 +137,10 @@ NOPOLL_SOCKET     __nopoll_listener_sock_listen_internal      (noPollCtx        
 	setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &unit, sizeof (unit));
 #endif 
 
+#if defined(SHOW_DEBUG_LOG)
 	/* get integer port */
 	int_port  = (uint16_t) atoi (port);
+#endif
 
 	/* call to bind */
 	tries    = 0;

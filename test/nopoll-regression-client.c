@@ -690,6 +690,10 @@ nopoll_bool test_04b (void) {
 		iterator ++;
 	}  /* end while */
 
+#if !defined(ETIMEDOUT)
+#define ETIMEDOUT 0
+#endif
+
 	if (errno != NOPOLL_EWOULDBLOCK && errno != EINPROGRESS && errno != ETIMEDOUT) {
 		printf ("ERROR: expected to find errno=%d, but found errno=%d : %s\n",
 			(int)NOPOLL_EWOULDBLOCK, (int)errno, strerror (errno));
