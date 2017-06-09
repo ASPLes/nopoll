@@ -1,5 +1,5 @@
 dnl LibNoPoll: A websocket library
-dnl  Copyright (C) 2013 Advanced Software Production Line, S.L.
+dnl  Copyright (C) 2017 Advanced Software Production Line, S.L.
 dnl
 dnl  This program is free software; you can redistribute it and/or
 dnl  modify it under the terms of the GNU Lesser General Public
@@ -29,9 +29,8 @@ dnl  contact us:
 dnl          
 dnl      Postal address:
 dnl         Advanced Software Production Line, S.L.
-dnl         Edificio Alius A, Oficina 102,
-dnl         C/ Antonio Suarez Nº 10,
-dnl         Alcalá de Henares 28802 Madrid
+dnl         Av. Juan Carlos I, Nº13, 2ºC
+dnl         Alcalá de Henares 28806 Madrid
 dnl         Spain
 dnl
 dnl      Email address:

@@ -1,6 +1,6 @@
 /*
  *  LibNoPoll: A websocket library
- *  Copyright (C) 2015 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2017 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -28,9 +28,8 @@
  *          
  *      Postal address:
  *         Advanced Software Production Line, S.L.
- *         Edificio Alius A, Oficina 102,
- *         C/ Antonio Suarez Nº 10,
- *         Alcalá de Henares 28802 Madrid
+ *         Av. Juan Carlos I, Nº13, 2ºC
+ *         Alcalá de Henares 28806 Madrid
  *         Spain
  *
  *      Email address:
@@ -1702,9 +1701,8 @@ void nopoll_cleanup_library (void)
  * \code
  *      Postal address:
  *         Advanced Software Production Line, S.L.
- *         C/ Antonio Suarez Nº 10, 
- *         Edificio Alius A, Despacho 102
- *         AlcalÃ¡ de Henares 28802 (Madrid)
+ *         Av. Juan Carlos I, Nº13, 2ºC
+ *         Alcalá de Henares 28806 Madrid
  *         Spain
  *
  *      Email address:

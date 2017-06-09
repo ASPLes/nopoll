@@ -1,0 +1,198 @@
+                   --== noPoll toolkit ==--
+                       Black Hole Sun
+                           0.4.4
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  - Several bugs were fixed, including several updates to improve
+    noPoll's stability while retrying, recovering partial transfers,
+    improved building and windows support.
+
+
+Thanks to
+~~~~~~~~~
+
+  - Javier Celaya (updates for building scripts, header includes
+    updates and linking for windows, several updates to pending write
+    codes around SSL code, fixings to ping/pong, set WSASetLastError,
+    removed retry code for writing, replaced by EWOULDBLOCK logic).
+
+  - Sergio Lopez (Support for sending/receiving messages bigger than
+    64KB)
+
+  - Elmar Siek (reported on ready not working on client side).
+
+  - Emmanuel Puig (reported and fixed fragment detection for final
+    messages after big transferes)
+
+  - Tony Mountifields (reported wrong break, replaced by return at
+    ctx_unregister_conn, old gcc support )
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* Run configure conditionally from autogen.sh
+
+* Include $(top_builddir)/src when building tests. This is needed when
+  doing an out-of-sources build, to find nopoll_config.h
+
+* Include ws2tcpip.h on Windows
+
+* It provides the definition of struct addrinfo and related functions.
+  Also, define _WIN32_WINNT as 0x0501 so that these funtions are
+  declared.
+
+* Link against ws2_32.dll on Windows
+
+* [fix] Web files updates..
+
+* [fix] Read messages bigger then 64KB
+
+* [fix] Send messages bigger than 64KB
+
+* [fix] Fix handling pending write data
+
+* [fix] When SSL_write returns EAGAIN, it keeps a pointer to the data
+  buffer that was being written. This buffer must exist the next time
+  that SSL_write is called. So, this commit recycles the send_buffer
+  in nopoll_conn_send_frame as pending_write, instead of creating a
+  new buffer and copying so many data around.
+
+  Besides, nopoll_conn_send_frame correctly returns all the bytes as
+  written, since they are kept in the pending_write buffer. Otherwise,
+  the caller will try to write the same data again.
+
+* [fix] Fix WS PING/PONG implementation
+
+  WebSocket specification, section 5.5.3, states that 'A Pong frame
+  sent in response to a Ping frame must have identical "Application
+  data" as found in the message body of the Ping frame being replied
+  to'. This commit does that, instead of returning an empty Pong
+  frame.
+
+* [fix] Check ENOTCONN on SSL_connect error
+
+  This happens on Windows (at least) when the TCP connection is not
+  yet established.
+
+* [fix] Updated nopoll_conn_new documentation (fixed typo)
+
+* [fix] Updated nopoll-conn module to include common code to call
+  defined on_ready function for client side code too (it was already
+  supported by listener side). Reported by Elmar Sieke.
+
+* [fix] Updated nopoll-conn API to include a new function to help API
+  consumer of nopoll_conn_read to know if there are more pending bytes
+  to be read. It fixes interation reported by Turbulence, in case of
+  SSL+WebSocket+BEEP and child process with different users (forcing
+  to activate proxy connections between parent process holding
+  receiving socket and child handling messages received other it).
+
+   - nopoll_conn_read_pending
+
+* [fix] Improved has_fin and is_fragment detection for final messages
+  after big transfer. Reported and fix provided by Emmanuel Puig
+  (emmanuel.puig@amarisoft.com)
+
+* [fix] Fixed nopoll_ctx_unregister_conn to do "return;" instead of
+  "break;" when the connection is found. Avoids double mutex unlock
+  call. Bug reported and fixed by Tony Mountifields
+  https://github.com/ASPLes/nopoll/issues/21
+
+* [fix] Allow building with old GCC that does not support
+  stack-protector
+
+* [fix] Silence warning on old GCC about potentially uninitialised variable.
+
+* [fix] Check stack protector options for gcc to be available to
+  include them during configure (by @softins Tony Mountifield )
+
+* [fix] Set errno in Windows too
+
+  Use WSASetLastError in Windows whenever errno is set in Unix
+  platforms
+
+* [fix] Set errno to EWOULDBLOCK when there is no full message
+
+* [fix] In nopoll_conn_read, if nopoll_conn_get_msg returns NULL, the
+  connection is still ok and a non-blocking call has been requested,
+  return EWOULDBLOCK
+
+* [fix] Remove retry loops and return EWOULDBLOCK
+
+* [fix] When SSL_get_error returns that more data is needed, or the
+  system call has been interrupted, set errno to EWOULDBLOCK instead
+  of retrying 50 times.
+
+* [fix] Return EWOULDBLOCK instead of retrying read & write (do not
+  retry after -2/retry-operation-allowed is reported). Reported by
+  Javier Celaya jcelaya.
+
+* [fix] Several updates to make nopoll_conn_send_frame to return the
+  amount of bytes written to the wire but not just fixed length. Also
+  updated the function to report -2 when no byte was written and
+  NOPOLL_EWOULD_BLOCK is reported by errno.  Updated the function to
+  also record added_header_size:
+
+       conn->pending_write_added_header = header_size;
+
+  ...to help nopoll_conn_complete_pending_write to report bytes
+  written to the write without including bytes added by noPoll due to
+  headers.
+
+* [fix] Updated documentation to better report values returned by:
+
+   - nopoll_conn_send_text
+   - nopoll_conn_send_text_fragment
+   - nopoll_conn_send_binary
+
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+9th Jun 2017, Madrid (Spain)
+
