@@ -204,8 +204,8 @@ noPollIoEngine * nopoll_io_get_engine (noPollCtx * ctx, noPollIoEngineType engin
 	engine->destroy = nopoll_io_wait_select_destroy;
 	engine->clear   = nopoll_io_wait_select_clear;
 	engine->wait    = nopoll_io_wait_select_wait;
-	engine->addto   = nopoll_io_wait_select_add_to;
-	engine->isset   = nopoll_io_wait_select_is_set;
+	engine->add_to  = nopoll_io_wait_select_add_to;
+	engine->is_set  = nopoll_io_wait_select_is_set;
 
 	/* call to create the object */
 	engine->ctx       = ctx;
