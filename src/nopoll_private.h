@@ -340,8 +340,8 @@ struct _noPollIoEngine {
 	noPollIoMechDestroy    destroy;
 	noPollIoMechClear      clear;
 	noPollIoMechWait       wait;
-	noPollIoMechAddTo      addto;
-	noPollIoMechIsSet      isset;
+	noPollIoMechAddTo      add_to;
+	noPollIoMechIsSet      is_set;
 };
 
 struct _noPollMsg {

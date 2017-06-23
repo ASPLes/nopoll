@@ -64,7 +64,7 @@ nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 
 	/* register the connection socket */
 	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding socket id: %d", conn->session);*/
-	if (! ctx->io_engine->addto (conn->session, ctx, conn, ctx->io_engine->io_object)) {
+	if (! ctx->io_engine->add_to (conn->session, ctx, conn, ctx->io_engine->io_object)) {
 
 		/* remove this connection from registry */
 		nopoll_ctx_unregister_conn (ctx, conn);
@@ -109,7 +109,7 @@ nopoll_bool nopoll_loop_process (noPollCtx * ctx, noPollConn * conn, noPollPtr u
 	int        * conn_changed = (int *) user_data;
 
 	/* check if the connection have something to notify */
-	if (ctx->io_engine->isset (ctx, conn->session, ctx->io_engine->io_object)) {
+	if (ctx->io_engine->is_set (ctx, conn->session, ctx->io_engine->io_object)) {
 
 		/* call to notify action according to role */
 		switch (conn->role) {
