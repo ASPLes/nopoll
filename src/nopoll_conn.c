@@ -2475,7 +2475,11 @@ char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_k
 	int             accept_key_size;
 	int             key_length;
 	unsigned char   buffer[EVP_MAX_MD_SIZE];
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	EVP_MD_CTX      mdctx;
+#else
+	EVP_MD_CTX    * mdctx;
+#endif
 	const EVP_MD  * md = NULL;
 	unsigned int    md_len = EVP_MAX_MD_SIZE;
 
@@ -2494,9 +2498,17 @@ char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_k
 
 	/* now sha-1 */
 	md = EVP_sha1 ();
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	EVP_DigestInit (&mdctx, md);
 	EVP_DigestUpdate (&mdctx, accept_key, strlen (accept_key));
 	EVP_DigestFinal (&mdctx, buffer, &md_len);
+#else
+	mdctx = EVP_MD_CTX_create();
+	EVP_DigestInit (mdctx, md);
+	EVP_DigestUpdate (mdctx, accept_key, strlen (accept_key));
+	EVP_DigestFinal (mdctx, buffer, &md_len);
+	EVP_MD_CTX_destroy(mdctx);
+#endif
 
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sha-1 length is: %u", md_len);
 	/* now convert into base64 */
