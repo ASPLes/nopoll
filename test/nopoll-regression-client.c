@@ -767,7 +767,7 @@ nopoll_bool test_04c (void) {
 	noPollCtx  * ctx;
 	noPollConn * conn;
 	int          length;
-	int          bytes_written;
+	int          bytes_written, bytes_written_orig;
 	char         buffer[4096];
 	FILE       * handle;
 	struct stat  file_info;
@@ -841,12 +841,28 @@ nopoll_bool test_04c (void) {
 			if (nopoll_conn_pending_write_bytes (conn) > 0)
 				flush_required = nopoll_true;
 
-			/* call to flush writes */
-			bytes_written = nopoll_conn_flush_writes (conn, 10000000, bytes_written);
+			if (bytes_written != length) {
+				/* check pending bytes plus bytes
+				   written equals to requested bytes
+				   (length) */
+				if ((nopoll_conn_pending_write_bytes (conn) + bytes_written) != length) {
+					printf ("ERROR: after bytes_written(%d) = nopoll_conn_send_text (conn, buffer, length(%d)), but nopoll_conn_pending_write_bytes (conn)=%d do not match\n",
+						bytes_written, length, nopoll_conn_pending_write_bytes (conn));
+					return nopoll_false;
+
+				} /* end if */
+
+				printf ("Test 04-c: requesting to flush (bytes_written=%d, requested=%d, pending=%d)\n", 
+					bytes_written, length, nopoll_conn_pending_write_bytes (conn));
+				
+				/* call to flush writes */
+				bytes_written_orig = bytes_written;
+				bytes_written      = nopoll_conn_flush_writes (conn, 10000000, bytes_written);
+			}
 
 			if (bytes_written != length) {
-				printf ("ERROR: Failed to flush bytes read from file %d, bytes written were=%d (errno=%d : %s, pending bytes: %d, total bytes: %d)..\n",
-					length, bytes_written, errno, strerror (errno), nopoll_conn_pending_write_bytes (conn), total_bytes);
+				printf ("ERROR: Failed to flush bytes read from file %d, bytes written were=%d, bytes written after flushing=%d (errno=%d : %s, pending bytes: %d, total bytes: %d)..\n",
+					length, bytes_written_orig, bytes_written, errno, strerror (errno), nopoll_conn_pending_write_bytes (conn), total_bytes);
 				
 				return nopoll_false;
 			} /* end if */
