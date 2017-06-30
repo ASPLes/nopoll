@@ -66,10 +66,10 @@ noPollConnOpts * nopoll_conn_opts_new (void)
 	result->ssl_protocol = NOPOLL_METHOD_TLS_FLEXIBLE;
 #elif defined(NOPOLL_HAVE_TLSv12_ENABLED)
 	result->ssl_protocol = NOPOLL_METHOD_TLSV2;
-#elif defined(NOPOLL_HAVE_TLSv11_ENABLED
+#elif defined(NOPOLL_HAVE_TLSv11_ENABLED)
 	result->ssl_protocol = NOPOLL_METHOD_TLSV1_1;
 #elif defined(NOPOLL_HAVE_TLSv10_ENABLED)
-	result->ssl_protocol = NOPOLL_METHOD_TLSV1
+	result->ssl_protocol = NOPOLL_METHOD_TLSV1;
 #endif	  
 
 	result->mutex        = nopoll_mutex_create ();
