@@ -4133,7 +4133,7 @@ int           nopoll_conn_pending_write_bytes (noPollConn * conn)
  *
  * @param conn The connection where pending bytes must be written. 
  *
- * @param timeout Timeout in milliseconds to limit the flush operation.
+ * @param timeout Timeout in microseconds to limit the flush operation.
  *
  * @param previous_result Optional parameter that can receive the
  * number of bytes optionally read before this call. The value
@@ -4142,7 +4142,9 @@ int           nopoll_conn_pending_write_bytes (noPollConn * conn)
  * clarify the interface. If you don't have the value to be passed to
  * this function at the time needed, just pass 0.
  *
- * @return Bytes that were written. If no pending bytes must be written, the function returns 0.
+ * @return Bytes that were written. If no pending bytes must be
+ * written, the function returns 0. The function returns bytes written
+ * or bytes written plus @previous_result if previous_result is > 0.
  */
 int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_result)
 {
@@ -4153,16 +4155,16 @@ int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_resu
 	long wait_implemented = 0;
 
 	/* check for errno and pending write operations */
-	if (errno != NOPOLL_EWOULDBLOCK || nopoll_conn_pending_write_bytes (conn) == 0) {
+	if ((errno != NOPOLL_EWOULDBLOCK && errno != NOPOLL_EINPROGRESS) && (nopoll_conn_pending_write_bytes (conn) == 0)) {
 	        nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "called flush but nothing is pending=%d or errno=%d isn't %d",
 		            nopoll_conn_pending_write_bytes (conn), errno, NOPOLL_EWOULDBLOCK);
 		return previous_result > 0 ? previous_result : 0;
-	}
+	} 
 		
 	while (iterator < 100 && nopoll_conn_pending_write_bytes (conn) > 0) {
 
 		/* stop operation if timeout reached */
-		if (wait_implemented >= timeout)
+		if (wait_implemented >= timeout) 
 			break;
 
 		nopoll_sleep (100000 * multiplier);
@@ -4171,7 +4173,7 @@ int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_resu
 		/* write content pending */
 		bytes_written = nopoll_conn_complete_pending_write (conn);
 
-		if (bytes_written > 0)
+		if (bytes_written > 0) 
 			total += bytes_written;
 
 		/* next position */
@@ -4179,8 +4181,8 @@ int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_resu
 		multiplier++;
 	} /* end while */
 
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "finishing flush operation, total written=%d, added to previous result=%d",
-		    total, previous_result);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "finishing flush operation, total written=%d, added to previous result=%d, errno=%d",
+		    total, previous_result, errno); 
 
 	/* add value received */
 	if (previous_result > 0) 
@@ -4413,7 +4415,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	conn->pending_write_bytes = length + header_size - desp;
 
 	/* record the header to be accurate when reporting the amount
-	   of bytes written: we have to avoid confusming two things:
+	   of bytes written: we have to avoid confusing two things:
 
 	   - Bytes written by the protocol (length + headers)
 	   - Bytes requested by the upper level application to be written (just length)
@@ -4428,8 +4430,13 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 
 	/* record and report useful userland payload's bytes sent  */
 	bytes_sent = 0;
-	if ((desp - header_size) > 0)
+	if ((desp - header_size) > 0) {
 	        bytes_sent = (desp - header_size);
+
+		/* make conn->pending_write_added_header 0 because it
+		   have written enought bytes including the header */
+		conn->pending_write_added_header = 0;
+	} /* end if */
 	
 #if defined(SHOW_DEBUG_LOG)
 	level = NOPOLL_LEVEL_DEBUG;
