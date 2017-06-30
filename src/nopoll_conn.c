@@ -573,29 +573,34 @@ int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 
 SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * opts, nopoll_bool is_client)
 {
+
 	/* call to user defined function if the context creator is defined */
 	if (ctx && ctx->context_creator) 
 		return ctx->context_creator (ctx, conn, opts, is_client, ctx->context_creator_data);
 
 	if (opts == NULL) {
+
 		/* select a default mechanism according to what's
 		 * available, starting from the most common accepted
 		 * solution, which is TLSv1.0 */
-#if defined(NOPOLL_HAVE_TLSv10_ENABLED)
+#if defined(NOPOLL_HAVE_TLSv10_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 		/* by default use TLSv1.0 */
 		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ());
-#elif defined(NOPOLL_HAVE_TLSv11_ENABLED)
+#elif defined(NOPOLL_HAVE_TLSv11_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 		/* if not use TLSv1.1 */
 		return SSL_CTX_new (is_client ? TLSv1_1_client_method () : TLSv1_1_server_method ());
-#elif defined(NOPOLL_HAVE_TLSv12_ENABLED)
+#elif defined(NOPOLL_HAVE_TLSv12_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 		/* if not use TLSv1.2 */
 		return SSL_CTX_new (is_client ? TLSv1_2_client_method () : TLSv1_2_server_method ());
-#elif defined(NOPOLL_HAVE_SSLv23_ENABLED)
+#elif defined(NOPOLL_HAVE_SSLv23_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 		/* if not use SSLv23 */
 		return SSL_CTX_new (is_client ? SSLv23_client_method () : SSLv23_server_method ()); 
-#elif defined(NOPOLL_HAVE_SSLv3_ENABLED)
+#elif defined(NOPOLL_HAVE_SSLv3_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 		/* if not use SSLv3 */
-		return SSL_CTX_new (is_client ? SSLv3_client_method () : SSLv3_server_method ()); 
+		return SSL_CTX_new (is_client ? SSLv3_client_method () : SSLv3_server_method ());
+#elif defined(NOPOLL_HAVE_TLS_FLEXIBLE_ENABLED)
+		/* flexible method */
+		return SSL_CTX_new (is_client ? TLS_client_method () : TLS_server_method ());
 #else
 		/* no default method found */
 		return NULL;
@@ -610,34 +615,41 @@ SSL_CTX * __nopoll_conn_get_ssl_context (noPollCtx * ctx, noPollConn * conn, noP
 		return SSL_CTX_new (is_client ? TLS_client_method () : TLS_server_method ());
 #endif		
 		
-#if defined(NOPOLL_HAVE_TLSv10_ENABLED)
+#if defined(NOPOLL_HAVE_TLSv10_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	case NOPOLL_METHOD_TLSV1:
 		return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ());
 #endif
 		
-#if defined(NOPOLL_HAVE_TLSv11_ENABLED)
+#if defined(NOPOLL_HAVE_TLSv11_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	case NOPOLL_METHOD_TLSV1_1:
 		return SSL_CTX_new (is_client ? TLSv1_1_client_method () : TLSv1_1_server_method ()); 
 #endif
 		
-#if defined(NOPOLL_HAVE_TLSv12_ENABLED)
+#if defined(NOPOLL_HAVE_TLSv12_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	case NOPOLL_METHOD_TLSV1_2:
 		return SSL_CTX_new (is_client ? TLSv1_2_client_method () : TLSv1_2_server_method ()); 
 #endif
 		
-#if defined(NOPOLL_HAVE_SSLv3_ENABLED)
+#if defined(NOPOLL_HAVE_SSLv3_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	case NOPOLL_METHOD_SSLV3:
 		/* printf ("**** REPORTING SSLv3 ****\n"); */
 		return SSL_CTX_new (is_client ? SSLv3_client_method () : SSLv3_server_method ()); 
 #endif
-#if defined(NOPOLL_HAVE_SSLv23_ENABLED)
+#if defined(NOPOLL_HAVE_SSLv23_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	case NOPOLL_METHOD_SSLV23:
 		/* printf ("**** REPORTING SSLv23 ****\n"); */
 		return SSL_CTX_new (is_client ? SSLv23_client_method () : SSLv23_server_method ());
+#endif
+	default:
+	        /* default case */
+#if defined(NOPOLL_HAVE_TLS_FLEXIBLE_ENABLED)
+		return SSL_CTX_new (is_client ? TLS_client_method () : TLS_server_method ());
+#else
+		return NULL;
 #endif		
 	}
 
-#if defined(NOPOLL_HAVE_TLSv10_ENABLED)
+#if defined(NOPOLL_HAVE_TLSv10_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	/* reached this point, report default TLSv1 method */
 	return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ());
 #else
@@ -4660,6 +4672,10 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 
 		/* create ssl context */
 		conn->ssl_ctx  = __nopoll_conn_get_ssl_context (ctx, conn, listener->opts, nopoll_false);
+		if (conn->ssl_ctx == NULL) {
+		        nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to get Ssl Context (conn->ssl_ctx = __nopoll_conn_get_ssl_context), function returned NULL");
+			return nopoll_false;
+		} /* end if */
 
 		/* Configure ca certificate in the case it is defined */
 		if (options && options->ca_certificate) {
