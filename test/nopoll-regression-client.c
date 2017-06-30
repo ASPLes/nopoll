@@ -1831,7 +1831,7 @@ nopoll_bool test_19 (void) {
 	/* reinit again */
 	ctx = create_ctx ();
 
-#if defined (NOPOLL_HAVE_SSLv23_ENABLED)
+#if defined (NOPOLL_HAVE_SSLv23_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	printf ("Test 19: testing SSLv23 connection...\n");
 
 	/* create options */
@@ -1854,7 +1854,7 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_close (conn);
 #endif	
 
-#if defined (NOPOLL_HAVE_SSLv23_ENABLED)
+#if defined (NOPOLL_HAVE_SSLv23_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	printf ("Test 19: testing SSLv23 connection with TLSv1 server...\n");
 
 	/* create options */
@@ -1875,7 +1875,7 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_close (conn);
 #endif	
 
-#if defined (NOPOLL_HAVE_SSLv3_ENABLED)
+#if defined (NOPOLL_HAVE_SSLv3_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
 	printf ("Test 19: perfect, got it working..\n");
 
 	/* create options */
@@ -1896,7 +1896,7 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_close (conn);
 #endif	
 
-#if defined (NOPOLL_HAVE_TLSv10_ENABLED)
+#if defined (NOPOLL_HAVE_TLSv10_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L	
 	printf ("Test 19: testing TLSv1.0 connection...\n");
 
 	/* create options */
@@ -1917,7 +1917,7 @@ nopoll_bool test_19 (void) {
 	
 	/* finish connection */
 	nopoll_conn_close (conn);
-#endif
+#endif	
 
 #if defined (NOPOLL_HAVE_TLSv11_ENABLED)
 	printf ("Test 19: testing TLSv1.1 connection...\n");
