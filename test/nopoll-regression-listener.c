@@ -535,7 +535,7 @@ int main (int argc, char ** argv)
 	opts     = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_2);
 	listener7 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1240");
-	if (! nopoll_conn_is_ok (listener5)) {
+	if (! nopoll_conn_is_ok (listener7)) {
 		printf ("ERROR: Expected to find proper listener TLS connection status (:1240, TLSv1.2), but found..\n");
 		return -1;
 	} /* end if */
