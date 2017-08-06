@@ -3400,22 +3400,30 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		nopoll_show_byte (conn->ctx, msg->mask[3], "mask[3]");
 	} /* end if */
 
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Detected incoming websocket frame: fin(%d), op_code(%d), is_masked(%d), payload size(%ld), mask=%d", 
+		    msg->has_fin, msg->op_code, msg->is_masked, msg->payload_size, nopoll_get_32bit (msg->mask));
+
 	/* check payload size */
 	if (msg->payload_size == 0) {
 		/* check for empty PING frames (RFC6455 5.5.2. Ping
 		   frame may include 'Application data'. Fixes
 		   https://github.com/ASPLes/nopoll/issues/31 */
-		if (msg->op_code == NOPOLL_PING_FRAME) 
-			return msg;
+		if (msg->op_code == NOPOLL_PING_FRAME) {
+
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PING received over connection id=%d, replying PONG", conn->id);
+			/* call to send pong */
+			nopoll_conn_send_pong (conn, nopoll_msg_get_payload_size (msg), (noPollPtr)nopoll_msg_get_payload (msg));
+			nopoll_msg_unref (msg);
+
+			/* reporting no message (but no error) */
+			return NULL;
+		} /* end if */
 
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Found incoming frame with payload size 0, shutting down id=%d the connection", conn->id);
 		nopoll_msg_unref (msg);
 		nopoll_conn_shutdown (conn);
 		return NULL; 	
 	} /* end if */
-
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Detected incoming websocket frame: fin(%d), op_code(%d), is_masked(%d), payload size(%ld), mask=%d", 
-		    msg->has_fin, msg->op_code, msg->is_masked, msg->payload_size, nopoll_get_32bit (msg->mask));
 
 	/* check here for the limit of message we are willing to accept */
 	/* FIX SECURITY ISSUE */
@@ -3880,14 +3888,6 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 
 		/* get the message content into the buffer */
 		if (msg) {
-			if (msg->op_code == NOPOLL_PING_FRAME) {
-				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PING received over connection id=%d, replying PONG", conn->id);
-				/* call to send pong */
-				nopoll_conn_send_pong (conn, nopoll_msg_get_payload_size (msg), (noPollPtr)nopoll_msg_get_payload (msg));
-				nopoll_msg_unref (msg);
-				continue;
-			} /* end if */
-
 			/* get the amount of bytes we can read */
 			amount = nopoll_msg_get_payload_size (msg);
 			total_pending = bytes - total_read;
@@ -3982,7 +3982,7 @@ int nopoll_conn_read_pending (noPollConn * conn) {
  */
 nopoll_bool      nopoll_conn_send_ping (noPollConn * conn)
 {
-	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_false, NOPOLL_PING_FRAME, 0, NULL, 0) > 0;
+	return nopoll_conn_send_frame (conn, nopoll_true, nopoll_true, NOPOLL_PING_FRAME, 0, NULL, 0) >= 0;
 }
 
 /** 
@@ -4502,7 +4502,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		level = NOPOLL_LEVEL_WARNING;
 
 	nopoll_log (conn->ctx, level, 
-		    "Write operation finished with with last result=%d (bytes_written), bytes-sent=%d, desp=%d, header_size=%d, requested=%d (length), remaining=%d (conn->pending_write_bytes), errno=%d (conn-id=%d)",
+		    "Write operation finished with last result=%d (bytes_written), bytes-sent=%d, desp=%d, header_size=%d, requested=%d (length), remaining=%d (conn->pending_write_bytes), errno=%d (conn-id=%d)",
 		    /* report want we are going to report: result */
 		    bytes_written,
 		    /* bytes sent */
