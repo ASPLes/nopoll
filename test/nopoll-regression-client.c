@@ -420,6 +420,51 @@ nopoll_bool test_02a (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_02b (void) {
+	
+	noPollCtx  * ctx;
+	noPollConn * conn;
+
+	/* create context */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	printf ("Test 02-b: creating connection localhost:1234 (errno=%d)\n", errno);
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
+			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
+		return nopoll_false;
+	}
+
+	printf ("Test 02-b: waiting until connection is ok (errno=%d)\n", errno);
+	if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
+		printf ("ERROR: failed to fully establish connection nopoll_conn_wait_until_connection_ready (conn, 5) failed..\n");
+	}
+
+	/* sending echo */
+	if (! test_sending_and_check_echo (conn, "Test 02-b", "This is a test"))
+		return nopoll_false;
+
+	printf ("Test 02-b: connection ready, sending PING frame (errno=%d)..\n", errno);
+	if (! nopoll_conn_send_ping (conn)) {
+		printf ("ERROR: failed to send ping frame..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* sending echo */
+	if (! test_sending_and_check_echo (conn, "Test 02-b", "This is a test"))
+		return nopoll_false;
+	
+	/* finish connection */
+	nopoll_conn_close (conn);
+	
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 
 nopoll_bool test_03 (void) {
 	noPollCtx  * ctx;
@@ -1876,7 +1921,7 @@ nopoll_bool test_19 (void) {
 #endif	
 
 #if defined (NOPOLL_HAVE_SSLv3_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L
-	printf ("Test 19: perfect, got it working..\n");
+	printf ("Test 19: perfect, got it working (OPENSSL_VERSION_NUMBER=%ld)..\n", (OPENSSL_VERSION_NUMBER));
 
 	/* create options */
 	opts     = nopoll_conn_opts_new ();
@@ -1896,8 +1941,14 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_close (conn);
 #endif	
 
-#if defined (NOPOLL_HAVE_TLSv10_ENABLED) && OPENSSL_VERSION_NUMBER < 0x10100000L	
-	printf ("Test 19: testing TLSv1.0 connection...\n");
+	/*** 
+	 * The following versions do not support the following test:
+	 *
+	 * - OPENSSL_VERSION_NUMBER=0x1000114fL  (jessie)
+	 */
+	
+#if defined (NOPOLL_HAVE_TLSv10_ENABLED) && OPENSSL_VERSION_NUMBER < 0x1000114fL	
+	printf ("Test 19: testing TLSv1.0 connection...(OPENSSL_VERSION_NUMBER=%ld)..\n", (OPENSSL_VERSION_NUMBER));
 
 	/* create options */
 	opts     = nopoll_conn_opts_new ();
@@ -2875,6 +2926,16 @@ int main (int argc, char ** argv)
 		return -1;
 	}
 
+	/* test sending ping */
+	if (test_02b ()) {	
+		printf ("Test 02b: test sending ping [   OK   ]\n");
+	}else {
+		printf ("Test 02a: test sending ping [ FAILED ]\n");
+		return -1;
+	}
+
+	/* test sending pong (without ping) */
+
 	/* test streaming api */
 	if (test_03 ()) {	
 		printf ("Test 03: test streaming api [   OK   ]\n");
@@ -3197,10 +3258,6 @@ int main (int argc, char ** argv)
 	 * information) */
 
 	/* test checking protocols and denying it */
-
-	/* test sending ping */
-
-	/* test sending pong (without ping) */
 
 	/* test sending frames 126 == ( 65536) */
 
