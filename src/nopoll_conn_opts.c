@@ -65,7 +65,7 @@ noPollConnOpts * nopoll_conn_opts_new (void)
 #if defined(NOPOLL_HAVE_TLS_FLEXIBLE_ENABLED)
 	result->ssl_protocol = NOPOLL_METHOD_TLS_FLEXIBLE;
 #elif defined(NOPOLL_HAVE_TLSv12_ENABLED)
-	result->ssl_protocol = NOPOLL_METHOD_TLSV2;
+	result->ssl_protocol = NOPOLL_METHOD_TLSV1_2;
 #elif defined(NOPOLL_HAVE_TLSv11_ENABLED)
 	result->ssl_protocol = NOPOLL_METHOD_TLSV1_1;
 #elif defined(NOPOLL_HAVE_TLSv10_ENABLED)
