@@ -147,6 +147,11 @@ nopoll_bool  nopoll_io_wait_select_add_to (int               fds,
 			    "received a non valid socket (%d), unable to add to the set", fds);
 		return nopoll_false;
 	}
+	if ((select->length - 1) > FD_SETSIZE) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL,
+			    "Unable to add requested socket (%d), reached max FD_SETSIZE=%d (select->length=%d)", fds, FD_SETSIZE, select->length);
+		return nopoll_false;
+	} /* end if */	
 
 	/* set the value */
 	FD_SET (fds, &(select->set));
