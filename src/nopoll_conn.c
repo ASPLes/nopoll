@@ -1280,6 +1280,29 @@ noPollConn * nopoll_conn_new_opts (noPollCtx       * ctx,
  * @param protocols Optional protocols requested to be activated for
  * this connection (an string of list of strings separated by a white
  * space).
+ *
+ * <h3>Socket ownership</h3>
+ *
+ * noPoll takes full ownership. For noPoll, there's no difference
+ * between a noPollConn created using regular API or offloaded and
+ * then used with \ref nopoll_conn_new_with_socket.
+ *
+ * However, noPoll will not close anything unless you do it (see calls
+ * to \ref nopoll_close_socket throughout the code).
+ *
+ * For noPoll, ownership here means no one is reading/writing to that
+ * socket but noPoll.
+ *
+ * <h3>Can socket passed be used with my favourite I/O loop mech?</h3>
+ *
+ * Yes.
+ *
+ * <h3>Will reading or writing from/to the socket make noPoll unsafe?</h3>
+ *
+ * Yes. Only noPoll must read and write to that socket using provided
+ * public API. Writing/reading directly will break not only noPoll
+ * sync but also remote's peer.
+ * 
  */
 noPollConn * nopoll_conn_new_with_socket (noPollCtx  * ctx,
 				   noPollConnOpts  * options,
