@@ -3024,14 +3024,23 @@ void nopoll_conn_mask_content (noPollCtx * ctx, char * payload, int payload_size
  * connection. The function returns NULL in the case no message is
  * still ready to be returned. 
  *
- * The function do not block. 
+ * This function is design to not block the caller. However,
+ * connection socket must be in non-blocking configuration. If you
+ * have not configured anything, this is the default.
+ *
+ * If the function blocks caller then the socket associated to \ref
+ * noPollConn is configured to make blocking I/O (maybe because you
+ * configured like this or the socket was passed to another library
+ * that did such configuration or maybe because you are using \ref
+ * nopoll_conn_new_with_socket). 
  *
  * @param conn The connection where the read operation will take
  * place.
  * 
  * @return A reference to a noPollMsg object or NULL if there is
  * nothing available. In case the function returns NULL, check
- * connection status with \ref nopoll_conn_is_ok.
+ * connection status with \ref nopoll_conn_is_ok. If the function
+ * blocks the caller check socket configuration.
  */
 noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 {
