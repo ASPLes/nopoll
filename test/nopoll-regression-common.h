@@ -37,6 +37,7 @@
  */
 #include <nopoll.h>
 
+
 #if defined(__NOPOLL_PTHREAD_SUPPORT__)
 #include <pthread.h>
 noPollPtr __nopoll_regtest_mutex_create (void);
@@ -47,3 +48,5 @@ void __nopoll_regtest_mutex_lock (noPollPtr _mutex);
 
 void __nopoll_regtest_mutex_unlock (noPollPtr _mutex);
 #endif
+
+#include <nopoll_private.h>

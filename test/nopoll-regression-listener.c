@@ -339,11 +339,20 @@ noPollPtr ssl_context_creator (noPollCtx * ctx, noPollConn * conn, noPollConnOpt
 
 	/* very basic context creation using default settings provided
 	 * by OpenSSL */
-	if (is_client) 
+	if (is_client) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 		return SSL_CTX_new (TLSv1_client_method ());
+#else
+	        return SSL_CTX_new (TLS_client_method ());
+#endif
+	} /* end if */
 
 	/* get the ssl context */
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 	ssl_ctx = SSL_CTX_new (TLSv1_server_method ());
+#else
+	ssl_ctx = SSL_CTX_new (TLS_server_method ());
+#endif
 
 	/* get a reference to the listener */
 	listener = nopoll_conn_get_listener (conn);
@@ -526,7 +535,7 @@ int main (int argc, char ** argv)
 	opts     = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_2);
 	listener7 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1240");
-	if (! nopoll_conn_is_ok (listener5)) {
+	if (! nopoll_conn_is_ok (listener7)) {
 		printf ("ERROR: Expected to find proper listener TLS connection status (:1240, TLSv1.2), but found..\n");
 		return -1;
 	} /* end if */

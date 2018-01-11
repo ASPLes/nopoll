@@ -77,7 +77,7 @@
  *
  * \code
  *   // define in your code new limit
- *   #define FD_SETSIZE 1024
+ *   #define FD_SETSIZE 8192
  *   // then include nopoll.h  (you need to recompile noPoll)
  *   #include <nopoll.n>
  * \endcode

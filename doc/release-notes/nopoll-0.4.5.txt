@@ -1,0 +1,175 @@
+                   --== noPoll toolkit ==--
+                    Excuse me while I run
+                           0.4.5
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  - New stable release with several corrections.
+
+Thanks to
+~~~~~~~~~
+
+  - Florian Fainelli (reported and fixed clash with isset, sys/param.h
+    for OpenWrt/LEDE).
+
+  - Camille Oudot (reported and fixed use EVP_MD_CTX as opaque type).
+
+  - github.com/@jackyzy823 (reported avoid allocating when WinSocket
+    fails to init and "masking" ping according to role).
+
+  - github.com/@rfish001 (reported Fixed wrong listener7 check at reg
+    tests).
+
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Updated config.mk.example to include linking indications for
+  windows platform.
+  
+* [fix] Updated nopoll-regression-client.c to define ETIMEDOUT in case it is not
+  available (windows platform).
+  
+* [fix] Fixed compilation failure (nopoll_listener.c) while compiling on windows
+  and having debug disabled.
+  
+* Add .gitignore file
+
+* [fix] Avoid clashes with isset() from sys/param.h (Reported and
+  fixed by florian.fainelli). Merge pull request #26 from
+  ffainelli/param.  Add .gitignore and avoid clashes with sys/param.h
+  isset while building with an external toolchain for OpenWrt/LEDE
+  (reported and fixed by Florian Fainelli
+  https://github.com/ffainelli).
+  
+* [fix] Corrected nopoll_conn_flush_writes documentation (wrong time indication
+  and explain better reported values).
+
+* [fix] Making nopoll_conn_flush_writes to also check for EWOULD_EINPROGRESS to
+  avoid insisting.
+
+* [fix] Making nopoll_conn_send_frame to clear conn->pending_write_added_header 
+  to 0 when it is detected enough was written to include the header so calls to
+  nopoll_conn_flush_writes do not reporting bytes (user land) considering those
+  bytes twice. 
+
+* [fix] Improved nopoll-regression-client (test-04-c) to avoid calling
+  to flush pending writes when there's nothing and to check that
+  pending + written equals to requested in order to signal precisely
+  what's happening. Making the code to also report this values so
+  developer can see what's going on.
+
+* [fix] openssl 1.1: use EVP_MD_CTX as opaque type (fixed by
+  camille.oudot). Merge pull request #27 from
+  camilleoudot/compat_openssl_1.1. openssl 1.1: use EVP_MD_CTX as
+  opaque type (OpenSSL 1.1 API change fix by github.com/camilleoudot
+  @camilleoudot ).
+
+* [fix] Making nopoll_conn_opts_new to setup result->ssl_protocol with
+  the default higher TLS method available.
+
+* [fix] Several updates to nopoll_conn module to make tls flexible
+  method available in those platforms with OpenSSL 1.1.0, trying to
+  remove rest of the deprecated apis to avoid compilation problems..
+
+* [fix] Updated nopoll-regression-client.c to better detect and
+  deprecate TLS flexible API (debian stretch)
+
+* [fix] Fixing compilation errors at debian lenny..
+
+* [fix] Making nopoll_ctx_new to avoid allocating when WinSocket fails
+  to init (Reported by github.com/jackyzy823 Closes
+  https://github.com/ASPLes/nopoll/issues/29).
+
+* [fix] fixed wrong reference to NOPOLL_METHOD_TLSV1_2
+  (NOPOLL_METHOD_TLSV2).
+
+* [fix] Fixed wrong listener7 (port 1240 running tlsv12) check. Closes
+  https://github.com/ASPLes/nopoll/issues/30 Reported by
+  https://github.com/rfish001
+
+* [fix] Fixed PING frames to support ping frames with 0 payload.
+  Closes https://github.com/ASPLes/nopoll/issues/31
+
+* [fix] Updated nopoll_conn_log_ssl to detect known errors to report
+  better error messages.
+
+* [fix] Updated TLS method selection to report (log) what is the
+  method selected. Updated code to use by default flexible and
+  stronger selection algorithms
+
+* [fix] Reorganised ping frame handling to automatically respond when
+  using message based API (nopoll_msg_get_next) not only stream based
+  API.
+  
+* [fix] Fixed nopoll_conn_send_ping. Added regression test (test_02-b)
+  to check ping support.
+
+* [fix] Updated client regression test to include new test (test-02-b)
+  to test client side ping support.
+  
+* [fix] Updated client regression test to avoid checking sslv23 when
+  Openssl is too new.
+
+* [fix] updated nopoll-regression-common.h to include additional
+  headers required by test19 reg test.
+
+* [fix] Updated documentation recommendation about FD_SETSIZE..
+
+* [fix] Updated nopoll_io_wait_select_add_to code to detect when
+  FD_SETSIZE is about to be reached to avoid breaking but reporting
+  error.
+
+* [fix] Updated nopoll_conn_send_ping to flag "masked" according to
+  role. Reported by https://github.com/jackyzy823
+  https://github.com/ASPLes/nopoll/commit/aabad7f44fc3ae9c99c1ce9a9cb52d35ae980b37#commitcomment-23612032
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+21th Aug 2017, Madrid (Spain)
+
