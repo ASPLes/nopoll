@@ -142,7 +142,7 @@ nopoll_bool  nopoll_io_wait_select_add_to (int               fds,
 {
 	noPollSelect * select = (noPollSelect *) __fd_set;
 
-	if (fds < 0) {
+	if (fds < 0 || fds >= FD_SETSIZE) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL,
 			    "received a non valid socket (%d), unable to add to the set", fds);
 		return nopoll_false;
@@ -183,6 +183,12 @@ nopoll_bool      nopoll_io_wait_select_is_set (noPollCtx   * ctx,
 {
 	noPollSelect * select = (noPollSelect *) __fd_set;
 	
+	if (fds < 0 || fds >= FD_SETSIZE) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL,
+			    "received a non valid socket (%d), unable to test in the set", fds);
+		return nopoll_false;
+	}
+
 	return FD_ISSET (fds, &(select->set));
 }
 
