@@ -68,16 +68,16 @@ void __nopoll_ctx_sigpipe_do_nothing (int _signal)
 noPollCtx * nopoll_ctx_new (void) {
 	noPollCtx * result;
 
+	/* call to create context after checkign WinSock */
+	result = nopoll_new (noPollCtx, 1);
+	if (result == NULL)
+		return NULL;
+
 #if defined(NOPOLL_OS_WIN32)
 	if (! nopoll_win32_init (result)) {
 		return NULL;
 	} /* end if */
 #endif
-
-	/* call to create context after checkign WinSock */
-	result = nopoll_new (noPollCtx, 1);
-	if (result == NULL)
-		return NULL;
 
 	/* set initial reference */
 	result->conn_id = 1;
