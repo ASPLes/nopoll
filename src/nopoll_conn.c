@@ -1918,6 +1918,13 @@ void          nopoll_conn_shutdown (noPollConn * conn)
 	if (conn->session != NOPOLL_INVALID_SOCKET && conn->on_close)
 	        conn->on_close (conn->ctx, conn, conn->on_close_data);
 
+	if(conn->on_close_data != NULL)
+        {
+	        nopoll_log(conn->ctx, NOPOLL_LEVEL_DEBUG,"freeing conn->on_close_data from shutdown...\n");
+	        nopoll_free(conn->on_close_data);
+	        conn->on_close_data = NULL;
+        }
+
 	/* shutdown connection here */
 	if (conn->session != NOPOLL_INVALID_SOCKET) {
 	        shutdown (conn->session, SHUT_RDWR);
@@ -2372,6 +2379,7 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "received connection close while reading from conn id %d (errno=%d : %s) (%d, %d, %d), shutting down connection..", 
 			    conn->id, errno, strerror (errno),
 			    NOPOLL_EAGAIN, NOPOLL_EWOULDBLOCK, NOPOLL_EINTR);
+		conn->on_close_data = nopoll_strdup ("Socket_Close:received connection close while reading from conn: shutting down connection");
 		nopoll_conn_shutdown (conn);
 	} /* end if */
 

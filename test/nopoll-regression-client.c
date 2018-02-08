@@ -528,6 +528,77 @@ nopoll_bool test_03 (void) {
 	return nopoll_true;
 }
 
+
+nopoll_bool __test_03a_on_close_signal = nopoll_false;
+void __test_03a_on_close (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	printf ("Test 03a: called on connection close for conn-id=%d\n", nopoll_conn_get_id (conn));
+	if((user_data != NULL) && (strstr(user_data, "Socket_Close") != NULL))
+	{
+		__test_03a_on_close_signal = nopoll_true;
+    }
+
+	return;
+}
+
+nopoll_bool test_03a (void) {
+
+	noPollConn     * conn;
+	noPollCtx      * ctx;
+	noPollMsg      * msg;
+
+	/* init context */
+	ctx = create_ctx ();
+
+	/* create connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
+	printf ("Test 03a: set connection close..\n");
+	/* set connection close */
+	nopoll_conn_set_on_close (conn, __test_03a_on_close, NULL);
+
+	/* wait until it is connected */
+	if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
+		printf ("ERROR: failed to fully establish connection nopoll_conn_wait_until_connection_ready (conn, 5) failed..\n");
+	} /* end if */
+
+	/* send a message to request connection close */
+	if (nopoll_conn_send_text (conn, "set-broken-socket", 17) != 17) {
+		printf ("ERROR: failed to send set-broken-socket..");
+		return nopoll_false;
+	} /* end if */
+
+
+	/* wait for the reply */
+	while ((msg = nopoll_conn_get_msg (conn)) == NULL) {
+
+		if (! nopoll_conn_is_ok (conn)) {
+			/* connection was closed by remote side */
+			break;
+		} /* end if */
+
+		nopoll_sleep (10000);
+	} /* while */
+
+	if (nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: we shouldn't get an ok value from nopoll_conn_is_ok (conn)..\n");
+		/* close the connection */
+		nopoll_conn_close (conn);
+		return nopoll_false;
+	} /* end if */
+
+	if (! __test_03a_on_close_signal) {
+		printf ("ERROR: connection close should've been called with Socket_Close but it wasn't..\n");
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+	return nopoll_true;
+}
+
 nopoll_bool test_04 (int chunk_size) {
 	noPollCtx  * ctx;
 	noPollConn * conn;
@@ -2941,6 +3012,13 @@ int main (int argc, char ** argv)
 		printf ("Test 03: test streaming api [   OK   ]\n");
 	}else {
 		printf ("Test 03: test streaming api [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_03a ()) {
+		printf ("Test 03a: test socket close [   OK   ]\n");
+	}else {
+		printf ("Test 03a: test socket close [ FAILED ]\n");
 		return -1;
 	}
 
