@@ -2308,6 +2308,7 @@ void __nopoll_pack_content (char * buffer, int start, int bytes)
 int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxlen)
 {
 	int         nread;
+	int         bytes;
 
 	if (conn->pending_buf_bytes > 0) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling with bytes we can reuse (%d), requested: %d",
@@ -2334,8 +2335,12 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 
 		/* call again to get bytes reducing the request in the
 		 * amount of bytes served */
-		return __nopoll_conn_receive (conn, buffer + nread, maxlen - nread) + nread;
-		
+		bytes = __nopoll_conn_receive (conn, buffer + nread, maxlen - nread);
+		if (bytes < 0) {
+			return -1;
+		}
+
+		return bytes + nread;
 	} /* end if */
 
  keep_reading:
@@ -2346,7 +2351,7 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 #elif defined(NOPOLL_OS_WIN32)
 	WSASetLastError(0);
 #endif
-	if ((nread = conn->receive (conn, buffer, maxlen)) == NOPOLL_SOCKET_ERROR) {
+	if ((nread = conn->receive (conn, buffer, maxlen)) < 0) {
 		/* nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, " returning errno=%d (%s)", errno, strerror (errno)); */
 		if (errno == NOPOLL_EAGAIN) 
 			return 0;
@@ -2375,11 +2380,6 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 		nopoll_conn_shutdown (conn);
 	} /* end if */
 
-	/* ensure we don't access outside the array */
-	if (nread < 0) 
-		nread = 0;
-
-	buffer[nread] = 0;
 	return nread;
 }
 
@@ -3463,7 +3463,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 read_payload:
 
 	/* copy payload received */
-	msg->payload = nopoll_new (char, msg->payload_size + 1);
+	msg->payload = nopoll_new (char, msg->payload_size + 1);	/* allow extra byte for string terminator */
 	if (msg->payload == NULL) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to read the incoming frame, dropping connection id=%d", conn->id);
 		nopoll_msg_unref (msg);
@@ -3480,6 +3480,8 @@ read_payload:
 		return NULL;		
 	} /* end if */
 
+	/* add string terminator */
+	((char *) msg->payload)[bytes] = 0;
 
 	/* record we've got content pending to be read */
 	msg->remain_bytes = msg->payload_size - bytes;	
