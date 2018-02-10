@@ -883,6 +883,8 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 	if (protocols != NULL)
 		conn->protocols = nopoll_strdup (protocols);
 
+	/* default to no close frame received */
+	conn->peer_close_status = 1006;
 
 	/* get client init payload */
 	content = __nopoll_conn_get_client_init (conn, options);
@@ -1856,7 +1858,10 @@ const char  * nopoll_conn_port   (noPollConn * conn)
  *
  * @param conn The connection where the peer reported close status is being asked.
  *
- * @return Status code reported by the remote peer or 0 if nothing was reported.
+ * @return Status code reported by the remote peer or:
+ *  0    - conn is NULL
+ *  1005 - empty closing frame
+ *  1006 - no closing frame
  */ 
 int           nopoll_conn_get_close_status (noPollConn * conn)
 {
@@ -3382,6 +3387,10 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	} /* end if */
 
 	if (msg->op_code == NOPOLL_CLOSE_FRAME) {
+
+		/* report that a closed frame was received */
+		conn->peer_close_status = 1005;
+
 		if (msg->payload_size == 0) {
 			/* nothing more to add here, close frame
 			   without content received, so we have no
@@ -3530,6 +3539,10 @@ read_payload:
 
 	/* check here close frame with reason */
 	if (msg->op_code == NOPOLL_CLOSE_FRAME) {
+
+		/* report that a closed frame was received */
+		conn->peer_close_status = 1005;
+
 		/* try to read reason and report those values */
 		if (msg->payload_size >= 2) {
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Close frame received id=%d with content bytes=%d, peer status=%d, peer reason=%s, reading reason..", 
