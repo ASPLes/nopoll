@@ -2095,7 +2095,30 @@ nopoll_bool test_21 (void) {
 	}
 	nopoll_conn_close (conn);
 
-	/* try again configuring conection certificates */
+	/* NOTE: the following test needs client.pem, server.pem and
+	 * root.epm used by nopoll-regression-client.c and
+	 * nopoll-regression-listener.c to be synchronized and
+	 * updated. 
+	 *
+	 * If you have problems running this test, run it with:
+	 *
+	 * >> ./nopoll-regression-client --show-critical-only
+	 *
+	 * or with full debug enabled:
+	 *
+	 * >> ./nopoll-regression-client --debug
+	 *
+	 * There is a script that allows to generate and refresh
+	 * certificates used by this test:
+	 *
+	 * >> ./gen-certificates-test-21.sh
+	 *
+	 * You can use to see how to generate a root.pem CA
+	 * certificate an a couple of certificates for client.pem and
+	 * server.pem
+	 */
+	
+	/* try again configuring conection certificates*/
 	printf ("Test 21: checking to connect again with client provided certificates..\n");
 	opts     = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_ssl_certs (opts, 
