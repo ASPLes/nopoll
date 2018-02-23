@@ -44,7 +44,7 @@ echo "Generating configuration files for $PACKAGE, please wait...."
 echo; 
 
 touch NEWS README AUTHORS ChangeLog 
-libtoolize --force;
+glibtoolize --force;
 aclocal $ACLOCAL_FLAGS; 
 autoheader --warnings=error
 automake --add-missing -Werror;
