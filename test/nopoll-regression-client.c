@@ -1678,8 +1678,8 @@ nopoll_bool test_17_send_and_receive_test (noPollCtx * ctx, noPollConn * conn, n
 
 	/* printf ("Test 17: sending partial content..\n"); */
 	_socket = nopoll_conn_socket (conn);
-	buffer[0] = 129;
-	buffer[1] = 150;
+	buffer[0] = 100;
+	buffer[1] = 101;
 	send (_socket, buffer, 2, 0);
 
 	if (read_after_header) {
