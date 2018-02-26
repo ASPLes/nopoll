@@ -216,6 +216,7 @@ noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
 	listener->refs     = 1;
 	/* create mutex */
 	listener->ref_mutex = nopoll_mutex_create ();
+	listener->handshake_mutex = nopoll_mutex_create ();
 	listener->session   = session;
 	listener->ctx       = ctx;
 	listener->role      = NOPOLL_ROLE_MAIN_LISTENER;
@@ -557,6 +558,7 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 	listener->refs      = 1;
 	/* create mutex */
 	listener->ref_mutex = nopoll_mutex_create ();
+	listener->handshake_mutex = nopoll_mutex_create ();
 	listener->session   = session;
 	listener->ctx       = ctx;
 	listener->role      = NOPOLL_ROLE_LISTENER;
