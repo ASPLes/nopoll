@@ -25,6 +25,7 @@
 #
 
 PACKAGE="Lib noPoll: a websocket toolkit"
+OS=`uname -s`
 
 (automake --version) < /dev/null > /dev/null 2>&1 || {
 	echo;
@@ -44,7 +45,11 @@ echo "Generating configuration files for $PACKAGE, please wait...."
 echo; 
 
 touch NEWS README AUTHORS ChangeLog 
+if [ "${OS}" = "Linux" ] ; then
 libtoolize --force;
+elif [ "${OS}" = "Darwin" ] ; then
+glibtoolize --force;
+fi
 aclocal $ACLOCAL_FLAGS; 
 autoheader --warnings=error
 automake --add-missing -Werror;
