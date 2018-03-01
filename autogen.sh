@@ -46,9 +46,12 @@ echo;
 
 touch NEWS README AUTHORS ChangeLog 
 if [ "${OS}" = "Linux" ] ; then
-libtoolize --force;
+   libtoolize --force;
 elif [ "${OS}" = "Darwin" ] ; then
-glibtoolize --force;
+   glibtoolize --force;
+else
+   # by default, try libtoolize even if it is not uname or OS is not recognized.
+   libtoolize --force;
 fi
 aclocal $ACLOCAL_FLAGS; 
 autoheader --warnings=error
