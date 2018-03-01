@@ -1,0 +1,135 @@
+                   --== noPoll toolkit ==--
+                       The Prophecy
+                           0.4.6
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  Stable release with bug fixes and corrections.
+
+Thanks to
+~~~~~~~~~
+
+  - Tony Mountifield (reported issues with nopoll_loop_wait
+    documentation, provided patch for range fds check before FD_SET,
+    provided patches to have different mutexes for conn reference and
+    conn handshake, patches to handle errors on recursive calls to
+    __nopoll_conn_receive)
+
+  - Morel Bérenger (reported issues with nopoll_conn_new_with_socket
+    documentation)
+
+  - Weston Schmidt (provided patches to handle 1005 and 1006 error
+    codes).
+
+  - Selvam Krish @selvamKrish (provided initial patches to send PONG reply with
+    same PING application).
+
+  - Ramki A. @cableramki (provided patches for autogen.sh to work with
+    glibtoolize).
+
+  - @dspname (provided indications to move nopoll_win32_init after
+    nopoll_new on windows).
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Updated nopoll_loop_wait to report -3 and -4 to indicate
+  timeout reached and to indicate I/O wait engine failure. This way,
+  caller can catch these codes and implement recovery and any other
+  policy. Added documentation to explain how to use this.
+
+  Thanks for Tony Mountifield (reported the problem).
+
+* [fix] Adding some additional documentation to
+  nopoll_conn_new_with_socket (with help by Morel Bérenger)
+
+* [fix] Updated nopoll_conn_get_msg to explain that the function do
+  not block by default and if it does, is because socket associated is
+  not configured to avoid blocking.
+
+* [fix] Range check fds before using for FD_SET or FD_ISSET (@tony.mountifield)
+   Merge pull request #35 from softins/fdset-range-check (by Tony Mountifield @softins ).
+
+* [fix] Moved call to nopoll_win32_init after nopoll_new (noPollCtx)
+  is done.  Closes https://github.com/ASPLes/nopoll/issues/37
+  Reported by @dspname
+
+* [fix] Add close status values of 1006 and 1005 (by @weston.smidth).
+
+* [fix] Updated Test21 regression test to include debug information to
+  explain how this test is related to client.pem, server.pem and
+  root.pem and that there is an script that can be used to refresh
+  certificates:
+
+  - ./gen-certificates-test-21.sh
+
+* [fix] Refreshed expired certificates for nopoll's regression test21.
+
+* [fix] Added new mutexes to handle handshake instead of using ref_mutex so 
+  calls to nopoll_conn_ref are possible inside on_ready handler. 
+  This also solves other calls to handlers like on_open. This closes 
+  https://github.com/ASPLes/nopoll/issues/43   #43 
+  Separate handshake_mutex from ref_mutex in noPollConn. Fixes #43
+
+* [fix] Fixes to __nopoll_conn_receive() and nopoll_conn_get_msg() by
+   @softins __nopoll_conn_receive(): Check error return on recursive
+   call.  Check conn->receive for all negative returns (both -1 and
+   -2).  Remove write outside the supplied buffer.
+   nopoll_conn_get_msg(): Add string terminator only at end of
+   payload.
+
+* [fix] Reworked patch by @selvamKrish reported at PR:
+  https://github.com/ASPLes/nopoll/pull/42 to send PONG response to
+  PING frame with message content. Updated PR to avoid nopoll_logging
+  application data received because it might be binary and can break
+  vprintfk causing SEGFAULT and similar problems..
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+1th Mar 2018, Madrid (Spain)
+
