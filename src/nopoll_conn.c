@@ -3569,6 +3569,8 @@ read_payload:
 	if (msg->payload_size != 0 && msg->op_code == NOPOLL_PING_FRAME) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PING received over connection id=%d and payload_size=%d, replying PONG",
 			    conn->id, msg->payload_size);
+		/* Set the ping handler */
+		conn->on_ping_msg (conn->ctx, conn, msg, conn->on_ping_msg_data);
 		nopoll_conn_send_pong (conn, nopoll_msg_get_payload_size (msg), (noPollPtr)nopoll_msg_get_payload (msg));
 		nopoll_msg_unref (msg);
 		return NULL;
@@ -4068,6 +4070,31 @@ void          nopoll_conn_set_on_msg (noPollConn              * conn,
 	/* configure on message handler */
 	conn->on_msg      = on_msg;
 	conn->on_msg_data = user_data;
+
+	return;
+}
+
+/**
+ * @brief Allows to configure an on ping message handler
+ * that will be called when ping with payload is received.
+ *
+ * @param conn The connection to be configured with a particular on ping message handler.
+ *
+ * @param on_ping_msg  The on ping message handler configured.
+ *
+ * @param user_data User defined pointer to be passed in into the on ping message handler when it is called.
+ *
+ */
+void          nopoll_conn_set_on_ping_msg (noPollConn              * conn,
+				      noPollOnMessageHandler    on_ping_msg,
+				      noPollPtr                 user_data)
+{
+	if (conn == NULL)
+		return;
+
+	/* configure on message handler */
+	conn->on_ping_msg      = on_ping_msg;
+	conn->on_ping_msg_data = user_data;
 
 	return;
 }
