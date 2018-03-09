@@ -372,6 +372,8 @@ struct _noPollHandshake {
 	nopoll_bool     upgrade_websocket;
 	nopoll_bool     connection_upgrade;
 	nopoll_bool     received_101; 
+	nopoll_bool     received_non_101;
+	int             httpStatus;
 	char          * websocket_key;
 	char          * websocket_version;
 	char          * websocket_accept;
@@ -379,6 +381,8 @@ struct _noPollHandshake {
 
 	/* reference to cookie header */
 	char          * cookie;
+	/* redirect Location URL */
+	char * redirectURL;
 };
 
 struct _noPollConnOpts {

@@ -2139,6 +2139,7 @@ void nopoll_conn_unref (noPollConn * conn)
 		nopoll_free (conn->handshake->expected_accept);
 		nopoll_free (conn->handshake->cookie);
 		nopoll_free (conn->handshake);
+		nopoll_free (conn->handshake->redirectURL);
 	} /* end if */
 
 	/* release connection options if defined and reuse flag is not defined */
@@ -2881,6 +2882,7 @@ int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, c
 	char * header;
 	char * value;
 	int    iterator;
+	char statuscode[4]={'\0'};
 
 	/* handle content */
 	if (! conn->handshake->received_101 && nopoll_ncmp (buffer, "HTTP/1.1 ", 9)) {
@@ -2889,6 +2891,16 @@ int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, c
 			iterator++;
 		if (! nopoll_ncmp (buffer + iterator, "101", 3)) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "websocket server denied connection with: %s", buffer + iterator);
+			strncpy(statuscode, buffer + iterator, 3);
+			/* flag that we have received HTTP/1.1 statuscode indication */
+			conn->handshake->received_non_101 = nopoll_true;
+			if(strlen(statuscode) > 0)
+			{
+				nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Received HTTP %d response from server", atoi(statuscode));
+				conn->handshake->httpStatus = atoi(statuscode);
+				return 1; /* continue to read next lines for error case */
+			}
+
 			return 0; /* do not continue */
 		} /* end if */
 
@@ -2926,7 +2938,15 @@ int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, c
 	} else if (strcasecmp (header, "Connection") == 0) {
 		conn->handshake->connection_upgrade = 1;
 		nopoll_free (value);
-	} else {
+	} else if (strcasecmp (header, "Location") == 0) {
+		if(conn->handshake->received_non_101 && (conn->handshake->httpStatus >= 300 || conn->handshake->httpStatus <= 399))
+		{
+			conn->handshake->redirectURL = nopoll_strdup (value);
+			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_complete_handshake_client: conn->handshake->redirectURL: %s",conn->handshake->redirectURL);
+			nopoll_free (value);
+		}
+	}
+	else {
 		/* release value, no body claimed it */
 		nopoll_free (value);
 	} /* end if */
@@ -4950,6 +4970,83 @@ nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
 
 	/* report if the connection is ok */
 	return nopoll_conn_is_ok (conn) && nopoll_conn_is_ready (conn);
+}
+
+/** 
+ * @brief Allows to implement a wait operation until the provided
+ * connection is ready or the provided timeout is reached.
+ *
+ * @param conn The connection that is being waited to be created.
+ *
+ * @param timeout The timeout operation to limit the wait
+ * operation. Timeout is provided in seconds.
+ *
+ * *@param status in-out parameter of integer value. The response http status code indicating 
+ * success with 101 and failure with non 101 code. e.g. 307 redirect, 403 unauthorized etc.
+
+ * @param message in-out parameter of char pointer. The response message string description indicating 
+ * "Success", "Failure" or "Redirect: Redirect_URL". Caller needs to free memory for this after use.
+ *
+ * @return The function returns when the timeout was reached or the
+ * connection is ready. In the case the connection is ready when the
+ * function finished nopoll_true is returned, otherwise nopoll_false.
+ */
+nopoll_bool      nopoll_conn_wait_for_status_until_connection_ready (noPollConn * conn,
+		int          timeout, int *status, char **message)
+{
+	long int total_timeout = timeout * 1000000;
+	nopoll_bool result = nopoll_false;
+
+	/* check if the connection already finished its connection
+	   handshake */
+	while (! nopoll_conn_is_ready (conn) && total_timeout > 0) {
+
+		if (conn->handshake->received_non_101) {
+			break;
+		}
+		/* check if the connection is ok */
+		if (! nopoll_conn_is_ok (conn))
+			return nopoll_false;
+
+		/* wait a bit 0,5ms */
+		nopoll_sleep (500);
+
+		/* reduce the amount of time we have to wait */
+		total_timeout = total_timeout - 500;
+	} /* end if */
+
+	result = nopoll_conn_is_ok (conn) && nopoll_conn_is_ready (conn);
+
+	if(conn->handshake->received_non_101 == nopoll_true && (conn->handshake->httpStatus >= 300 || conn->handshake->httpStatus <= 399) && (conn->handshake->redirectURL != NULL))
+	{
+		if(message != NULL)
+		{
+			*message = nopoll_strdup_printf ("Redirect:%s", conn->handshake->redirectURL);
+			*status = conn->handshake->httpStatus;
+		}
+
+		conn->handshake->received_non_101 = nopoll_false;
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_wait_for_status_until_connection_ready() response: message: %s" ,*message );
+		return nopoll_false; /* retry with redirection URLs */
+	}
+	else if(conn->handshake->received_non_101 == nopoll_true && conn->handshake->httpStatus !=0)
+	{
+		*status = conn->handshake->httpStatus;
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_wait_for_status_until_connection_ready() response: status: %d" ,*status );
+		return nopoll_false; /* retry as server returns error http code */
+	}
+	else if(result)
+	{
+		*message = nopoll_strdup_printf("Success");
+	}
+	else if(!result)
+	{
+		*message = nopoll_strdup_printf("Failure");
+	}
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "*****End nopoll_conn_wait_for_status_until_connection_ready ****");
+
+	/* report if the connection is ok */
+	return result;
 }
 
 /* @} */
