@@ -5035,11 +5035,11 @@ nopoll_bool      nopoll_conn_wait_for_status_until_connection_ready (noPollConn 
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_wait_for_status_until_connection_ready() response: status: %d" ,*status );
 		return nopoll_false; /* retry as server returns error http code */
 	}
-	else if(result)
+	else if(result && message != NULL)
 	{
 		*message = nopoll_strdup_printf("Success");
 	}
-	else if(!result)
+	else if(!result && message != NULL)
 	{
 		*message = nopoll_strdup_printf("Failure");
 	}

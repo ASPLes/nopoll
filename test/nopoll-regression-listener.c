@@ -46,6 +46,8 @@
 #include <openssl/x509v3.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <unistd.h>
+#include <pthread.h>
 
 int connection_close_count = 0;
 
@@ -375,6 +377,44 @@ noPollPtr ssl_context_creator (noPollCtx * ctx, noPollConn * conn, noPollConnOpt
 	printf ("RETURNING: ssl context reference %p\n", ssl_ctx);
 	return ssl_ctx;
 }
+void *start_listener(char *reply, int port) {
+
+	NOPOLL_SOCKET listener, client_sock;
+	struct sockaddr_in serveraddr;
+
+	listener = socket(AF_INET, SOCK_STREAM, 0);
+	memset( &serveraddr,0, sizeof(serveraddr));
+
+	serveraddr.sin_family = AF_INET;
+	serveraddr.sin_addr.s_addr = htons(INADDR_ANY);
+	serveraddr.sin_port = htons(port);
+
+	printf("noPoll listener started at: %s:%d.\n", inet_ntoa(serveraddr.sin_addr), htons(serveraddr.sin_port));
+	bind(listener, (struct sockaddr *) &serveraddr, sizeof(serveraddr));
+
+	listen(listener, 1);
+
+	client_sock = accept(listener, (struct sockaddr*) NULL, NULL);
+	printf("INFO: Received request at %s:%d, replying to client %s",inet_ntoa(serveraddr.sin_addr), htons(serveraddr.sin_port),reply);
+
+	if(write(client_sock, reply, strlen(reply)+1)){
+		close(client_sock);
+	}
+	else {
+		printf("ERROR: Unable to write data on socket\n");
+	}
+	return NULL;
+}
+
+void *listener_for_URL_redirection (void *vargp) {
+	char server_response[] = "HTTP/1.1 307 Temporary Redirect\r\nLocation: http://localhost:1234\r\n\r\n";
+	return start_listener(server_response,6789);
+}
+
+void *listener_for_non_101_status (void *vargp) {
+	char server_response[] = "HTTP/1.1 500 Internal Server Error\r\n\r\n";
+	return start_listener(server_response,9876);
+}
 
 int main (int argc, char ** argv)
 {
@@ -427,6 +467,11 @@ int main (int argc, char ** argv)
 		/* next position */
 		iterator++;
 	} 
+
+	/* create listener for URL redirection */
+	pthread_t tid1, tid2;
+	pthread_create(&tid1, NULL, listener_for_URL_redirection, NULL);
+	pthread_create(&tid2, NULL, listener_for_non_101_status, NULL);
 
 	/* call to create a listener */
 	listener = nopoll_listener_new (ctx, "0.0.0.0", "1234");
