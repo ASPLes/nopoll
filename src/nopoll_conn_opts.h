@@ -69,6 +69,8 @@ void nopoll_conn_opts_set_interface    (noPollConnOpts * opts, const char * _int
 void nopoll_conn_opts_set_extra_headers (noPollConnOpts * opts, const char * extra_headers);
 
 void nopoll_conn_opts_free (noPollConnOpts * opts);
+/* hostname validation */
+void nopoll_conn_opts_ssl_host_verify (noPollConnOpts * opts, nopoll_bool verify);
 
 /** internal API **/
 void __nopoll_conn_opts_release_if_needed (noPollConnOpts * options);

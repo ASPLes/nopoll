@@ -23,7 +23,10 @@ libnopoll_la_SOURCES     = \
 	nopoll_io.c \
 	nopoll_msg.c \
 	nopoll_win32.c \
-	nopoll_conn_opts.c
+	nopoll_conn_opts.c \
+	nopoll_hostname_validation.c \
+	nopoll_hostname_compare.c \
+	nopoll_hostcheck.c
 
 libnopollinclude_HEADERS = \
 	nopoll.h \
@@ -39,7 +42,10 @@ libnopollinclude_HEADERS = \
 	nopoll_io.h \
 	nopoll_msg.h \
 	nopoll_win32.h \
-	nopoll_conn_opts.h
+	nopoll_conn_opts.h \
+	nopoll_hostname_validation.h \
+	nopoll_hostname_compare.h \
+	nopoll_hostcheck.h
 
 libnopoll_la_LDFLAGS = -no-undefined -export-symbols-regex '^(nopoll|__nopoll|_nopoll).*'
 
