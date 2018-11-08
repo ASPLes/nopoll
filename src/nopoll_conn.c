@@ -3194,7 +3194,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			memcpy (msg->mask, conn->previous_msg->mask, 4);
 			
 			if (msg->is_masked) {
-				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reusing mask value = %d from previous frame (%d)", nopoll_get_32bit (msg->mask));
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reusing mask value = %d from previous frame", nopoll_get_32bit (msg->mask));
 				nopoll_show_byte (conn->ctx, msg->mask[0], "mask[0]");
 				nopoll_show_byte (conn->ctx, msg->mask[1], "mask[1]");
 				nopoll_show_byte (conn->ctx, msg->mask[2], "mask[2]");
