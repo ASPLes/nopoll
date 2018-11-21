@@ -1657,6 +1657,7 @@ nopoll_bool test_17_send_and_receive_test (noPollCtx * ctx, noPollConn * conn, n
 	NOPOLL_SOCKET  _socket;
 	char           mask[4];
 	int            desp;
+	int            value;
 
 	memset (buffer, 0, 1024);
 
@@ -1730,8 +1731,10 @@ nopoll_bool test_17_send_and_receive_test (noPollCtx * ctx, noPollConn * conn, n
 
 	printf ("Test 17: now read the content received..\n");
 	/* now read the content */
-	if (nopoll_conn_read (listener, buffer + desp, length - desp, nopoll_true, 0) != (length - desp)) {
-		printf ("ERROR: expected to receive 22 bytes but found something different..\n");
+	value = nopoll_conn_read (listener, buffer + desp, length - desp, nopoll_true, 0);
+	if (value != (length - desp)) {
+		printf ("ERROR: expected to receive nopoll_conn_read (listener, buffer + desp, length - desp, nopoll_true, 0)=%d bytes but found something different (length - desp)=%d..\n",
+			value, (length - desp));
 		return nopoll_false;
 	} /* end if */
 
