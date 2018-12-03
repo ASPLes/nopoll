@@ -511,20 +511,18 @@ typedef enum {
 	 * established with this method will only understand this
 	 * method.
 	 */
-	NOPOLL_METHOD_TLSV1_1     = 5
+	NOPOLL_METHOD_TLSV1_1     = 5,
 #endif
 #if defined(NOPOLL_HAVE_TLSv12_ENABLED)
-	,
 	/** 
 	 * @brief Allows to define TLSv1.2 as SSL protocol used by the
 	 * client or server connection. A connection/listener
 	 * established with this method will only understand this
 	 * method.
 	 */
-	NOPOLL_METHOD_TLSV1_2     = 6
+	NOPOLL_METHOD_TLSV1_2     = 6,
 #endif
 #if defined(NOPOLL_HAVE_TLS_FLEXIBLE_ENABLED)
-	,
 	/** 
 	 * @brief Allows to define TLS flexible negotiation where the
 	 * highest version available will be negotiated by both
