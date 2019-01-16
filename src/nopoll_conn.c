@@ -300,11 +300,11 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 	/* do a tcp connect */
         if (connect (session, res->ai_addr, res->ai_addrlen) < 0) {
 		if(errno != NOPOLL_EINPROGRESS && errno != NOPOLL_EWOULDBLOCK && errno != NOPOLL_ENOTCONN) { 
-		        shutdown (session, SHUT_RDWR);
-                        nopoll_close_socket (session);
-
 			nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to connect to remote host %s:%s errno=%d",
 				    host, port, errno);
+
+		        shutdown (session, SHUT_RDWR);
+                        nopoll_close_socket (session);
 
 			/* relase address info */
 			freeaddrinfo (res);
