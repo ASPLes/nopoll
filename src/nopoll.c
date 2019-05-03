@@ -66,7 +66,7 @@ nopoll_bool nopoll_cmp (const char * string1, const char * string2)
 
 	/* next position */
 	iterator = 0;
-	while (string1[iterator] && string1[iterator]) {
+	while (string1[iterator] && string2[iterator]) {
 		if (string1[iterator] != string2[iterator])
 			return nopoll_false;
 		iterator++;
