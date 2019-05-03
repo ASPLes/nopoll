@@ -399,6 +399,7 @@ struct _noPollConnOpts {
 	char * ca_certificate;
 
 	nopoll_bool  disable_ssl_verify;
+	nopoll_bool host_verify;
 
 	/* cookie support */
 	char * cookie;

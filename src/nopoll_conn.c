@@ -47,7 +47,7 @@
 
 #include <nopoll_conn.h>
 #include <nopoll_private.h>
-
+#include <nopoll_hostname_validation.h>
 #if defined(NOPOLL_OS_UNIX)
 # include <netinet/tcp.h>
 #endif
@@ -1022,6 +1022,28 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 			__nopoll_conn_opts_release_if_needed (options);
 
 			return conn;
+		}
+		
+		/* Check for opts to verify hostname validation during conn handshake */  
+		if (options == NULL ||  options->host_verify) 
+		{
+		    noPollHostValidationStatus status = ERROR;
+		    /* hostname should be validated without http/https, so pass conn->host_name */
+		    status = nopoll_validate_hostname(server_cert, conn->host_name);
+		    if( status == MATCH_FOUND )
+		    {
+		        nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Hostname validation SUCCESS, done as part of client \n");  
+		    }
+		    else
+		    {
+		        nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL,"Hostname validation FAILED with errno %d \n",status);
+		        /* release connection options */
+			    nopoll_free (content);
+			    nopoll_conn_shutdown (conn);
+			    __nopoll_conn_opts_release_if_needed (options);
+                X509_free (server_cert);
+			    return NULL;
+		    }
 		}
 		X509_free (server_cert);
 

@@ -77,6 +77,8 @@ noPollConnOpts * nopoll_conn_opts_new (void)
 
 	/* by default, disable ssl peer verification */
 	result->disable_ssl_verify = nopoll_true;
+	/* by default, enable hostname validation */
+	result->host_verify = nopoll_true;
 
 	return result;
 }
@@ -173,6 +175,24 @@ void nopoll_conn_opts_ssl_peer_verify (noPollConnOpts * opts, nopoll_bool verify
 	if (opts == NULL)
 		return;
 	opts->disable_ssl_verify = ! verify;
+	return;
+}
+
+/** 
+ * @brief Allows to enable hostname validation
+ *
+ * @param opts The connection option to configure.
+ *
+ * @param hostVerify nopoll_true to enable hostname validation
+ * otherwise, nopoll_false should be used. By default hostname validation 
+ * is enabled.
+ */
+
+void nopoll_conn_opts_ssl_host_verify (noPollConnOpts * opts, nopoll_bool hostVerify)
+{
+	if (opts == NULL)
+		return;
+	opts->host_verify = hostVerify;
 	return;
 }
 
