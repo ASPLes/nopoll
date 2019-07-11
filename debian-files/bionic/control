@@ -18,7 +18,7 @@ Description: WebSocket OpenSource implementation
 Package: libnopoll0-dev
 Section: libdevel
 Architecture: any
-Depends: libnopoll0 (= ${Source-Version})
+Depends: libnopoll0 (= ${binary:Version})
 Description: WebSocket OpenSource implementation (dev headers)
   noPoll is a WebSocket implementation designed to integreate well into
   existing projects that needs support for WebSocket, even in the same
