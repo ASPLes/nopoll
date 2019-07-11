@@ -1660,45 +1660,61 @@ nopoll_bool test_17_send_and_receive_test (noPollCtx * ctx, noPollConn * conn, n
 	int            value;
 
 	memset (buffer, 0, 1024);
+	memset (buffer2, 0, 1024);
 
 	/* make it unblock */
 	nopoll_conn_set_sock_block (nopoll_conn_socket (listener), nopoll_false);
 
 	/* now send partial content */
-	printf ("Test 17: sending normal message to test link..\n");
+	printf ("Test 17: 1. CLIENT >> sending normal message to test link..\n");
 	if (nopoll_conn_send_text (conn, message, length) != length) {
 		printf ("ERROR: expected to properly send all bytes but it wasn't possible..\n");
 		return nopoll_false;
 	} /* end if */
 
 	/* read reply */
+	printf ("Test 17: 2. SERVER << reading content..\n");
 	if (nopoll_conn_read (listener, buffer, length, nopoll_true, 0) != length) {
 		printf ("ERROR: expected read 22 bytes ...but there was a failure..\n");
 		return nopoll_false;
 	} /* end if */
 
-	/* printf ("Test 17: sending partial content..\n"); */
+	printf ("Test 17: 3. CLIENT >> sending partial content..\n");
 	_socket = nopoll_conn_socket (conn);
-	buffer[0] = 126;
-	buffer[1] = 127;
+
+	/* NOTE: the following values has to be 129 and 150. They has
+	   be this way because they represent the right WebSocket
+	   header initialization for this test */
+	buffer[0] = 129; /*  buffer[0]) = 0 1 1 1  1 1 1 0 */
+	buffer[1] = 150; /*  buffer[0]) = 0 1 1 1  1 1 1 1 */
+	
 	send (_socket, buffer, 2, 0);
+	
+	nopoll_show_byte (ctx, buffer[0], "CLIENT >> buffer[0]");
+	nopoll_show_byte (ctx, buffer[1], "CLIENT >> buffer[0]");
 
 	if (read_after_header) {
 		nopoll_sleep (1000000);
-		printf ("Test 17: Reading after header..\n");
+		printf ("Test 17: 3.1 SERVER << Reading after header..\n");
 		nopoll_conn_read (listener, buffer2, length, nopoll_false, 0);
 	}
 
 	/* send mask */
+	printf ("Test 17: 4. CLIENT >> sending content..\n");
 	mask[0] = 23;
 	mask[1] = 24;
 	mask[2] = 25;
 	mask[3] = 26;
 	send (_socket, mask, 4, 0);
 
+	nopoll_show_byte (ctx, mask[0], "CLIENT >> mask[0]");
+	nopoll_show_byte (ctx, mask[1], "CLIENT >> mask[1]");
+	nopoll_show_byte (ctx, mask[2], "CLIENT >> mask[2]");
+	nopoll_show_byte (ctx, mask[3], "CLIENT >> mask[3]");
+
 	if (read_after_mask) {
 		nopoll_sleep (1000000);
-		printf ("Test 17: Reading after mask..\n");
+		printf ("Test 17: 4.1 SERVER << Reading after mask..\n");
 		nopoll_conn_read (listener, buffer2, length, nopoll_false, 0);
 	}
 
@@ -1706,12 +1722,12 @@ nopoll_bool test_17_send_and_receive_test (noPollCtx * ctx, noPollConn * conn, n
 	nopoll_conn_mask_content (ctx, buffer, length, mask, 0);
 
 	send (_socket, buffer, 10, 0);
-	printf ("Test 17: sent partial content...wait a bit (2 seconds)..\n");
+	printf ("Test 17: 5. CLIENT >> sent partial content...wait a bit (2 seconds)..\n");
 	nopoll_sleep (2000000);
 
 	desp = 0;
 	if (read_in_the_middle) {
-		printf ("Test 17: reading in the middle (10 bytes)\n");
+		printf ("Test 17: 5.1 SERVER << reading in the middle (10 bytes)\n");
 		memset (buffer2, 0, 100);
 		desp = nopoll_conn_read (listener, buffer2, length, nopoll_false, 0);
 		if (desp != 10) {
@@ -1722,14 +1738,14 @@ nopoll_bool test_17_send_and_receive_test (noPollCtx * ctx, noPollConn * conn, n
 		printf ("Test 17: read %d bytes..\n", desp);
 	} 
 
-	printf ("Test 17: now send the rest..\n");
+	printf ("Test 17: 6. CLIENT >> now send the rest..\n");
 	send (_socket, buffer + 10, length - 10, 0);
 
 	/* copy content into original buffer */
 	if (read_in_the_middle) 
 		memcpy (buffer, buffer2, desp);
 
-	printf ("Test 17: now read the content received..\n");
+	printf ("Test 17: 7. SERVER << now read the content received..\n");
 	/* now read the content */
 	value = nopoll_conn_read (listener, buffer + desp, length - desp, nopoll_true, 0);
 	if (value != (length - desp)) {
@@ -1782,6 +1798,7 @@ nopoll_bool test_17 (void) {
 	} /* end if */
 	
 	/** call test here **/
+	printf ("Test 17: sending first 'This is a test message'..\n");
 	if (! test_17_send_and_receive_test (ctx, conn, listener, "This is a test message", 22, 
 					     /* read in the middle */
 					     nopoll_false, 
@@ -1792,6 +1809,7 @@ nopoll_bool test_17 (void) {
 		return nopoll_false;
 
 	/** call test here **/
+	printf ("Test 17: sending second 'This is a test message'..\n");
 	if (! test_17_send_and_receive_test (ctx, conn, listener, "This is a test message", 22, 
 					     /* read in the middle */
 					     nopoll_true, 
@@ -1802,6 +1820,7 @@ nopoll_bool test_17 (void) {
 		return nopoll_false;
 
 	/** call test here **/
+	printf ("Test 17: sending third 'This is a test message'..\n");
 	if (! test_17_send_and_receive_test (ctx, conn, listener, "This is a test message", 22, 
 					     /* read in the middle */
 					     nopoll_false, 
@@ -1812,6 +1831,7 @@ nopoll_bool test_17 (void) {
 		return nopoll_false;
 
 	/** call test here **/
+	printf ("Test 17: sending fourth 'This is a test message'..\n");
 	if (! test_17_send_and_receive_test (ctx, conn, listener, "This is a test message", 22, 
 					     /* read in the middle */
 					     nopoll_false, 
