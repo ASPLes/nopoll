@@ -400,7 +400,7 @@ char * __nopoll_conn_get_client_init (noPollConn * conn, noPollConnOpts * opts)
 				     "\r\nConnection: Upgrade"
 				     "\r\nSec-WebSocket-Key: %s"
 				     "\r\nSec-WebSocket-Version: %d"
-				     "\r\nOrigin: %s"
+				     "%s%s"
 				     "%s%s"  /* Cookie */
 				     "%s%s"  /* protocol part */
 				     "%s"    /* extra arbitrary headers */
@@ -411,8 +411,9 @@ char * __nopoll_conn_get_client_init (noPollConn * conn, noPollConnOpts * opts)
 				     key,
 				     /* sec-websocket-version */
 				     conn->ctx->protocol_version,
-				     /* Origin */
-				     conn->origin,
+				     /* Origin (support not sending Origin: header in case it is not defined) */
+				     (conn->origin != NULL && opts->add_origin_header) ? "\r\nOrigin: " : "",
+				     (conn->origin != NULL && opts->add_origin_header) ? conn->origin : "",
 				     /* Cookie */
 				     (opts && opts->cookie) ? "\r\nCookie: " : "",
 				     (opts && opts->cookie) ? opts->cookie : "",
@@ -2638,7 +2639,7 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 
 	/* update default origin check (Origin: header must be
 	 * defined, event though RFC says SHOULD it should have been
-	 * MUST because other wise, server side cannot check this
+	 * MUST because otherwise, server side cannot check this
 	 * value which is crucial for security reasons */
 	origin_check = conn->origin != NULL;
 
