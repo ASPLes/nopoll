@@ -74,6 +74,7 @@ nopoll_conn_new
 nopoll_conn_new6
 nopoll_conn_new_opts
 nopoll_conn_new_with_socket
+nopoll_conn_opts_add_origin_header
 nopoll_conn_opts_free
 nopoll_conn_opts_new
 nopoll_conn_opts_ref

@@ -411,6 +411,10 @@ struct _noPollConnOpts {
 
 	/* extra HTTP headers to send during the connection */
 	char * extra_headers;
+
+	/* control whether origin header is added or not (see
+	 * nopoll_conn_opts_add_origin_header) */
+	nopoll_bool add_origin_header;
 };
 
 #endif
