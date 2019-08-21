@@ -58,6 +58,8 @@ void        nopoll_conn_opts_set_cookie (noPollConnOpts * opts, const char * coo
 
 void        nopoll_conn_opts_skip_origin_check (noPollConnOpts * opts, nopoll_bool skip_check);
 
+void        nopoll_conn_opts_add_origin_header (noPollConnOpts * opts, nopoll_bool add);
+
 nopoll_bool nopoll_conn_opts_ref (noPollConnOpts * opts);
 
 void        nopoll_conn_opts_unref (noPollConnOpts * opts);
