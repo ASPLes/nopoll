@@ -412,8 +412,8 @@ char * __nopoll_conn_get_client_init (noPollConn * conn, noPollConnOpts * opts)
 				     /* sec-websocket-version */
 				     conn->ctx->protocol_version,
 				     /* Origin (support not sending Origin: header in case it is not defined) */
-				     (conn->origin != NULL && opts->add_origin_header) ? "\r\nOrigin: " : "",
-				     (conn->origin != NULL && opts->add_origin_header) ? conn->origin : "",
+				     (conn->origin != NULL && (opts == NULL || opts->add_origin_header)) ? "\r\nOrigin: " : "",
+				     (conn->origin != NULL && (opts == NULL || opts->add_origin_header)) ? conn->origin : "",
 				     /* Cookie */
 				     (opts && opts->cookie) ? "\r\nCookie: " : "",
 				     (opts && opts->cookie) ? opts->cookie : "",
