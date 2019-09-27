@@ -1,0 +1,5 @@
+libnopoll0 (0.21-0) unstable; urgency=low
+
+  * First release
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 08 Apr 2013 11:12:23 +0100
