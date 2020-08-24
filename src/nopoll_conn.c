@@ -4022,6 +4022,15 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
  * function. This API is not useful if you are not using \ref
  * nopoll_conn_read (stream oriented APi).
  *
+ * This function is designed to be used *after* you have completed a
+ * \ref nopoll_conn_read so you can get a quick indication if there
+ * are pending data that can be read without waiting and blocking
+ * (especially when you use non blocking I/O).
+ *
+ * You have an working example at:
+ *
+ * https://github.com/ASPLes/libvortex-1.1/blob/master/web-socket/vortex_websocket.c#L404
+ *
  * @param conn The connection where the operation takes place
  *
  * @return The amount of bytes pendings to be read (and a confirmation
