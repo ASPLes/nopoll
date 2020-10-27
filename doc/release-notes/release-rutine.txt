@@ -68,7 +68,11 @@
 * Retuitear como {4}
 * Enlazar noticia con google plus.
 
-* Cerrar release y hacer un tag release en github.com
+* Cerrar release y hacer un tag release en github.com:
+
+   - https://github.com/ASPLes/nopoll/releases/new
+     
+     
 
 
 
