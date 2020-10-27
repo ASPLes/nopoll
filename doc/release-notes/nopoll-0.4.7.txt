@@ -1,0 +1,146 @@
+                   --== noPoll toolkit ==--
+                         Stormwind
+                           0.4.7
+
+Advanced Software Production Line is proud to announce a new stable
+release of the noPoll toolkit.
+
+noPoll is a OpenSource WebSocket implementation (RFC 6455), written in
+ANSI C, that allows building pure WebSocket solutions or to provide
+WebSocket support to existing TCP oriented applications.
+
+Commercially supported, noPoll was written to have a clean, easy to
+use and integrate library. It is released under the terms of LGPL 2.1
+(so you can build OpenSource or commercial applications) and currently
+is being heavily used by Vortex Library, Turbulence and Core-Admin to
+provide WebSocket support to those projects (some of them using BEEP
+over WebSocket).
+
+Resources
+~~~~~~~~~
+
+   noPoll homepage
+   [ http://www.aspl.es/nopoll ]
+
+   Commercial support
+   [ http://www.aspl.es/nopoll/commercial.html ]
+
+   Advanced Software Production Line, S.L.
+   [ http://www.aspl.es ]
+
+   Featured project: Core-Admin
+   [ http://www.core-admin.com ]
+
+This release in short
+~~~~~~~~~~~~~~~~~~~~~
+
+  - Stable release with bug fixing, support for Debian Stretch and
+    Ubuntu Bionic
+
+Thanks to
+~~~~~~~~~
+
+  - Javier Celaya [github.com/jcelaya] (warn about incomplet read/writes)
+
+  - @qianqiangliu [github.com/qianqiangliu] (format parameter strings).
+
+  - @bill.williams [github.com/bill.williams] (fixed error logs)
+
+  - @samisallinen [github.com/samisallinen] (fixed npoll_cmp issue)
+
+  - @mhennecke [github.com/mhennecke] (reported client side SNI issue)
+
+Changes from previous release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* [fix] Do not warn about incomplete read/write operations
+
+  Log messages about not reading or writing as much data as requested
+  are tagged as warnings, while this is a perfectly normal situation
+  when dealing with non-blocking sockets. This results in lots of
+  unwanted warning messages. This commit tags them as debug messages.
+
+* [fix] Do not warn about incomplete read/write operations. Thanks to
+  Javier Celaya (github.com/jcelaya). Log messages about not reading
+  or writing as much data as requested are tagged as warnings, while
+  this is a perfectly normal situation when dealing with non-blocking
+  sockets. This results in lots of unwanted warning messages. This
+  commit tags them as debug messages.
+  
+* [fix] Adding support for Debian Stretch
+
+* [fix] Fixed libssl1.1 reference for Debian Stretch.
+
+* [fix] Fixed missing parameter to format string at nopoll_conn.c:3197
+  Reported by @qianqiangliu. Thanks!
+
+* [fix] Minor fixings to regression-client.c
+
+* [fix] connect error log to report the correct errno
+
+* [fix] Fix connect error log to report the correct errno:
+   In function __nopoll_conn_sock_connect_opts_internal, after a connect failure, the log statement 
+   is currently placed after the socket shutdown and close, so that errno may by changed before the 
+   message is printed.
+
+   This change moves the log statement to before the socket shutdown and close, so that errno is 
+   reported correctly.
+
+* [fix] Fixed nopoll_cmp internal check (reported by @samisallinen).
+  Closes https://github.com/ASPLes/nopoll/issues/65
+
+* [fix] Configure SNI indication on TLS client connection. 
+  Closes https://github.com/ASPLes/nopoll/pull/63. Reported by @mhennecke
+
+* [fix] Updated regression test17 to include content
+  direction. Reverting wrong path to header initialization
+  values. Added documentation to avoid failing on the same.
+
+  Reverting patch (r398 | ananthakrishnan) restoring initial right
+  values. Added documentation to explain that these are the right
+  values to make test to run without error.
+
+* [fix] Adding files to support Ubuntu 18 Bionic
+
+* [fix] More fixings to Ubuntu 18 Bionic packaging
+
+* [fix] Added new function, connection option, to allow controlling if
+  Origin header is added to client init transation:
+
+  - nopoll_conn_opts_add_origin_header
+
+  By default Origin header is always added unless otherwise
+  configured. Library keeps working the same: it always provides
+  Origin header (either provided by user or inferred by library)
+  unless not configured with this API.
+
+* [fix] Updated client side __nopoll_conn_get_client_init to support
+  not generating Origin header in case it is not defined or it was
+  disabled by user by calling:
+
+  - nopoll_conn_opts_add_origin_header (opts, nopoll_false)
+
+* [fix] Making opts to be optional at __nopoll_conn_get_client_init
+
+* [fix] Updated nopoll_conn_read_pending documentation to better reflect how
+  to use it and some pointers to example.
+
+About Advanced Software Production Line, S.L. (ASPL)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  Advanced Software Production Line (ASPL) provides GNU/Linux support
+  and consulting services to enable organisation to introduce
+  GNU/Linux into their processes, making other platforms to properly
+  interact with it.
+
+  You can contact us, using English or Spanish, at:
+
+       http://www.aspl.es - info@aspl.es
+
+  We hope noPoll may be useful you. Enjoy noPoll toolkit!
+
+--
+Francis Brosnan Blázquez           - francis@aspl.es
+Advanced Software Production Line  - http://www.aspl.es
+27th Oct 2020, Madrid (Spain)
+

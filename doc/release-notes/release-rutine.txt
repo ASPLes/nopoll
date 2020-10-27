@@ -4,7 +4,17 @@
 
 * subir producto a aspl.es/nopoll/downloads/
 
+  >> cf
+  >> make
+  >> make dist
+  # ver version producida
+  >> ls -la -tr nopoll-*.tar.gz
+  # subir la version que corresponda
+  >> scp nopoll-VERSION.tar.gz aspl-web@www.aspl.es:www/nopoll/downloads/
+
 * publicar en listas de correo de aspl.
+
+    Sugerencia asunto: [ANN] noPoll VERSION 'Release name' is ready for download!
 
 * actualizar web de nopoll (actualizar sección de noticias y a la gestión
   de releases notes).

@@ -36,7 +36,7 @@
   
 <p class="center"><img src="../images/android_logo-1.png" alt="[URL]"> <a href="http://www.aspl.es/nopoll/downloads/android">Android library binaries</a></p>
   
-<h2>Paquetes Debian / Ubuntu / Raspbian más recientes</h2>
+<h2>Paquetes Debian / Ubuntu más recientes</h2>
 
 <p>Utilice el siguiente repositorio APT para instalar noPoll y sus dependencias</p>
 
@@ -44,14 +44,20 @@
   
 <pre>
 
-  # public aspl raspbian-wheezy repository (Raspbian Wheezy)
-  deb http://www.aspl.es/debian/public raspbian-wheezy/
+  # repositorio debian publico de aspl (BIONIC) 18.04 LTS
+  deb http://www.aspl.es/ubuntu/public bionic/
 
   # repositorio debian publico de aspl (XENIAL) 16.04 LTS
   deb http://www.aspl.es/ubuntu/public xenial/
 
   # repositorio ubuntu publico de aspl (PRECISE) 12.04 LTS
   deb http://www.aspl.es/ubuntu/public precise/
+
+  # repositorio debian publico de aspl (BUSTER)
+  deb http://www.aspl.es/debian/public buster/
+
+  # repositorio debian publico de aspl (STRETCH)
+  deb http://www.aspl.es/debian/public stretch/
 
   # repositorio debian publico de aspl (JESSIE)
   deb http://www.aspl.es/debian/public jessie/
@@ -69,7 +75,7 @@
 
 <p>Luego ejecute <b>apt-cache search nopoll</b> para buscar los paquetes para noPoll.</p>
 
-<h2>Paquetes para CentOS</h2>
+<h2>Paquetes para CentOS (6/7)</h2>
 
 <p>Utilice los siguientes repositorios para obtener acceso a los paquetes para CentOS:</p>
 
@@ -111,6 +117,7 @@
 <h2>Seguimiento de revisiones</h2>
 
 <ul>
+  <li><a href="http://lists.aspl.es/pipermail/nopoll/2020-October/000233.html">0.4.7 Stormwind - Liberada el 27/10/2020</a></li>
   <li><a href="http://lists.aspl.es/pipermail/nopoll/2018-March/000218.html">0.4.6 The Prophecy - Liberada el 01/03/2018</a></li>
   <li><a href="http://lists.aspl.es/pipermail/nopoll/2017-August/000199.html">0.4.5 Excuse me while I run - Liberada el 21/08/2017</a></li>
   <li><a href="http://lists.aspl.es/pipermail/nopoll/2017-June/000189.html">0.4.4 Black Hole Sun - Liberada el 09/06/2017</a></li>
@@ -191,7 +198,7 @@
 
 
 <div class="footer-content">  
- Copyright © 2000-2017 Advanced Software Production Line, S.L.
+ Copyright © 2000-2020 Advanced Software Production Line, S.L.
  Todos los derechos reservados.<br>
  ASPL y su logo son marcas registradas de Advanced Software Production Line, S.L.<br>
  Webmaster: <a href="mailto:webmaster@aspl.es">webmaster@aspl.es</a>
