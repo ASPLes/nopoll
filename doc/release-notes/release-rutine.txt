@@ -66,7 +66,7 @@
 * Publicar noticia en twitter ASPL_es
 
 * Retuitear como {4}
-* Enlazar noticia con google plus.
+* Publicar entrada en google business (Novedad)
 
 * Cerrar release y hacer un tag release en github.com:
 
