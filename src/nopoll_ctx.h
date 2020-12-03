@@ -1,6 +1,6 @@
 /*
  *  LibNoPoll: A websocket library
- *  Copyright (C) 2017 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2020 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
