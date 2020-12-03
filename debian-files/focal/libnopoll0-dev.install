@@ -1,0 +1,14 @@
+usr/lib/pkgconfig/nopoll.pc
+usr/include/nopoll/nopoll.h
+usr/include/nopoll/nopoll_conn.h
+usr/include/nopoll/nopoll_conn_opts.h
+usr/include/nopoll/nopoll_handlers.h
+usr/include/nopoll/nopoll_decl.h
+usr/include/nopoll/nopoll_private.h
+usr/include/nopoll/nopoll_ctx.h
+usr/include/nopoll/nopoll_log.h
+usr/include/nopoll/nopoll_listener.h
+usr/include/nopoll/nopoll_msg.h
+usr/include/nopoll/nopoll_io.h
+usr/include/nopoll/nopoll_loop.h
+usr/include/nopoll/nopoll_config.h
