@@ -397,6 +397,7 @@ struct _noPollConnOpts {
 	char * private_key;
 	char * chain_certificate;
 	char * ca_certificate;
+	char * crl;
 
 	nopoll_bool  disable_ssl_verify;
 
