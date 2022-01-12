@@ -1,3 +1,21 @@
+libnopoll0 (0.4.6-428) stable; urgency=low
+
+  * New upstream release
+
+ -- Advanced Software Production Line, S.L. <info@aspl.es>  Tue, 01 Oct 2019 17:36:47 +0200
+
+libnopoll0 (0.4.6-426) stable; urgency=low
+
+  * New upstream release
+
+ -- Advanced Software Production Line, S.L. <info@aspl.es>  Thu, 26 Sep 2019 17:29:46 +0200
+
+libnopoll0 (0.4.6-424) stable; urgency=low
+
+  * New upstream release
+
+ -- Advanced Software Production Line, S.L. <info@aspl.es>  Thu, 26 Sep 2019 17:17:53 +0200
+
 libnopoll0 (0.21-0) unstable; urgency=low
 
   * First release

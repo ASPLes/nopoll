@@ -1384,7 +1384,9 @@ noPollConn * nopoll_conn_tls_new (noPollCtx  * ctx,
 	/* init ssl ciphers and engines */
 	if (! __nopoll_tls_was_init) {
 		__nopoll_tls_was_init = nopoll_true;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 		SSL_library_init ();
+#endif
 	} /* end if */
 
 	/* call common implementation */
@@ -1430,7 +1432,9 @@ noPollConn * nopoll_conn_tls_new6 (noPollCtx  * ctx,
 	/* init ssl ciphers and engines */
 	if (! __nopoll_tls_was_init) {
 		__nopoll_tls_was_init = nopoll_true;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 		SSL_library_init ();
+#endif
 	} /* end if */
 
 	/* call common implementation */
@@ -1499,7 +1503,9 @@ noPollConn * nopoll_conn_tls_new_with_socket (noPollCtx  * ctx,
 	/* init ssl ciphers and engines */
 	if (! __nopoll_tls_was_init) {
 		__nopoll_tls_was_init = nopoll_true;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 		SSL_library_init ();
+#endif
 	} /* end if */
 
 	/* call common implementation */
@@ -4768,7 +4774,9 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 		/* init ssl ciphers and engines */
 		if (! __nopoll_tls_was_init) {
 			__nopoll_tls_was_init = nopoll_true;
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 			SSL_library_init ();
+#endif
 		} /* end if */
 
 		/* now configure chainCertificate */

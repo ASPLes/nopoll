@@ -868,9 +868,11 @@ void nopoll_cleanup_library (void)
 {
 	
 	if (__nopoll_tls_was_init) {
+#if OPENSSL_VERSION_NUMBER < 0x10100000L
 		EVP_cleanup ();
 		CRYPTO_cleanup_all_ex_data ();
 		ERR_free_strings ();
+#endif
 
 		/* notify the library isn't initialized */
 		__nopoll_tls_was_init = nopoll_false;
