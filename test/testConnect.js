@@ -1,5 +1,5 @@
 /**
- ** Copyright (C) 2020 Advanced Software Production Line, S.L.
+ ** Copyright (C) 2022 Advanced Software Production Line, S.L.
  ** See license.txt or http://www.aspl.es/nopoll
  **/
 

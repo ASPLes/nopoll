@@ -1,6 +1,6 @@
 /*
  *  LibNoPoll: A websocket library
- *  Copyright (C) 2020 Advanced Software Production Line, S.L.
+ *  Copyright (C) 2022 Advanced Software Production Line, S.L.
  *
  *  This program is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public License
@@ -2892,7 +2892,7 @@ int main (int argc, char ** argv)
 	int iterator;
 
 	printf ("** NoPoll: Websocket toolkit (regression test).\n");
-	printf ("** Copyright (C) 2020 Advanced Software Production Line, S.L.\n**\n");
+	printf ("** Copyright (C) 2022 Advanced Software Production Line, S.L.\n**\n");
 	printf ("** NoPoll regression tests: version=%s\n**\n",
 		VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");

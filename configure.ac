@@ -1,5 +1,5 @@
 dnl LibNoPoll: A websocket library
-dnl  Copyright (C) 2017 Advanced Software Production Line, S.L.
+dnl  Copyright (C) 2022 Advanced Software Production Line, S.L.
 dnl
 dnl  This program is free software; you can redistribute it and/or
 dnl  modify it under the terms of the GNU Lesser General Public
