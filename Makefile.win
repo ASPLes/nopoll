@@ -1,6 +1,17 @@
 # Hey emacs this this -*- makefile -*- 
-# Makefile.win: compile the af-arch enviroment under the mingw
+# Makefile.win: compile the nopoll under the mingw
 # Advanced Software Prodution Line, S.L.
+
+# 1) To compile the project run:
+#
+#    >> make -f Makefile.win build
+# 
+# 2) To clean the project run:
+# 
+#    >> make -f Makefile.win clean
+#
+#  Requirements: mingw, msys, make and gcc
+# 
 
 # include versions file
 include versions.mk
