@@ -943,6 +943,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 		/* do the initial connect connect */
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "connecting to remote TLS site %s:%s", conn->host, conn->port);
 		iterator = 0;
+                conn->pending_ssl_connect = nopoll_true;
 		while (SSL_connect (conn->ssl) <= 0) {
 		
 			/* get ssl error */
@@ -1041,6 +1042,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 		conn->send    = nopoll_conn_tls_send;
 
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "TLS I/O handlers configured");
+                conn->pending_ssl_connect = nopoll_false;
 		conn->tls_on = nopoll_true;
 	} /* end if */
 
@@ -3073,6 +3075,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 
 	if (conn == NULL)
 		return NULL;
+
+        if (conn->pending_ssl_connect)
+            return NULL;  /* Let the loop in conn_new_common handle this */
 
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, 
 		    "=== START: conn-id=%d (errno=%d, session: %d, conn->handshake_ok: %d, conn->pending_ssl_accept: %d) ===", 

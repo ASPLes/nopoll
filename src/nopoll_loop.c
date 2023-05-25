@@ -62,6 +62,10 @@ nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 		return nopoll_false; /* keep foreach, don't stop */
 	}
 
+        /* Do not listen on sockets that are doing SSL/TLS handshake */
+        if (conn->pending_ssl_connect)
+                return nopoll_false;
+
 	/* register the connection socket */
 	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding socket id: %d", conn->session);*/
 	if (! ctx->io_engine->add_to (conn->session, ctx, conn, ctx->io_engine->io_object)) {
