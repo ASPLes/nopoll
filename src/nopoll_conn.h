@@ -225,6 +225,9 @@ int           __nopoll_conn_send_common (noPollConn * conn,
 nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
 							  int          timeout);
 
+nopoll_bool      nopoll_conn_wait_for_status_until_connection_ready (noPollConn * conn,
+							  int          timeout, int *status, char **message);
+
 void               nopoll_conn_connect_timeout (noPollCtx * ctx,
 						long        microseconds_to_wait);
 
