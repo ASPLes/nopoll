@@ -274,6 +274,13 @@ struct _noPollConn {
 	 */
 	nopoll_bool   pending_ssl_accept;
 
+        /**
+         * @internal Flag that indicates that the provided session
+         * is in the process of doing a TLS handshake and must not
+         * be read or written to by any other function than SSL_Connect()
+         */
+        nopoll_bool   pending_ssl_connect;
+
 	/* SSL support */
 	SSL_CTX        * ssl_ctx;
 	SSL            * ssl;
