@@ -151,6 +151,31 @@ nopoll_bool        nopoll_conn_opts_set_ssl_certs    (noPollConnOpts * opts,
 }
 
 /** 
+ * @brief Set CRL on a particular options object that can be used for
+ * a client and a listener connection.
+ *
+ * @param opts The connection options where these settings will be
+ * applied.
+ *
+ * @param crl The CRL to use on the connection.
+ *
+ * @return nopoll_true in the case the CRL provided is reachable.
+ */
+nopoll_bool nopoll_conn_opts_set_ssl_crl (noPollConnOpts * opts, const char * crl)
+{
+	if (opts == NULL)
+		return nopoll_false;
+
+	/* store certificate settings */
+	opts->crl        = nopoll_strdup (crl);
+	if (opts->crl)
+		if (access (opts->crl, R_OK) != 0)
+			return nopoll_false;
+
+	return nopoll_true;
+}
+
+/**
  * @brief Allows to disable peer ssl certificate verification. This is
  * not recommended for production enviroment. This affects in a
  * different manner to a listener connection and a client connection.
@@ -404,6 +429,7 @@ void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
 	nopoll_free (opts->private_key);
 	nopoll_free (opts->chain_certificate);
 	nopoll_free (opts->ca_certificate);
+	nopoll_free (opts->crl);
 
 	/* cookie */
 	nopoll_free (opts->cookie);

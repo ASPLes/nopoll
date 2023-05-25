@@ -714,6 +714,8 @@ int __nopoll_conn_ssl_verify_callback (int ok, X509_STORE_CTX * store) {
 
 nopoll_bool __nopoll_conn_set_ssl_client_options (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * options)
 {
+	X509_LOOKUP *lookup;
+
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking to establish SSL options (%p)", options);
 
 	if (options && options->ca_certificate) {
@@ -773,6 +775,19 @@ nopoll_bool __nopoll_conn_set_ssl_client_options (noPollCtx * ctx, noPollConn * 
 		__nopoll_conn_ssl_ctx_debug = ctx;
 		SSL_CTX_set_verify (conn->ssl_ctx, SSL_VERIFY_PEER, __nopoll_conn_ssl_verify_callback); 
 		SSL_CTX_set_verify_depth (conn->ssl_ctx, 10); 
+	} /* end if */
+
+	if (options && options->crl) {
+		/* Code and comments shamelessly borrowed from cURL */
+		/* tell OpenSSL where to find CRL file that is used to check certificate revocation */
+		lookup = X509_STORE_add_lookup(SSL_CTX_get_cert_store(conn->ssl_ctx), X509_LOOKUP_file());
+		if (!lookup || (!X509_load_crl_file(lookup, options->crl, X509_FILETYPE_PEM))) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Error loading CRL (%s)", options->crl);
+			return nopoll_false;
+		}
+		/* Everything is fine. */
+		X509_STORE_set_flags(SSL_CTX_get_cert_store(conn->ssl_ctx), X509_V_FLAG_CRL_CHECK | X509_V_FLAG_CRL_CHECK_ALL);
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Successfully set CRL: %s", options->crl);
 	} /* end if */
 
 	return nopoll_true;
