@@ -1,3 +1,7 @@
+2024-03-04  Francis Brosnan Blázquez  <francis@aspl.es>
+
+	* [fix] Updated compilation files to remove subversion dependencies
+
 2023-11-23  Francis Brosnan Blázquez  <francis@aspl.es>
 
 	* [fix] Updated dependencies
