@@ -14,7 +14,7 @@ make dist
 cp nopoll-`cat VERSION`.tar.gz rpm/SOURCES
 
 echo "Calling to compile packages.."
-LANG=C rpmbuild -ba --define '_topdir /usr/src/nopoll/trunk/rpm' rpm/SPECS/nopoll.spec
+LANG=C rpmbuild -ba --define '_topdir /usr/src/nopoll/rpm' rpm/SPECS/nopoll.spec
 error=$?
 if [ $error != 0 ]; then
     echo "ERROR: ***"
