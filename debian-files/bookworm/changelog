@@ -1,0 +1,11 @@
+libnopoll0 (0.4.7-438) stable; urgency=low
+
+  * New upstream release
+
+ -- Advanced Software Production Line, S.L. <info@aspl.es>  Wed, 24 Aug 2022 12:42:59 +0200
+
+libnopoll0 (0.21-0) unstable; urgency=low
+
+  * First release
+
+ -- Francis Brosnan <francis@aspl.es>  Mon, 08 Apr 2013 11:12:23 +0100
