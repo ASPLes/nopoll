@@ -4171,7 +4171,7 @@ void          nopoll_conn_set_on_close (noPollConn            * conn,
  *              
  * @param conn The connection to configure with the on ping handle.
  *              
- * @param on_close The handler to be configured.
+ * @param on_ping The handler to be configured.
  *              
  * @param user_data A reference pointer to be passed in into the handler.
  */             

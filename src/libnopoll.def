@@ -108,6 +108,7 @@ nopoll_conn_set_bind_interface
 nopoll_conn_set_hook
 nopoll_conn_set_on_close
 nopoll_conn_set_on_msg
+nopoll_conn_set_on_ping
 nopoll_conn_set_on_ready
 nopoll_conn_set_sock_block
 nopoll_conn_set_sock_tcp_nodelay
