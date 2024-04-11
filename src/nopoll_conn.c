@@ -3469,6 +3469,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		if (msg->op_code == NOPOLL_PING_FRAME) {
 
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PING received over connection id=%d, replying PONG", conn->id);
+                        if (conn->on_ping) {
+                            conn->on_ping (conn->ctx, conn, conn->on_ping_data);
+                        }
 			/* call to send pong */
 			nopoll_conn_send_pong (conn, nopoll_msg_get_payload_size (msg), (noPollPtr)nopoll_msg_get_payload (msg));
 			nopoll_msg_unref (msg);
@@ -3584,6 +3587,9 @@ read_payload:
 	if (msg->payload_size != 0 && msg->op_code == NOPOLL_PING_FRAME) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PING received over connection id=%d and payload_size=%d, replying PONG",
 			    conn->id, msg->payload_size);
+                if (conn->on_ping) {
+                    conn->on_ping (conn->ctx, conn, conn->on_ping_data);
+                }
 		nopoll_conn_send_pong (conn, nopoll_msg_get_payload_size (msg), (noPollPtr)nopoll_msg_get_payload (msg));
 		nopoll_msg_unref (msg);
 		return NULL;
@@ -4158,6 +4164,30 @@ void          nopoll_conn_set_on_close (noPollConn            * conn,
 
         return;
 }
+
+/**     
+ * @brief Allows to configure an OnPing handler that will be called
+ * when a ping message is received on a connection.
+ *              
+ * @param conn The connection to configure with the on ping handle.
+ *              
+ * @param on_close The handler to be configured.
+ *              
+ * @param user_data A reference pointer to be passed in into the handler.
+ */             
+void          nopoll_conn_set_on_ping (noPollConn           * conn,
+                                       noPollOnPingHandler    on_ping,
+                                       noPollPtr              user_data)
+{       
+        if (conn == NULL)
+                return;
+        
+        /* configure on close handler */
+        conn->on_ping      = on_ping;
+        conn->on_ping_data = user_data;
+                
+        return;
+} 
 
 /** 
  * @internal Allows to send a pong message over the Websocket

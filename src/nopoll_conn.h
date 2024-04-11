@@ -211,6 +211,10 @@ void          nopoll_conn_set_on_close (noPollConn            * conn,
 					noPollOnCloseHandler    on_close,
 					noPollPtr               user_data);
 
+void          nopoll_conn_set_on_ping (noPollConn             *conn,
+                                       noPollOnPingHandler    on_ping,
+                                       noPollPtr              user_data);
+
 int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool masked,
 			    noPollOpCode op_code, long length, noPollPtr content,
 			    long sleep_in_header);

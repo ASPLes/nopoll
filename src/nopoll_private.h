@@ -245,6 +245,12 @@ struct _noPollConn {
 	noPollOnCloseHandler   on_close;
 	noPollPtr              on_close_data;
 
+        /** 
+         * @internal Reference to the defined on ping handling.
+         */
+        noPollOnPingHandler    on_ping;
+        noPollPtr              on_ping_data;
+
 	/* reference to the handshake */
 	noPollHandShake  * handshake;
 
