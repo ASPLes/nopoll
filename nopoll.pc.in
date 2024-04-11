@@ -8,4 +8,3 @@ Description: LibNoPoll: websocket toolkit library
 Version: @NOPOLL_VERSION@ 
 Libs: -L${libdir} -lnopoll 
 Cflags: -I${includedir}/nopoll
-Features: ping
