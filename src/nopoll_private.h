@@ -233,6 +233,12 @@ struct _noPollConn {
 	noPollOnMessageHandler on_msg;
 	noPollPtr              on_msg_data;
 
+	/**
+	 * @internal Reference to the defined on ping message handling.
+	 */
+	noPollOnMessageHandler on_ping_msg;
+    noPollPtr              on_ping_msg_data;
+
 	/** 
 	 * @internal Reference to defined on ready handling.
 	 */
