@@ -340,6 +340,11 @@ struct _noPollConn {
 	/* force stop after header: do not use this, it is just for
 	   testing purposes */
 	nopoll_bool  __force_stop_after_header;
+
+	/**
+	 * X-Real-IP 
+	 */
+	char                 * x_real_ip_address;
 };
 
 struct _noPollIoEngine {
