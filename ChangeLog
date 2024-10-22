@@ -1,4 +1,44 @@
+2024-10-22  Francis Brosnan Blázquez  <francis@aspl.es>
+
+	* [fix] Revision update
+
+	* [fix] Removed urchin/google analytics tracker from web page
+
+2024-10-22  Francis Brosnan Blázquez  <francis.brosnan@aspl.es>
+
+	* [fix] Web copyright updates
+
+	* [fix] Copyright year change
+
+	* [fix] Added minor correction to license header (removed "f").
+	* [fix] Added minimal documentation
+
+2024-10-22  Francis Brosnan Blázquez  <francis@aspl.es>
+
+	Merge pull request #80 from suminoey/X-Real-IP-header
+	handle X-Real-IP header for server behind nginx
+
+2024-10-22  Su Min  <97204353+suminoey@users.noreply.github.com>
+
+	Add feature const char * nopoll_conn_get_real_ip_header(NoPollConn* conn) to get X-Real-IP header
+
+2024-09-26  Francis Brosnan Blázquez  <francis.brosnan@aspl.es>
+
+	* [fix] Adding initial working files for Ubuntu Noble
+
+2024-03-09  Francis Brosnan Blázquez  <francis.brosnan@aspl.es>
+
+	* [fix] More changes for bookworm
+
+	* [fix] Adding modifications to complete bookworm packaging
+
+	* [fix] Adding packaging for bookworm
+
 2024-03-04  Francis Brosnan Blázquez  <francis@aspl.es>
+
+	* [fix] Normalizing building directory for rpm based systems now we are   only supporting git building (no trunk/)
+
+	* [fix] Revision update for release
 
 	* [fix] More commits for Ubuntu Jammy internal release
 
@@ -189,8 +229,6 @@
 
 	Fixed error due to implicit conversion from unsigned 'int' to 'char'.
 	It does seem to matter what values are passed for the testing as these values are random and not being checked anywhere for verification.
-
-2018-02-28  Ananthakrishnan  <ramki_ananthakrishnan@cable.comcast.com>
 
 	Fixed build on Mac.
 
@@ -654,9 +692,9 @@
 
 	* [fix] Added additional code to disable NOPOLL_METHOD_SSLV3 when it is not   available (reported by Chris Severance)
 
-2016-06-09  Francis Brosnan Blázquez  <francis@aspl.es>
-
 	* [fix] added support to detect SSLv3 methods and remove support for it   in the case they are not present. Added missing pthread_mutexattr_init/destroy   inside regression test.
+
+2016-06-09  Francis Brosnan Blázquez  <francis@aspl.es>
 
 	* [fix] More web updates..
 
@@ -1580,9 +1618,11 @@
 
 	* [fix] More fixings. Now clients and servers are able to receive content   with frame header size in the range of 127 - 65536. Updated regression   test (test_04) which now passes.
 
-2013-02-24  Francis Brosnan Blázquez  <francis@aspl.es>
+2013-02-25  Francis Brosnan Blázquez  <francis@aspl.es>
 
 	* [fix] Added additional code to support sending and receiving   frames bigger than 65535 <. Added new regression test (test-04)   but still not working. Added sigpipe handle to avoid having the server   closed because connection close...added RFC to the base documentation.
+
+2013-02-24  Francis Brosnan Blázquez  <francis@aspl.es>
 
 	* [fix] More notes about elements to be tested..
 
