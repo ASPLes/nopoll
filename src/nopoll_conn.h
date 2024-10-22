@@ -230,6 +230,9 @@ void               nopoll_conn_connect_timeout (noPollCtx * ctx,
 
 long               nopoll_conn_get_connect_timeout (noPollCtx * ctx);
 
+const char *       nopoll_conn_get_x_real_ip_header (noPollConn * conn);
+
+
 /** internal api **/
 void nopoll_conn_complete_handshake (noPollConn * conn);
 

@@ -64,6 +64,7 @@ nopoll_conn_get_msg
 nopoll_conn_get_origin
 nopoll_conn_get_requested_protocol
 nopoll_conn_get_requested_url
+nopoll_conn_get_x_real_ip_header
 nopoll_conn_host
 nopoll_conn_is_ok
 nopoll_conn_is_ready

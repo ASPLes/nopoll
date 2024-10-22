@@ -16,7 +16,7 @@
  *  License along with this program; if not, write to the Free
  *  Software Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA
  *  02111-1307 USA
- *  
+ *  f
  *  You may find a copy of the license under this software is released
  *  at COPYING file. This is LGPL software: you are welcome to develop
  *  proprietary applications using this library without any royalty or
@@ -1901,6 +1901,24 @@ const char *  nopoll_conn_get_close_reason (noPollConn * conn)
 }
 
 /** 
+ * @brief Returns the X-Real_IP header
+ *
+ * @param conn The connection to check for the host value.
+ *
+ * @return The host location value or NULL if it fails.
+ */
+
+const char * nopoll_conn_get_x_real_ip_header (noPollConn * conn)
+{
+	if(conn)
+	{
+		return conn->x_real_ip_address;
+	}
+
+	return NULL;
+}
+
+/** 
  * @brief Call to close the connection immediately without going
  * through websocket close negotiation.
  *
@@ -2125,6 +2143,7 @@ void nopoll_conn_unref (noPollConn * conn)
 	nopoll_free (conn->protocols);
 	nopoll_free (conn->accepted_protocol);
 	nopoll_free (conn->get_url);
+	nopoll_free (conn->x_real_ip_address);
 
 	/* close reason if any */
 	nopoll_free (conn->peer_close_reason);
@@ -2848,6 +2867,8 @@ int nopoll_conn_complete_handshake_listener (noPollCtx * ctx, noPollConn * conn,
 		return 0;
 	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "Cookie", conn->handshake->cookie)) 
 		return 0;
+	if (nopoll_conn_check_mime_header_repeated (conn, header, value, "X-Real-IP", conn->x_real_ip_address)) 
+		return 0;
 	
 	/* set the value if required */
 	if (strcasecmp (header, "Host") == 0)
@@ -2869,6 +2890,8 @@ int nopoll_conn_complete_handshake_listener (noPollCtx * ctx, noPollConn * conn,
 	} else if (strcasecmp (header, "Cookie") == 0) {
 		/* record cookie so it can be used by the application level */
 		conn->handshake->cookie = value;
+	} else if (strcasecmp (header, "X-Real-IP") == 0) {
+		conn->x_real_ip_address = value;
 	} else {
 		/* release value, no body claimed it */
 		nopoll_free (value);
