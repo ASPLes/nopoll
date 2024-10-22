@@ -342,7 +342,9 @@ struct _noPollConn {
 	nopoll_bool  __force_stop_after_header;
 
 	/**
-	 * X-Real-IP 
+	 * @internal Support for X-Real-IP header for scenarios where
+	 * noPoll application is used behind nginx and similar proxy
+	 * forwarding servers.
 	 */
 	char                 * x_real_ip_address;
 };
