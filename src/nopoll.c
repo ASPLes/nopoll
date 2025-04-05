@@ -970,6 +970,10 @@ void nopoll_cleanup_library (void)
  * 
  * - \ref nopoll_android_usage "4.1 Android noPoll's usage"
  *
+ * <b>Section 5: Regression tests: </b>
+ *
+ * - \ref nopoll_regression_tests
+ *
  * \section installing_nopoll 1.1 How to install noPoll 
  *
  * Currently, noPoll has only one dependency, which is OpenSSL
@@ -1494,8 +1498,32 @@ void nopoll_cleanup_library (void)
  * As you can see, the function must return an SSL_CTX for every
  * connection received and attempting to start TLS session.
  *
+ * \section nopoll_regression_tests 5. Nopoll Regression tests
+ *
+ * All API functions are checked using the following regression
+ * tests. They not only serve as a checking reference but also a way
+ * to know how to implement and use noPoll's API. Look through them to
+ * find code examples. See:
+ *
+ * - \ref nopoll_regression_client
+ * - \ref nopoll_regression_listener
  *
  */
+
+/** 
+ * \page nopoll_regression_client noPoll Regression Client source code
+ *
+ * 
+ * \include nopoll-regression-client.c
+ */
+
+/** 
+ * \page nopoll_regression_listener noPoll Regression Listener source code
+ *
+ * 
+ * \include nopoll-regression-listener.c
+ */
+
 
 /** 
  * \page nopoll_android_usage Android noPoll's usage
