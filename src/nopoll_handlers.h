@@ -113,6 +113,8 @@ typedef int (*noPollIoMechWait)  (noPollCtx * ctx, noPollPtr io_object);
  * @brief Handler used to define the IO add to set function for an IO
  * mechanism.
  *
+ * @param fds File descriptor be added to the working set.
+ *
  * @param ctx The context where the io mechanism was created.
  *
  * @param conn The noPollConn to be added to the working set.
@@ -132,7 +134,7 @@ typedef nopoll_bool (*noPollIoMechAddTo)  (int               fds,
  *
  * @param ctx The context where the io mechanism was created.
  *
- * @param conn The noPollConn to be added to the working set.
+ * @param fds File descriptor be added to the working set.
  *
  * @param io_object The io object to be created as created by \ref
  * noPollIoMechCreate handler where the wait will be implemented.
@@ -224,21 +226,21 @@ typedef noPollPtr (*noPollMutexCreate) (void);
 /** 
  * @brief Mutex destroy handler used by the library.
  *
- * @param The mutex to destroy.
+ * @param mutex The mutex to destroy.
  */
 typedef void (*noPollMutexDestroy) (noPollPtr mutex);
 
 /** 
  * @brief Mutex lock handler used by the library.
  *
- * @param The mutex where to implement the lock operation.
+ * @param mutex The mutex where to implement the lock operation.
  */
 typedef void (*noPollMutexLock) (noPollPtr mutex);
 
 /** 
  * @brief Mutex unlock handler used by the library.
  *
- * @param The mutex where to implement the unlock operation.
+ * @param mutex The mutex where to implement the unlock operation.
  */
 typedef void (*noPollMutexUnlock) (noPollPtr mutex);
 
@@ -325,4 +327,7 @@ typedef nopoll_bool (*noPollSslPostCheck) (noPollCtx      * ctx,
 
 #endif
 
-/* @} */
+/**
+ * @}
+ */
+

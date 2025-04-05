@@ -315,5 +315,6 @@ void         nopoll_msg_unref (noPollMsg * msg)
 	return;
 }
 
-
-/* @} */
+/**
+ * @}
+ */

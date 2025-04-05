@@ -881,7 +881,9 @@ void nopoll_cleanup_library (void)
 	return;
 } /* end if */
 
-/* @} */
+/**
+ * @}
+ */
 
 /** 
  * \mainpage 
@@ -1499,7 +1501,7 @@ void nopoll_cleanup_library (void)
  * \page nopoll_android_usage Android noPoll's usage
  *
  * 
- * \section nopoll_android_usage Using noPoll's Android install and development kit
+ * \section nopoll_android_usage_intro Using noPoll's Android install and development kit
  *
  * Inside http://www.aspl.es/nopoll/downloads/android you'll find two types of downloads. 
  * One prefixed with <b>-install.zip</b> that provides just those binaries needed and <b>-full.zip</b>
@@ -1570,13 +1572,13 @@ void nopoll_cleanup_library (void)
  * install/android-21/&lt;arch>/lib/mips64/{libfiles}.so files.
  * \endcode
  * 
- * You might wonder why don't use a <android-platform>/<arch>/lib
+ * You might wonder why don't use a &lt;android-platform>/&lt;arch>/lib
  * scheme? That's good question.  This is because Android
  * architectural design. See "Native code in app packages" in the
  * following link https://developer.android.com/ndk/guides/abis.html
  * to know more about this structure.
  * 
- * The idea is that you have to support all <archs> for a given
+ * The idea is that you have to support all &lt;archs> for a given
  * <android-platform> (android-21 i.e.).
  * 
  * In that case, the install.zip is prepared to pick the entire

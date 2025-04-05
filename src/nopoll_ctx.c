@@ -805,4 +805,6 @@ void           nopoll_ctx_set_protocol_version (noPollCtx * ctx, int version)
 	return;
 }
 
-/* @} */
+/**
+ * @}
+ */

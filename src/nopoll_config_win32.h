@@ -85,7 +85,8 @@
  */
 #define NOPOLL_HAVE_TLSv12_ENABLED (1)
 
-
-/* @} */
+/**
+ * @}
+ */
 
 #endif

@@ -38,13 +38,14 @@
 #ifndef __NOPOLL_DECL_H__
 #define __NOPOLL_DECL_H__
 
-/** 
+/**
  * \defgroup nopoll_decl_module Nopoll Declarations: Common Nopoll declarations, Types, macros, and support functions.
  */
 
 /** 
  * \addtogroup nopoll_decl_module
  * @{
+ *
  */
 
 /** 
@@ -139,9 +140,13 @@
 /* Direct portable mapping definitions */
 #if defined(NOPOLL_OS_UNIX)
 
-/* Portable definitions while using noPoll Library */
+/**
+ * @typedef
+ * @brief Portable definitions while using noPoll Library.
+ */
 #define NOPOLL_EINTR           EINTR
-/** 
+
+/**
  * @brief Portable definition for EWOULDBLOCK errno code.
  */
 #define NOPOLL_EWOULDBLOCK     EWOULDBLOCK
@@ -151,7 +156,14 @@
 #define NOPOLL_SOCKET          int
 #define NOPOLL_INVALID_SOCKET  -1
 #define NOPOLL_SOCKET_ERROR    -1
+/**
+ * @brief Convenient macro used to check and close a socket.
+ * @param s The file descriptor socket to check and close
+ */
 #define nopoll_close_socket(s) do {if ( s >= 0) {close (s);}} while (0)
+/**
+ * @brief Conviente macro used to check if disconnect signal is reported by errno system indication.
+ */
 #define nopoll_is_disconnected (errno == EPIPE)
 
 #endif /* end defined(AXL_OS_UNIX) */
@@ -197,6 +209,11 @@
 #define NOPOLL_SOCKET          SOCKET
 #define NOPOLL_INVALID_SOCKET  INVALID_SOCKET
 #define NOPOLL_SOCKET_ERROR    SOCKET_ERROR
+/**
+ * \def nopoll_close_socket(socket)
+ * @brief Convenient macro used to check and close a socket.
+ * @param socket The file descriptor socket to check and close
+ */
 #define nopoll_close_socket(s) do {if ( s >= 0) {closesocket (s);}} while (0)
 #define uint16_t               u_short
 #define nopoll_is_disconnected ((errno == WSAESHUTDOWN) || (errno == WSAECONNABORTED) || (errno == WSAECONNRESET))
@@ -565,4 +582,6 @@ END_C_DECLS
 
 #endif
 
-/* @} */
+/**
+ * @}
+ */

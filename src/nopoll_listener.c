@@ -618,4 +618,6 @@ NOPOLL_SOCKET nopoll_listener_accept (NOPOLL_SOCKET server_socket)
 	return accept (server_socket, (struct sockaddr *)&inet_addr, &addrlen);
 }
 
-/* @} */
+/**
+ * @}
+ */

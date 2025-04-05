@@ -127,7 +127,9 @@ void   nopoll_set_32bit (int value, char * buffer);
 
 int    nopoll_get_32bit (const char * buffer);
 
-/* @} */
+/**
+ * @}
+ */
 
 END_C_DECLS
 

@@ -104,7 +104,9 @@ void            nopoll_log_set_handler (noPollCtx * ctx, noPollLogHandler handle
 
 void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * file, int line, noPollDebugLevel level, const char * message, ...);
 
-/* @} */
+/**
+ * @}
+ */
 
 END_C_DECLS
 

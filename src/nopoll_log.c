@@ -241,4 +241,7 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 	return;
 }
 
-/* @} */
+/**
+ * @}
+ */
+

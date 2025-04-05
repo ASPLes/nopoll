@@ -227,7 +227,6 @@ void nopoll_loop_stop (noPollCtx * ctx)
  *     }
  * \endcode
  *
- * <b>
  */
 int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 {
@@ -312,6 +311,8 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 	return result;
 }
 
-/* @} */
+/**
+ * @}
+ */
 
 

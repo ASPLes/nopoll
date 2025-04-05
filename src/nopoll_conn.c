@@ -3686,7 +3686,7 @@ int           __nopoll_conn_send_common (noPollConn * conn, const char * content
  *
  * See \ref nopoll_manual_retrying_write_operations to know more about error codes and when it is possible to retry write operations.
  * 
- * The function returns the number of bytes sent, being @length the 
+ * The function returns the number of bytes sent, being \p length the 
  * max amount of bytes that can be reported as sent by
  * this funciton. This means value reported by this function do not
  * includes headers.  The funciton also returns the following general indications:
@@ -3724,7 +3724,7 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
  * See \ref nopoll_manual_retrying_write_operations to know more about
  * error codes and when it is possible to retry write operations.
  *
- * The function returns the number of bytes sent, being @length the 
+ * The function returns the number of bytes sent, being \p length the 
  * max amount of bytes that can be reported as sent by
  * this funciton. This means value reported by this function do not
  * includes headers.  The funciton also returns the following general indications:
@@ -3759,7 +3759,7 @@ int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * co
  *
  * See \ref nopoll_manual_retrying_write_operations to know more about error codes and when it is possible to retry write operations.
  *
- * The function returns the number of bytes sent, being @length the 
+ * The function returns the number of bytes sent, being \p length the 
  * max amount of bytes that can be reported as sent by
  * this funciton. This means value reported by this function do not
  * includes headers.  The funciton also returns the following general indications:
@@ -3797,7 +3797,7 @@ int           nopoll_conn_send_binary (noPollConn * conn, const char * content, 
  * See \ref nopoll_manual_retrying_write_operations to know more about
  * error codes and when it is possible to retry write operations.
  *
- * The function returns the number of bytes sent, being @length the 
+ * The function returns the number of bytes sent, being \p length the 
  * max amount of bytes that can be reported as sent by
  * this funciton. This means value reported by this function do not
  * includes headers.  The funciton also returns the following general indications:
@@ -4312,7 +4312,7 @@ int           nopoll_conn_pending_write_bytes (noPollConn * conn)
  *
  * @return Bytes that were written. If no pending bytes must be
  * written, the function returns 0. The function returns bytes written
- * or bytes written plus @previous_result if previous_result is > 0.
+ * or bytes written plus \p previous_result if previous_result is > 0.
  */
 int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_result)
 {
@@ -5004,4 +5004,6 @@ nopoll_bool      nopoll_conn_wait_until_connection_ready (noPollConn * conn,
 	return nopoll_conn_is_ok (conn) && nopoll_conn_is_ready (conn);
 }
 
-/* @} */
+/**
+ * @}
+ */

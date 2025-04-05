@@ -209,7 +209,7 @@ void        nopoll_conn_opts_set_cookie (noPollConnOpts * opts, const char * coo
  * the connection handshake.
  *
  * @note String must match the format: "\r\nheader:value\r\nheader2:value2" with
- * no trailing \r\n.
+ * no trailing "\r\n".
  *
  * @param opts The connection option to configure.
  *
@@ -449,4 +449,6 @@ void __nopoll_conn_opts_release_if_needed (noPollConnOpts * options)
 	return;
 }
 
-/* @} */
+/**
+ * @}
+ */
