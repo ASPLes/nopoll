@@ -195,10 +195,10 @@ void nopoll_loop_stop (noPollCtx * ctx)
  *
  * @param ctx The context object where the wait will be implemented.
  *
- * @param timeout The timeout to wait for changes. If no changes
+ * @param timeout The timeout to wait for changes (microseconds). If no changes
  * happens, the function returns. The function will block the caller
  * until a call to \ref nopoll_loop_stop is done in the case timeout
- * passed is 0.
+ * passed is 0. To wait 1 second, pass 1000000
  *
  * @return The function returns 0 when finished without error or -2 in
  * the case ctx is NULL or timeout is negative. Function returns -3 if
@@ -218,6 +218,8 @@ void nopoll_loop_stop (noPollCtx * ctx)
  * while (nopoll_true) {
  *     // wait for ever
  *     int error_code = nopoll_loop_wait (ctx, 0);
+ *     // or wait 15 seconds
+ *     // int error_code = nopoll_loop_wait (ctx, 15000000); 
  *
  *     if (error_code == -4) {
  *          printf ("Log here you had an error cause by the io waiting mechanism, errno=%d\n", errno);
