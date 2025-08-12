@@ -1875,10 +1875,10 @@ nopoll_bool test_18 (void) {
 		return nopoll_false;
 	}
 
-	printf ("Test 18: waiting on nopoll_loop_wait (1 seconds)...\n");
-	nopoll_loop_wait (ctx, 1);
-	printf ("Test 18: waiting on nopoll_loop_wait (1 seconds)...\n");
-	nopoll_loop_wait (ctx, 1);
+	printf ("Test 18: waiting on nopoll_loop_wait (1 seconds => 1000000 microseconds)...\n");
+	nopoll_loop_wait (ctx, 1000000);
+	printf ("Test 18: waiting on nopoll_loop_wait (1 seconds => 1000000 microseconds)...\n");
+	nopoll_loop_wait (ctx, 1000000);
 
 	/* finish connection */
 	nopoll_conn_close (conn);
