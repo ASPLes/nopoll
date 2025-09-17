@@ -3809,7 +3809,7 @@ int           nopoll_conn_send_binary (noPollConn * conn, const char * content, 
  */
 int           nopoll_conn_send_binary_fragment (noPollConn * conn, const char * content, long length)
 {
-	return __nopoll_conn_send_common (conn, content, length, nopoll_true, 0, NOPOLL_BINARY_FRAME);
+	return __nopoll_conn_send_common (conn, content, length, nopoll_false, 0, NOPOLL_BINARY_FRAME);
 }
 
 
