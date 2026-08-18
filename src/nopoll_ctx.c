@@ -104,6 +104,9 @@ noPollCtx * nopoll_ctx_new (void) {
 	/* setup default protocol version */
 	result->protocol_version = 13;
 
+	/* setup default maximum frame size accepted */
+	result->max_frame_size = NOPOLL_MAX_FRAME_SIZE_DEFAULT;
+
 	/* create mutexes */
 	result->ref_mutex = nopoll_mutex_create ();
 
@@ -803,6 +806,64 @@ void           nopoll_ctx_set_protocol_version (noPollCtx * ctx, int version)
 	ctx->protocol_version = version;
 
 	return;
+}
+
+/**
+ * @brief Allows to configure the maximum websocket frame size
+ * (payload) that will be accepted by connections created under the
+ * provided context.
+ *
+ * Any incoming frame declaring a payload size bigger than this value
+ * causes the connection to be closed without allocating memory for
+ * it. This limit protects the application from remote peers declaring
+ * huge (or crafted) frame sizes.
+ *
+ * By default, every context is configured with \ref
+ * NOPOLL_MAX_FRAME_SIZE_DEFAULT (16MB). The value can be also
+ * configured for a particular connection or listener, which takes
+ * precedence over this one, by using \ref
+ * nopoll_conn_opts_set_max_frame_size.
+ *
+ * @param ctx The context where the limit will be configured.
+ *
+ * @param max_frame_size The maximum frame size to accept. It must be
+ * a value bigger than 0 and equal or lower than \ref
+ * NOPOLL_MAX_FRAME_SIZE_LIMIT. Any other value is discarded, keeping
+ * the current configuration.
+ */
+void           nopoll_ctx_set_max_frame_size (noPollCtx * ctx, long int max_frame_size)
+{
+	/* check input data */
+	nopoll_return_if_fail (ctx, ctx);
+
+	if (max_frame_size <= 0 || max_frame_size > NOPOLL_MAX_FRAME_SIZE_LIMIT) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received wrong max frame size value (%ld), it must be inside the range 1..%ld, discarding configuration",
+			    max_frame_size, (long int) NOPOLL_MAX_FRAME_SIZE_LIMIT);
+		return;
+	} /* end if */
+
+	/* setup the new limit */
+	ctx->max_frame_size = max_frame_size;
+
+	return;
+}
+
+/**
+ * @brief Allows to get current maximum websocket frame size (payload)
+ * accepted by connections created under the provided context.
+ *
+ * @param ctx The context that is being checked.
+ *
+ * @return Current limit configured or \ref
+ * NOPOLL_MAX_FRAME_SIZE_DEFAULT in the case of wrong reference
+ * received or no limit was configured.
+ */
+long int       nopoll_ctx_get_max_frame_size (noPollCtx * ctx)
+{
+	if (ctx == NULL || ctx->max_frame_size <= 0)
+		return NOPOLL_MAX_FRAME_SIZE_DEFAULT;
+
+	return ctx->max_frame_size;
 }
 
 /**

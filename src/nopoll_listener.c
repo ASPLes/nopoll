@@ -235,6 +235,10 @@ noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
 	/* configure connection options */
 	listener->opts      = opts;
 
+	/* record max frame size accepted (it is also transferred to
+	 * every connection accepted by this listener) */
+	__nopoll_conn_set_max_frame_size (listener, opts);
+
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Listener created, started: %s:%s (socket: %d, transport: %s)",
 		    listener->host, listener->port, listener->session, (transport == NOPOLL_TRANSPORT_IPV4 ? "IPv4" : "IPv6"));
 

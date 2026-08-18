@@ -2887,6 +2887,200 @@ nopoll_bool test_36 (void) {
 	return nopoll_true;
 }
 
+/**
+ * @internal Common function to send a crafted websocket frame to the
+ * listener, checking it is rejected and that the listener keeps on
+ * working after that (see https://github.com/ASPLes/nopoll/issues/84).
+ */
+nopoll_bool test_37_common_crafted_frame (const char * label, const char * frame, int frame_size)
+{
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	noPollConn * conn2;
+	int          tries;
+
+	printf ("Test %s: sending crafted frame (%d bytes) announcing a wrong payload size..\n", label, frame_size);
+
+	/* init context */
+	ctx = create_ctx ();
+
+	/* create connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* wait until the handshake is finished so the content sent is
+	 * handled by the websocket engine at the listener */
+	nopoll_conn_wait_until_connection_ready (conn, 5);
+
+	/* send the crafted frame directly over the socket to skip
+	 * noPoll's own framing */
+	if (send (nopoll_conn_socket (conn), frame, frame_size, 0) != frame_size) {
+		printf ("ERROR: failed to send crafted frame to the listener..\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test %s: waiting for the listener to close the connection..\n", label);
+	tries = 20;
+	while (tries > 0) {
+		nopoll_conn_get_msg (conn);
+		if (! nopoll_conn_is_ok (conn))
+			break;
+		nopoll_sleep (100000);
+		tries--;
+	} /* end while */
+
+	if (nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: expected the listener to close the connection after receiving a crafted frame, but it is still working..\n");
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_conn_close (conn);
+
+	/* now check the listener is still working: without the fix
+	 * the crafted frame crashes it */
+	printf ("Test %s: connecting again to ensure listener is working..\n", label);
+	conn2 = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn2)) {
+		printf ("ERROR: expected proper connection after sending the crafted frame (listener gone?)..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! test_sending_and_check_echo (conn2, label, "This is a test to check the listener is alive"))
+		return nopoll_false;
+
+	nopoll_conn_close (conn2);
+
+	/* release context */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+nopoll_bool test_37 (void) {
+
+	/* masked binary frame announcing 0xFFFFFFFFFFFFFFFF as
+	 * payload size: it used to produce a signed overflow that
+	 * ended into a negative payload size */
+	const char frame[] = {(char) 0x82, (char) 0xFF,
+			      (char) 0xFF, (char) 0xFF, (char) 0xFF, (char) 0xFF,
+			      (char) 0xFF, (char) 0xFF, (char) 0xFF, (char) 0xFF,
+			      (char) 0x00, (char) 0x00, (char) 0x00, (char) 0x00};
+
+	return test_37_common_crafted_frame ("37", frame, 14);
+}
+
+nopoll_bool test_38 (void) {
+
+	/* masked binary frame announcing 0x00000000FFFFFFFF as
+	 * payload size: this value is positive and representable but
+	 * it gets truncated into -1 when it reaches the read
+	 * function, so it must be rejected too */
+	const char frame[] = {(char) 0x82, (char) 0xFF,
+			      (char) 0x00, (char) 0x00, (char) 0x00, (char) 0x00,
+			      (char) 0xFF, (char) 0xFF, (char) 0xFF, (char) 0xFF,
+			      (char) 0x00, (char) 0x00, (char) 0x00, (char) 0x00};
+
+	return test_37_common_crafted_frame ("38", frame, 14);
+}
+
+nopoll_bool test_39 (void) {
+
+	/* masked binary frame announcing 32MB as payload size: it is
+	 * a perfectly legal value but it is over the default limit
+	 * (16MB), so the connection must be closed */
+	const char frame[] = {(char) 0x82, (char) 0xFF,
+			      (char) 0x00, (char) 0x00, (char) 0x00, (char) 0x00,
+			      (char) 0x02, (char) 0x00, (char) 0x00, (char) 0x00,
+			      (char) 0x00, (char) 0x00, (char) 0x00, (char) 0x00};
+
+	return test_37_common_crafted_frame ("39", frame, 14);
+}
+
+nopoll_bool test_40 (void) {
+
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+	noPollConnOpts * opts;
+	const char     * msg = "This is a message that is bigger than the limit configured for this connection..";
+	int              tries;
+
+	printf ("Test 40: checking max frame size configuration..\n");
+
+	/* init context */
+	ctx = create_ctx ();
+
+	/* check default value */
+	if (nopoll_ctx_get_max_frame_size (ctx) != NOPOLL_MAX_FRAME_SIZE_DEFAULT) {
+		printf ("ERROR: expected to find default max frame size (%ld) but found %ld..\n",
+			(long int) NOPOLL_MAX_FRAME_SIZE_DEFAULT, nopoll_ctx_get_max_frame_size (ctx));
+		return nopoll_false;
+	} /* end if */
+
+	/* check wrong values are discarded */
+	nopoll_ctx_set_max_frame_size (ctx, 0);
+	nopoll_ctx_set_max_frame_size (ctx, -1);
+	nopoll_ctx_set_max_frame_size (ctx, NOPOLL_MAX_FRAME_SIZE_LIMIT + 1);
+	if (nopoll_ctx_get_max_frame_size (ctx) != NOPOLL_MAX_FRAME_SIZE_DEFAULT) {
+		printf ("ERROR: expected wrong max frame size values to be discarded, but configuration changed to %ld..\n",
+			nopoll_ctx_get_max_frame_size (ctx));
+		return nopoll_false;
+	} /* end if */
+
+	/* configure a small limit at the context */
+	nopoll_ctx_set_max_frame_size (ctx, 32);
+
+	/* check connection options take precedence over the context */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_max_frame_size (opts, 64);
+
+	conn = nopoll_conn_new_opts (ctx, opts, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (nopoll_conn_get_max_frame_size (conn) != 64) {
+		printf ("ERROR: expected to find max frame size configured at the connection options (64) but found %ld..\n",
+			nopoll_conn_get_max_frame_size (conn));
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_conn_wait_until_connection_ready (conn, 5);
+
+	/* ask the listener to echo a message bigger than the limit
+	 * configured: the reply must be rejected, closing the
+	 * connection */
+	printf ("Test 40: sending message to get a reply bigger than the limit configured (64)..\n");
+	if (nopoll_conn_send_text (conn, msg, strlen (msg)) != (int) strlen (msg)) {
+		printf ("ERROR: failed to send message..\n");
+		return nopoll_false;
+	} /* end if */
+
+	tries = 20;
+	while (tries > 0) {
+		nopoll_conn_get_msg (conn);
+		if (! nopoll_conn_is_ok (conn))
+			break;
+		nopoll_sleep (100000);
+		tries--;
+	} /* end while */
+
+	if (nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: expected connection to be closed after receiving a frame bigger than the limit configured..\n");
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_conn_close (conn);
+
+	/* release context */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -3269,6 +3463,34 @@ int main (int argc, char ** argv)
 		printf ("Test 36: check dead-lock on connection timeout (23/02/2016)  [   OK    ]\n");
 	} else {
 		printf ("Test 36: check dead-lock on connection timeout (23/02/2016) [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_37 ()) {
+		printf ("Test 37: reject frame with 64bit payload size overflow (issue #84)  [   OK    ]\n");
+	} else {
+		printf ("Test 37: reject frame with 64bit payload size overflow (issue #84)  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_38 ()) {
+		printf ("Test 38: reject frame with payload size truncated to -1 (issue #84)  [   OK    ]\n");
+	} else {
+		printf ("Test 38: reject frame with payload size truncated to -1 (issue #84)  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_39 ()) {
+		printf ("Test 39: reject frame bigger than default max frame size  [   OK    ]\n");
+	} else {
+		printf ("Test 39: reject frame bigger than default max frame size  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_40 ()) {
+		printf ("Test 40: check max frame size configuration (ctx and conn opts)  [   OK    ]\n");
+	} else {
+		printf ("Test 40: check max frame size configuration (ctx and conn opts)  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

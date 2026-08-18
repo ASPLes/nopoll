@@ -102,6 +102,23 @@
 /* max buffer size to process incoming handshake */
 #define NOPOLL_HANDSHAKE_BUFFER_SIZE 8192
 
+/**
+ * @brief Default maximum websocket frame size (payload) accepted by
+ * noPoll when no other value is configured. See \ref
+ * nopoll_ctx_set_max_frame_size and \ref
+ * nopoll_conn_opts_set_max_frame_size.
+ */
+#define NOPOLL_MAX_FRAME_SIZE_DEFAULT (16777216)
+
+/**
+ * @brief Hard limit for the value that can be configured as maximum
+ * websocket frame size. Values bigger than this are rejected by \ref
+ * nopoll_ctx_set_max_frame_size and \ref
+ * nopoll_conn_opts_set_max_frame_size because internal read
+ * operations track sizes using int values.
+ */
+#define NOPOLL_MAX_FRAME_SIZE_LIMIT (2147483646)
+
 /* include this at this place to load GNU extensions */
 #if defined(__GNUC__)
 #  ifndef _GNU_SOURCE

@@ -150,6 +150,13 @@ struct _noPollCtx {
 	/* SSL postcheck */
 	noPollSslPostCheck      post_ssl_check;
 	noPollPtr               post_ssl_check_data;
+
+	/**
+	 * @internal Maximum websocket frame size (payload) accepted by
+	 * connections created on this context. 0 means to use \ref
+	 * NOPOLL_MAX_FRAME_SIZE_DEFAULT.
+	 */
+	long int                max_frame_size;
 };
 
 struct _noPollConn {
@@ -347,6 +354,13 @@ struct _noPollConn {
 	 * forwarding servers.
 	 */
 	char                 * x_real_ip_address;
+
+	/**
+	 * @internal Maximum websocket frame size (payload) accepted by
+	 * this particular connection. 0 means to use the value
+	 * configured at the context.
+	 */
+	long int               max_frame_size;
 };
 
 struct _noPollIoEngine {
@@ -429,6 +443,12 @@ struct _noPollConnOpts {
 	/* control whether origin header is added or not (see
 	 * nopoll_conn_opts_add_origin_header) */
 	nopoll_bool add_origin_header;
+
+	/* maximum websocket frame size (payload) accepted by
+	 * connections configured with these options. 0 means to use
+	 * the value configured at the context (see
+	 * nopoll_conn_opts_set_max_frame_size) */
+	long int max_frame_size;
 };
 
 #endif

@@ -383,6 +383,41 @@ void nopoll_conn_opts_set_interface    (noPollConnOpts * opts, const char * _int
 	return;
 }
 
+/**
+ * @brief Allows to configure the maximum websocket frame size
+ * (payload) accepted by the connection (or the listener) created with
+ * these options.
+ *
+ * Any incoming frame declaring a payload size bigger than this value
+ * causes the connection to be closed without allocating memory for
+ * it. When configured on a listener, the limit applies to every
+ * connection accepted by that listener.
+ *
+ * This value takes precedence over the limit configured at the
+ * context level (see \ref nopoll_ctx_set_max_frame_size). When it is
+ * not configured, the context value is used, which defaults to \ref
+ * NOPOLL_MAX_FRAME_SIZE_DEFAULT (16MB).
+ *
+ * @param opts The connection options object.
+ *
+ * @param max_frame_size The maximum frame size to accept. It must be
+ * a value bigger than 0 and equal or lower than \ref
+ * NOPOLL_MAX_FRAME_SIZE_LIMIT. Any other value is discarded, keeping
+ * the current configuration.
+ */
+void nopoll_conn_opts_set_max_frame_size (noPollConnOpts * opts, long int max_frame_size)
+{
+	if (opts == NULL)
+		return;
+
+	if (max_frame_size <= 0 || max_frame_size > NOPOLL_MAX_FRAME_SIZE_LIMIT)
+		return;
+
+	opts->max_frame_size = max_frame_size;
+
+	return;
+}
+
 void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
 {
 	if (opts == NULL)

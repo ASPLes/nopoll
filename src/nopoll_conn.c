@@ -855,6 +855,10 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 	conn->session = session;
 	conn->role    = NOPOLL_ROLE_CLIENT;
 
+	/* record max frame size accepted for this connection (if
+	 * configured through connection options) */
+	__nopoll_conn_set_max_frame_size (conn, options);
+
 	/* record host and port */
 	conn->host    = nopoll_strdup (host_ip);
 	conn->port    = nopoll_strdup (host_port);
@@ -2191,7 +2195,55 @@ void nopoll_conn_unref (noPollConn * conn)
 	return;
 }
 
-/** 
+/**
+ * @brief Allows to get the maximum websocket frame size (payload)
+ * accepted by the provided connection.
+ *
+ * The value reported is the one configured through \ref
+ * nopoll_conn_opts_set_max_frame_size for this connection (or for the
+ * listener that accepted it) and, if it wasn't configured, the value
+ * configured at the context through \ref
+ * nopoll_ctx_set_max_frame_size.
+ *
+ * @param conn The connection that is being checked.
+ *
+ * @return Current limit in bytes or \ref
+ * NOPOLL_MAX_FRAME_SIZE_DEFAULT in the case of a wrong reference
+ * received.
+ */
+long int nopoll_conn_get_max_frame_size (noPollConn * conn)
+{
+	if (conn == NULL)
+		return NOPOLL_MAX_FRAME_SIZE_DEFAULT;
+
+	/* value configured for this particular connection */
+	if (conn->max_frame_size > 0)
+		return conn->max_frame_size;
+
+	/* value configured at the listener that accepted us (in the
+	 * case the connection wasn't configured directly) */
+	if (conn->listener && conn->listener->max_frame_size > 0)
+		return conn->listener->max_frame_size;
+
+	/* fall back into the context configuration */
+	return nopoll_ctx_get_max_frame_size (conn->ctx);
+}
+
+/**
+ * @internal Allows to configure into the connection the max frame
+ * size received through the provided connection options (if any).
+ */
+void __nopoll_conn_set_max_frame_size (noPollConn * conn, noPollConnOpts * options)
+{
+	if (conn == NULL || options == NULL || options->max_frame_size <= 0)
+		return;
+
+	conn->max_frame_size = options->max_frame_size;
+
+	return;
+}
+
+/**
  * @internal Default connection receive until handshake is complete.
  */
 int nopoll_conn_default_receive (noPollConn * conn, char * buffer, int buffer_size)
@@ -2350,6 +2402,13 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 {
 	int         nread;
 	int         bytes;
+
+	/* protect against wrong lengths: a negative value here would
+	 * be converted into a huge unsigned value by memcpy () and
+	 * recv (), causing a buffer overflow over the buffer received
+	 * (see https://github.com/ASPLes/nopoll/issues/84) */
+	if (maxlen <= 0)
+		return maxlen == 0 ? 0 : -1;
 
 	if (conn->pending_buf_bytes > 0) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling with bytes we can reuse (%d), requested: %d",
@@ -3098,12 +3157,19 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	long        result;
 #endif
 	unsigned char *len;
+	unsigned long int  payload_size_aux;
+	long int           max_frame_size;
 
 	if (conn == NULL)
 		return NULL;
 
         if (conn->pending_ssl_connect)
             return NULL;  /* Let the loop in conn_new_common handle this */
+
+	/* get maximum frame size accepted for this connection: it is
+	 * used to reject frames declaring a payload size bigger than
+	 * what this connection is willing to handle */
+	max_frame_size = nopoll_conn_get_max_frame_size (conn);
 
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, 
 		    "=== START: conn-id=%d (errno=%d, session: %d, conn->handshake_ok: %d, conn->pending_ssl_accept: %d) ===", 
@@ -3403,12 +3469,20 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		} /* end if */
 
                 len = (unsigned char*)buffer;
-		msg->payload_size = 0;
+
+		/* accumulate the extended payload length into an
+		 * unsigned variable: doing it directly over
+		 * msg->payload_size (long int, signed) makes the
+		 * shifting to overflow, which is undefined behaviour,
+		 * producing a negative payload size that was later
+		 * used to allocate and to read content
+		 * (https://github.com/ASPLes/nopoll/issues/84) */
+		payload_size_aux = 0;
 #if defined(NOPOLL_64BIT_PLATFORM)
-		msg->payload_size |= ((long)(len[0]) << 56);
-		msg->payload_size |= ((long)(len[1]) << 48);
-		msg->payload_size |= ((long)(len[2]) << 40);
-		msg->payload_size |= ((long)(len[3]) << 32);
+		payload_size_aux |= ((unsigned long int)(len[0]) << 56);
+		payload_size_aux |= ((unsigned long int)(len[1]) << 48);
+		payload_size_aux |= ((unsigned long int)(len[2]) << 40);
+		payload_size_aux |= ((unsigned long int)(len[3]) << 32);
 #else
 		if (len[0] || len[1] || len[2] || len[3]) {
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "noPoll doesn't support messages bigger than 2GB on this plataform (support for 64bit not found)");
@@ -3417,10 +3491,37 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			return NULL;
 		}
 #endif
-		msg->payload_size |= ((long)(len[4]) << 24);
-		msg->payload_size |= ((long)(len[5]) << 16);
-		msg->payload_size |= ((long)(len[6]) << 8);
-		msg->payload_size |= len[7];
+		payload_size_aux |= ((unsigned long int)(len[4]) << 24);
+		payload_size_aux |= ((unsigned long int)(len[5]) << 16);
+		payload_size_aux |= ((unsigned long int)(len[6]) << 8);
+		payload_size_aux |= len[7];
+
+		/* check the value announced before storing it into the
+		 * signed msg->payload_size: this way values that
+		 * cannot be represented are rejected here */
+		if (payload_size_aux > (unsigned long int) max_frame_size) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL,
+				    "Received websocket frame announcing a payload size (%lu) bigger than the maximum frame size accepted (%ld), closing session id: %d",
+				    payload_size_aux, max_frame_size, conn->id);
+			nopoll_msg_unref (msg);
+			nopoll_conn_shutdown (conn);
+			return NULL;
+		} /* end if */
+
+		msg->payload_size = (long int) payload_size_aux;
+	} /* end if */
+
+	/* common check for every payload size representation received
+	 * (7 bits, 16 bits and 64 bits): reject anything negative or
+	 * beyond the limit configured for this connection before any
+	 * allocation or read operation is done with that value */
+	if (msg->payload_size < 0 || msg->payload_size > max_frame_size) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL,
+			    "Received websocket frame with a wrong payload size (%ld): it is negative or bigger than the maximum frame size accepted (%ld), closing session id: %d",
+			    msg->payload_size, max_frame_size, conn->id);
+		nopoll_msg_unref (msg);
+		nopoll_conn_shutdown (conn);
+		return NULL;
 	} /* end if */
 
 	if (msg->op_code == NOPOLL_PONG_FRAME) {
@@ -4741,7 +4842,11 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 
 	/* configure non blocking mode */
 	nopoll_conn_set_sock_block (session, nopoll_true);
-	
+
+	/* record max frame size accepted for this connection (taken
+	 * from the options configured at the listener) */
+	__nopoll_conn_set_max_frame_size (conn, options);
+
 	/* now check for accept handler */
 	if (ctx->on_accept) {
 		/* call to on accept */

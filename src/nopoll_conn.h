@@ -232,9 +232,13 @@ long               nopoll_conn_get_connect_timeout (noPollCtx * ctx);
 
 const char *       nopoll_conn_get_x_real_ip_header (noPollConn * conn);
 
+long int           nopoll_conn_get_max_frame_size (noPollConn * conn);
+
 
 /** internal api **/
 void nopoll_conn_complete_handshake (noPollConn * conn);
+
+void __nopoll_conn_set_max_frame_size (noPollConn * conn, noPollConnOpts * options);
 
 int nopoll_conn_default_receive (noPollConn * conn, char * buffer, int buffer_size);
 

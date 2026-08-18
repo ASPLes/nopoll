@@ -70,6 +70,8 @@ void nopoll_conn_opts_set_interface    (noPollConnOpts * opts, const char * _int
 
 void nopoll_conn_opts_set_extra_headers (noPollConnOpts * opts, const char * extra_headers);
 
+void nopoll_conn_opts_set_max_frame_size (noPollConnOpts * opts, long int max_frame_size);
+
 void nopoll_conn_opts_free (noPollConnOpts * opts);
 
 /** internal API **/

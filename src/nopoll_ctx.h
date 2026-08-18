@@ -98,6 +98,10 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx * ctx, noPollForeachConn forea
 
 void           nopoll_ctx_set_protocol_version (noPollCtx * ctx, int version);
 
+void           nopoll_ctx_set_max_frame_size (noPollCtx * ctx, long int max_frame_size);
+
+long int       nopoll_ctx_get_max_frame_size (noPollCtx * ctx);
+
 void           nopoll_ctx_free (noPollCtx * ctx);
 
 END_C_DECLS
