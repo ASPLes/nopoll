@@ -2534,28 +2534,44 @@ nopoll_bool test_26 (void) {
 
 	noPollConn     * conn;
 	noPollCtx      * ctx;
+	int              tries;
+	nopoll_bool      result;
 
 	/* init context */
 	ctx = create_ctx ();
 
-	/* create connection */
+	/* NOTE: this test connects to an external service
+	 * (echo.websocket.org) which is out of our control: it may be
+	 * unreachable, moved or replying a redirect. Because of that,
+	 * the test reports SKIPPED instead of failing when the
+	 * connection cannot be completed: otherwise a third party site
+	 * breaks the whole regression test */
 	conn = nopoll_conn_new (ctx, "echo.websocket.org", "80", NULL, NULL, NULL, NULL);
-	if (! nopoll_conn_is_ok (conn)) {
-		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
-		return nopoll_false;
+
+	/* wait a bit for the handshake to be completed */
+	tries = 100; /* 100 x 100ms = 10 seconds */
+	while (tries > 0 && nopoll_conn_is_ok (conn) && ! nopoll_conn_is_ready (conn)) {
+		nopoll_sleep (100000);
+		tries--;
+	} /* end while */
+
+	if (! nopoll_conn_is_ok (conn) || ! nopoll_conn_is_ready (conn)) {
+		printf ("Test 26: SKIPPED: unable to reach external service echo.websocket.org (unreachable or changed)..\n");
+		nopoll_conn_close (conn);
+		nopoll_ctx_unref (ctx);
+		return nopoll_true;
 	} /* end if */
 
 	/* check test */
-	if (! test_sending_and_check_echo (conn, "Test 26", "This is a test"))
-		return nopoll_false;
+	result = test_sending_and_check_echo (conn, "Test 26", "This is a test");
 
 	/* close the connection */
-	nopoll_conn_close (conn);	
+	nopoll_conn_close (conn);
 
 	/* release context */
 	nopoll_ctx_unref (ctx);
 
-	return nopoll_true;
+	return result;
 }
 
 nopoll_bool test_27 (void) {

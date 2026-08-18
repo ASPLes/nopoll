@@ -118,13 +118,15 @@ nopoll_bool                 nopoll_conn_set_sock_block         (NOPOLL_SOCKET so
  *
  * See also \ref nopoll_conn_connect_timeout.
  *
+ * @param ctx The context where the timeout is configured.
+ *
  * @return Current timeout configured. Returned value is measured in
- * microseconds (1 second = 1000000 microseconds). If a null value is
- * received, 0 is return and no timeout is implemented.
+ * microseconds (1 second = 1000000 microseconds). If a NULL reference
+ * is received, 0 is returned and no timeout is implemented.
  */
 long              nopoll_conn_get_connect_timeout (noPollCtx * ctx)
 {
-	/* check context recevied */
+	/* check context received */
 	if (ctx == NULL) {
 		/* get the the default connect */
 		return (0);
@@ -253,7 +255,7 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 			return -1;
 		} /* end if */
 
-		/* create the socket and check if it */
+		/* create the socket (it is checked right after the switch) */
 		session      = socket (AF_INET, SOCK_STREAM, 0);
 		break;
 	case NOPOLL_TRANSPORT_IPV6:
@@ -267,7 +269,7 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 			return -1;
 		} /* end if */
 
-		/* create the socket and check if it */
+		/* create the socket (it is checked right after the switch) */
 		session      = socket (AF_INET6, SOCK_STREAM, 0);
 		break;
 	} /* end switch */
@@ -275,7 +277,7 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 	if (session == NOPOLL_INVALID_SOCKET) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to create socket");
 
-		/* relase address info */
+		/* release address info */
 		freeaddrinfo (res);
 		return -1;
 	} /* end if */
@@ -288,7 +290,7 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to bind to specified interface");
 		nopoll_close_socket (session);
 
-		/* relase address info */
+		/* release address info */
 		freeaddrinfo (res);
 		
 		return -1;
@@ -306,14 +308,14 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 		        shutdown (session, SHUT_RDWR);
                         nopoll_close_socket (session);
 
-			/* relase address info */
+			/* release address info */
 			freeaddrinfo (res);
 			
 			return -1;
 		} /* end if */
 	} /* end if */
 
-	/* relase address info */
+	/* release address info */
 	freeaddrinfo (res);
 
 	/* return socket created */
@@ -428,6 +430,8 @@ char * __nopoll_conn_get_client_init (noPollConn * conn, noPollConnOpts * opts)
 /**
  * @internal Function that dumps all errors found on current ssl context.
  *
+ * @param conn The connection whose SSL error stack will be dumped.
+ *
  * @return Always returns 0
  */
 int nopoll_conn_log_ssl (noPollConn * conn)
@@ -505,7 +509,7 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * lab
 				/* report to retry */
 				return -2;
 			}
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "SSL_read (SSL_ERROR_SYSCALL)");
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "%s (SSL_ERROR_SYSCALL) (res=%d, errno=%d)", label, res, errno);
 			return -1;
 		}
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "SSL socket closed on %s (res=%d, ssl_err=%d, errno=%d)",
@@ -525,13 +529,15 @@ int __nopoll_conn_tls_handle_error (noPollConn * conn, int res, const char * lab
 		/* nothing to handle */
 		break;
 	}
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "%s/SSL_get_error returned %d", label, res);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "%s/SSL_get_error returned %d", label, ssl_err);
 	return -1;
 	
 }
 
-/** 
- * @internal Default connection receive until handshake is complete.
+/**
+ * @internal Receive handler installed on connections running under
+ * TLS: it is configured once the TLS session is established and it is
+ * used for the rest of the connection life time.
  */
 int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 {
@@ -556,8 +562,10 @@ int nopoll_conn_tls_receive (noPollConn * conn, char * buffer, int buffer_size)
 	return res;
 }
 
-/** 
- * @internal Default connection send until handshake is complete.
+/**
+ * @internal Send handler installed on connections running under TLS:
+ * it is configured once the TLS session is established and it is used
+ * for the rest of the connection life time.
  */
 int nopoll_conn_tls_send (noPollConn * conn, char * buffer, int buffer_size)
 {
@@ -743,7 +751,7 @@ nopoll_bool __nopoll_conn_set_ssl_client_options (noPollCtx * ctx, noPollConn * 
 	if (options && options->certificate) {
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Setting certificate: %s", options->certificate);
 		if (SSL_CTX_use_certificate_chain_file (conn->ssl_ctx, options->certificate) != 1) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to configure client certificate (%s), SSL_CTX_use_certificate_file () failed", options->certificate);
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to configure client certificate (%s), SSL_CTX_use_certificate_chain_file () failed", options->certificate);
 			return nopoll_false;
 		} /* end if */
 	} /* end if */
@@ -758,13 +766,13 @@ nopoll_bool __nopoll_conn_set_ssl_client_options (noPollCtx * ctx, noPollConn * 
 
 	if (options && options->private_key && options->certificate) {
 		if (!SSL_CTX_check_private_key (conn->ssl_ctx)) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Certificate and private key do not matches, verification fails, SSL_CTX_check_private_key ()");
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Certificate and private key do not match, verification fails, SSL_CTX_check_private_key ()");
 			return nopoll_false;
 		} /* end if */
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Certificate (%s) and private key (%s) matches", options->certificate, options->private_key);
 	} /* end if */
 
-	/* if no option and it is not disabled */
+	/* enable peer verification unless it was explicitly disabled through options */
 	if (options == NULL || ! options->disable_ssl_verify) {
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Enabling certificate peer verification");
 		/** really, really ugly hack to let
@@ -1130,7 +1138,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
  * server is received and the handshake is completed (which is where
  * the blocking it is likely to happen).
  *
- * So, it essence, \ref nopoll_conn_new (and all its variants) is not
+ * So, in essence, \ref nopoll_conn_new (and all its variants) is not
  * blocking (unless you have a problem with network connection causing
  * send() API to fail to send the WebSocket init message by returning
  * EWOULD_BLOCK, which is very likely to not happen),
@@ -1140,7 +1148,7 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
  * or the blocking one \ref nopoll_conn_wait_until_connection_ready to ensure
  * you successfully connected),
  *
- * <b>Note 2: Controll connect timeout</b>
+ * <b>Note 2: Control connect timeout</b>
  *
  * To control timeout for sending the initial message (and to ensure
  * the engine sends it), you can use the following functions:
@@ -1168,7 +1176,7 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
  * destination, physically located at host_ip and host_port (IPv6 version).
  *
  * See \ref nopoll_conn_new for more information about this
- * function. Both shares same core.
+ * function. Both share the same core.
  *
  * @param ctx See \ref nopoll_conn_new
  *
@@ -1185,10 +1193,6 @@ noPollConn * nopoll_conn_new (noPollCtx  * ctx,
  * @param protocols See \ref nopoll_conn_new
  *
  * @return See \ref nopoll_conn_new
- *
- * See \ref nopoll_conn_new for more information about this
- * function. Both shares same core.
- *
  */
 noPollConn * nopoll_conn_new6 (noPollCtx  * ctx,
 			       const char * host_ip, 
@@ -1300,8 +1304,9 @@ noPollConn * nopoll_conn_new_opts (noPollCtx       * ctx,
  * between a noPollConn created using regular API or offloaded and
  * then used with \ref nopoll_conn_new_with_socket.
  *
- * However, noPoll will not close anything unless you do it (see calls
- * to \ref nopoll_close_socket throughout the code).
+ * That means the socket is closed by noPoll when the connection is
+ * terminated (see \ref nopoll_conn_close and \ref
+ * nopoll_conn_shutdown), so the caller must not close it on its own.
  *
  * For noPoll, ownership here means no one is reading/writing to that
  * socket but noPoll.
@@ -1524,7 +1529,7 @@ noPollConn * nopoll_conn_tls_new_with_socket (noPollCtx  * ctx,
 /** 
  * @brief Allows to acquire a reference to the provided connection.
  *
- * @param conn The conection to be referenced
+ * @param conn The connection to be referenced
  *
  * @return nopoll_true In the case the function acquired a reference
  * otherwise nopoll_false is returned.
@@ -1595,7 +1600,7 @@ nopoll_bool    nopoll_conn_is_ok (noPollConn * conn)
  * @brief Allows to check if the connection is ready to be used
  * (handshake completed).
  *
- * Note this function may block the caller in the case the hanshake is
+ * Note this function may block the caller in the case the handshake is
  * not completed.
  *
  * @param conn The connection to be checked.
@@ -1626,9 +1631,11 @@ nopoll_bool    nopoll_conn_is_ready (noPollConn * conn)
 /** 
  * @brief Allows to check if the provided connection is working under a TLS session.
  *
- * @param conn The connection where the TLS is being queired to be enabled.
+ * @param conn The connection where the TLS is being queried to be enabled.
  *
- * @return nopoll_true in the case TLS is enabled, otherwise* nopoll_false is returned. Note the function also returns* nopoll_false when the reference received is NULL.
+ * @return nopoll_true in the case TLS is enabled, otherwise
+ * nopoll_false is returned. Note the function also returns
+ * nopoll_false when the reference received is NULL.
  */
 nopoll_bool    nopoll_conn_is_tls_on (noPollConn * conn)
 {
@@ -1642,6 +1649,8 @@ nopoll_bool    nopoll_conn_is_tls_on (noPollConn * conn)
 /** 
  * @brief Allows to get the socket associated to this nopoll
  * connection.
+ *
+ * @param conn The connection from where the socket will be returned.
  *
  * @return The socket reference or -1 if it fails.
  */
@@ -1689,7 +1698,9 @@ int           nopoll_conn_get_id (noPollConn * conn)
  *
  * @param conn The connection from where the url will be obtained
  *
- * @return The get_url or NULL
+ * @return The url requested or "/" when no url was recorded for this
+ * connection. The function only returns NULL when a NULL reference is
+ * received.
  */
 const char * nopoll_conn_get_requested_url (noPollConn * conn)
 {
@@ -1716,6 +1727,8 @@ noPollCtx   * nopoll_conn_ctx    (noPollConn * conn)
 
 /** 
  * @brief Allows to get the connection role.
+ *
+ * @param conn The connection from where the role will be returned.
  *
  * @return The connection role, see \ref noPollRole for details.
  */
@@ -1905,17 +1918,17 @@ const char *  nopoll_conn_get_close_reason (noPollConn * conn)
 }
 
 /** 
- * @brief Returns the X-Real_IP header, useful for nopoll applications
+ * @brief Returns the X-Real-IP header, useful for nopoll applications
  * used behind nginx scenarios.
  *
  * Support for X-Real-IP header for scenarios where noPoll application
  * is used behind nginx and similar proxy forwarding servers.
  *
- * @param conn The connection to check for the host value.
+ * @param conn The connection to check for the X-Real-IP value.
  *
- * @return The host location value or NULL if it fails.
+ * @return The X-Real-IP value received during the handshake or NULL
+ * when it wasn't defined (or a NULL reference was received).
  */
-
 const char * nopoll_conn_get_x_real_ip_header (noPollConn * conn)
 {
 	if(conn) {
@@ -1929,7 +1942,7 @@ const char * nopoll_conn_get_x_real_ip_header (noPollConn * conn)
  * @brief Call to close the connection immediately without going
  * through websocket close negotiation.
  *
- * @param conn The connection to be shutted down.
+ * @param conn The connection to be shut down.
  */
 void          nopoll_conn_shutdown (noPollConn * conn)
 {
@@ -2006,7 +2019,7 @@ void          nopoll_conn_close_ext  (noPollConn  * conn, int status, const char
 	else if (conn->role == NOPOLL_ROLE_CLIENT)
 		role = "client";
 	
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling to close close id=%d (session %d, refs: %d, role: %s)", 
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Calling to close connection id=%d (session %d, refs: %d, role: %s)", 
 		    conn->id, conn->session, conn->refs, role);
 #endif
 	if (conn->session != NOPOLL_INVALID_SOCKET) {
@@ -2023,7 +2036,7 @@ void          nopoll_conn_close_ext  (noPollConn  * conn, int status, const char
 			} /* end if */
 		} /* end if */
 
-		/* send close without reason */
+		/* send close frame (with reason when it was provided) */
 		nopoll_conn_send_frame (conn, nopoll_true /* has_fin */, 
 					/* masked */
 					conn->role == NOPOLL_ROLE_CLIENT, NOPOLL_CLOSE_FRAME, 
@@ -2091,9 +2104,9 @@ void          nopoll_conn_set_hook (noPollConn * conn, noPollPtr ptr)
 
 /** 
  * @brief Allows to get the user level pointer defined by \ref
- * nopoll_conn_get_hook.
+ * nopoll_conn_set_hook.
  *
- * @param conn The connection where the uesr level pointer was stored.
+ * @param conn The connection where the user level pointer was stored.
  *
  * @return A reference to the pointer stored.
  */
@@ -2108,7 +2121,7 @@ noPollPtr     nopoll_conn_get_hook (noPollConn * conn)
  * @brief Allows to unref connection reference acquired via \ref
  * nopoll_conn_ref.
  *
- * @param conn The connection to be unrefered.
+ * @param conn The connection to be unreferenced.
  */
 void nopoll_conn_unref (noPollConn * conn)
 {
@@ -2137,7 +2150,7 @@ void nopoll_conn_unref (noPollConn * conn)
 
 	/* release ctx */
 	if (conn->ctx) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Released context refs, now: %d", conn->ctx->refs);
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Releasing context reference, count before unref: %d", conn->ctx->refs);
 		nopoll_ctx_unref (conn->ctx);
 	} /* end if */
 	conn->ctx = NULL;
@@ -2160,7 +2173,7 @@ void nopoll_conn_unref (noPollConn * conn)
 	nopoll_free (conn->private_key);
 	nopoll_free (conn->chain_certificate);
 
-	/* release uncomplete message */
+	/* release incomplete message */
 	if (conn->previous_msg) 
 		nopoll_msg_unref (conn->previous_msg);
 
@@ -2244,15 +2257,19 @@ void __nopoll_conn_set_max_frame_size (noPollConn * conn, noPollConnOpts * optio
 }
 
 /**
- * @internal Default connection receive until handshake is complete.
+ * @internal Default receive handler (plain, no TLS) installed on every
+ * connection when it is created and kept for the rest of its life time
+ * unless TLS is enabled (see \ref nopoll_conn_tls_receive).
  */
 int nopoll_conn_default_receive (noPollConn * conn, char * buffer, int buffer_size)
 {
 	return recv (conn->session, buffer, buffer_size, 0);
 }
 
-/** 
- * @internal Default connection send until handshake is complete.
+/**
+ * @internal Default send handler (plain, no TLS) installed on every
+ * connection when it is created and kept for the rest of its life time
+ * unless TLS is enabled (see \ref nopoll_conn_tls_send).
  */
 int nopoll_conn_default_send (noPollConn * conn, char * buffer, int buffer_size)
 {
@@ -2264,16 +2281,16 @@ int nopoll_conn_default_send (noPollConn * conn, char * buffer, int buffer_size)
  * maxlen is reached. Some code errors are used to manage exceptions
  * (see return values)
  * 
- * @param connection The connection where the read operation will be done.
+ * @param conn The connection where the read operation will be done.
  *
  * @param buffer A buffer to store content read from the network.
  *
  * @param maxlen max content to read from the network.
- * 
+ *
  * @return  values returned by this function follows:
- *  0 - remote peer have closed the connection
- * -1 - an error have happened while reading
- * -2 - could read because this connection is on non-blocking mode and there is no data.
+ *  0 - remote peer has closed the connection
+ * -1 - an error has happened while reading
+ * -2 - could not read because this connection is on non-blocking mode and there is no data.
  *  n - some data was read.
  * 
  **/
@@ -2460,7 +2477,7 @@ int         __nopoll_conn_receive  (noPollConn * conn, char  * buffer, int  maxl
 		if (errno == NOPOLL_EINTR) 
 			goto keep_reading;
 		
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "unable to readn=%d, error code was: %d (%s) (shutting down connection)", maxlen, errno, strerror (errno));
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "unable to read n=%d, error code was: %d (%s) (shutting down connection)", maxlen, errno, strerror (errno));
 		nopoll_conn_shutdown (conn);
 		return -1;
 	}
@@ -2495,14 +2512,14 @@ nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, in
 
 	/* check if we already received method */
 	if (conn->get_url) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received GET method declartion when it was already received during handshake..closing session");
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received GET method declaration when it was already received during handshake..closing session");
 		nopoll_conn_shutdown (conn);
 		return nopoll_false;
 	} /* end if */
 	
 	/* the get url must have a minimum size: GET / HTTP/1.1\r\n 16 (15 if only \n) */
 	if (buffer_size < 15) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received uncomplete GET method during handshake, closing session");
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received incomplete GET method during handshake, closing session");
 		nopoll_conn_shutdown (conn);
 		return nopoll_false;
 	} /* end if */
@@ -2512,14 +2529,14 @@ nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, in
 	while (iterator <  buffer_size && buffer[iterator] == ' ') 
 		iterator++;
 	if (buffer_size == iterator) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method without an starting request url, closing session", method);
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method without a starting request url, closing session", method);
 		nopoll_conn_shutdown (conn);
 		return nopoll_false;
 	} /* end if */
 
 	/* now check url format */
 	if (buffer[iterator] != '/') {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method with a request url that do not start with /, closing session", method);
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method with a request url that does not start with /, closing session", method);
 		nopoll_conn_shutdown (conn);
 		return nopoll_false;
 	}
@@ -2529,7 +2546,7 @@ nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, in
 	while (iterator2 <  buffer_size && buffer[iterator2] != ' ') 
 		iterator2++;
 	if (buffer_size == iterator2) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method with an uncomplate request url, closing session", method);
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method with an incomplete request url, closing session", method);
 		nopoll_conn_shutdown (conn);
 		return nopoll_false;
 	} /* end if */
@@ -2540,10 +2557,10 @@ nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, in
 
 	/* now check final HTTP header */
 	iterator = iterator2 + 1;
-	while (iterator <  buffer_size && buffer[iterator] == ' ') 
+	while (iterator <  buffer_size && buffer[iterator] == ' ')
 		iterator++;
 	if (buffer_size == iterator) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method with an uncomplate request url, closing session", method);
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method without the trailing HTTP version indication, closing session", method);
 		nopoll_conn_shutdown (conn);
 		return nopoll_false;
 	} /* end if */
@@ -2588,7 +2605,7 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 		iterator2++;
 	if (buffer[iterator2] != '\n') {
 	        nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
-			    "Expected to find mime header value end (13) but it wasn't found (iterator=%d, iterator2=%d, buffer_size=%d, for header: [%s], found value: [%d])..",
+			    "Expected to find mime header value end (10) but it wasn't found (iterator=%d, iterator2=%d, buffer_size=%d, for header: [%s], found value: [%d])..",
 			    iterator, iterator2, buffer_size, (*header), (int)buffer[iterator2]);
 		nopoll_free (*header);
 		(*header) = NULL;
@@ -2608,10 +2625,13 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 	return nopoll_true;
 }
 
-/** 
- * @internal Function that ensures we don't receive any 
- */ 
-nopoll_bool nopoll_conn_check_mime_header_repeated (noPollConn   * conn, 
+/**
+ * @internal Function that ensures we don't receive the same mime
+ * header twice during the handshake: when the header is repeated the
+ * function releases header and value, shuts down the connection and
+ * reports nopoll_true so the caller stops processing.
+ */
+nopoll_bool nopoll_conn_check_mime_header_repeated (noPollConn   * conn,
 						    char         * header, 
 						    char         * value, 
 						    const char   * ref_header, 
@@ -2702,7 +2722,7 @@ nopoll_bool __nopoll_conn_call_on_ready_if_defined (noPollCtx * ctx, noPollConn 
 		} /* end if */
 
 		if (on_ready &&  ! on_ready (ctx, conn, on_ready_data)) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Peer from %s:%s was denied by application level (on ready handler: %p), clossing session", 
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Peer from %s:%s was denied by application level (on ready handler: %p), closing session", 
 				    conn->host, conn->port, on_ready);
 			nopoll_conn_shutdown (conn);
 			return nopoll_false;
@@ -2727,9 +2747,9 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking client handshake data..");
 
 	/* update default origin check (Origin: header must be
-	 * defined, event though RFC says SHOULD it should have been
-	 * MUST because otherwise, server side cannot check this
-	 * value which is crucial for security reasons */
+	 * defined: even though the RFC says SHOULD, it should have
+	 * been MUST because otherwise the server side cannot check
+	 * this value, which is crucial for security reasons) */
 	origin_check = conn->origin != NULL;
 
 	/* now, update this origin_check in the case it is not defined
@@ -2738,13 +2758,13 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 		origin_check = nopoll_true;
 	
 
-	/* ensure we have all minumum data */
+	/* ensure we have all minimum data */
 	if (! conn->handshake->upgrade_websocket ||
 	    ! conn->handshake->connection_upgrade ||
 	    ! conn->handshake->websocket_key ||
 	    ! origin_check ||  /* see above */
 	    ! conn->handshake->websocket_version) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s didn't provide all websocket handshake values required, closing session (Upgraded: websocket %d, Connection: upgrade%d, Sec-WebSocket-Key: %p, Origin: %p, Sec-WebSocket-Version: %p)",
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s didn't provide all websocket handshake values required, closing session (Upgraded: websocket %d, Connection: upgrade %d, Sec-WebSocket-Key: %p, Origin: %p, Sec-WebSocket-Version: %p)",
 			    conn->host, conn->port,
 			    conn->handshake->upgrade_websocket,
 			    conn->handshake->connection_upgrade,
@@ -2765,7 +2785,7 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	   connection */
 	if (ctx->on_open) {
 		if (! ctx->on_open (ctx, conn, ctx->on_open_data)) {
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s was denied by application level (on open handler %p), clossing session", 
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Client from %s:%s was denied by application level (on open handler %p), closing session", 
 				    conn->host, conn->port, ctx->on_open);
 			nopoll_conn_shutdown (conn);
 			return nopoll_false;
@@ -2828,7 +2848,7 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 	if (! conn->handshake->websocket_accept ||
 	    ! conn->handshake->upgrade_websocket ||
 	    ! conn->handshake->connection_upgrade) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received uncomplete listener handshake reply (%p %d %d)",
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received incomplete listener handshake reply (%p %d %d)",
 			    conn->handshake->websocket_accept, conn->handshake->upgrade_websocket, conn->handshake->connection_upgrade);
 		return nopoll_false;
 	} /* end if */
@@ -2845,7 +2865,7 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 	}
 	nopoll_free (accept);
 
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Sec-Websocket-Accept matches expected value..nopoll_conn_complete_handshake_check_client (%p, %p)=%d",
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Finished Sec-Websocket-Accept check, nopoll_conn_complete_handshake_check_client (%p, %p)=%d",
 		    ctx, conn, result);
 
 	/* now call the user app level to accept the websocket
@@ -2955,7 +2975,7 @@ int nopoll_conn_complete_handshake_listener (noPollCtx * ctx, noPollConn * conn,
 	} else if (strcasecmp (header, "X-Real-IP") == 0) {
 		conn->x_real_ip_address = value;
 	} else {
-		/* release value, no body claimed it */
+		/* release value, nobody claimed it */
 		nopoll_free (value);
 	} /* end if */
 	
@@ -3024,7 +3044,7 @@ int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, c
 		conn->handshake->connection_upgrade = 1;
 		nopoll_free (value);
 	} else {
-		/* release value, no body claimed it */
+		/* release value, nobody claimed it */
 		nopoll_free (value);
 	} /* end if */
 	
@@ -3485,7 +3505,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		payload_size_aux |= ((unsigned long int)(len[3]) << 32);
 #else
 		if (len[0] || len[1] || len[2] || len[3]) {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "noPoll doesn't support messages bigger than 2GB on this plataform (support for 64bit not found)");
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "noPoll doesn't support messages bigger than 2GB on this platform (support for 64bit not found)");
 			nopoll_msg_unref (msg);
 			nopoll_conn_shutdown (conn);
 			return NULL;
@@ -3656,7 +3676,7 @@ read_payload:
 			    bytes, (int) msg->payload_size);
 		msg->payload_size = bytes;
 
-		/* grab a reference to previous message to reuse itsdata but only when bytes > 0 
+		/* grab a reference to previous message to reuse its data but only when bytes > 0 
 		   because when bytes == 0, the reference is reused since it is not returned
 		   to the caller (see next lines) */
 		if (bytes > 0)
@@ -3666,12 +3686,14 @@ read_payload:
 		/* flag this message as a fragment */
 		msg->is_fragment = nopoll_true;
 
-		/* flag that this message doesn't have FIN = 0 because
-		 * we wasn't able to read it entirely */
+		/* NOTE: has_fin is deliberately left untouched here:
+		 * this is a partial read of a single frame, not a
+		 * fragmented message, so the FIN bit announced by the
+		 * peer must be preserved */
 		/* msg->has_fin = 0; */
 	} /* end if */
 
-	/* flag the message was being a fragment according to previous flag */
+	/* flag the message as a fragment according to the previous flag */
 	msg->is_fragment = msg->is_fragment || conn->previous_was_fragment || msg->has_fin == 0;
 
 	/* update was a fragment */
@@ -3741,11 +3763,15 @@ read_payload:
  *
  * @param length The length of such content to be sent.
  *
- * @param has_fin nopoll_true/nopoll_false to signal FIN header flag 
+ * @param has_fin nopoll_true/nopoll_false to signal FIN header flag
  *
  * @param sleep_in_header Optional hacking option that allows to
  * include a pause between sending the header and the rest of the
  * content.
+ *
+ * @param frame_type The op code to use for the frame being sent (for
+ * example \ref NOPOLL_TEXT_FRAME or \ref NOPOLL_BINARY_FRAME). Note
+ * that length == -1 is only accepted for text frames.
  */
 int           __nopoll_conn_send_common (noPollConn * conn, const char * content, long length, nopoll_bool has_fin, long sleep_in_header, noPollOpCode frame_type)
 {
@@ -3765,7 +3791,7 @@ int           __nopoll_conn_send_common (noPollConn * conn, const char * content
 
 		length = strlen (content);
 	}
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "nopoll_conn_send_text: Attempting to send %d bytes", (int) length);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "__nopoll_conn_send_common: attempting to send %d bytes", (int) length);
 
 	/* sending content as client */
 	if (conn->role == NOPOLL_ROLE_CLIENT) {
@@ -3800,8 +3826,8 @@ int           __nopoll_conn_send_common (noPollConn * conn, const char * content
  * 
  * The function returns the number of bytes sent, being \p length the 
  * max amount of bytes that can be reported as sent by
- * this funciton. This means value reported by this function do not
- * includes headers.  The funciton also returns the following general indications:
+ * this function. This means value reported by this function do not
+ * includes headers.  The function also returns the following general indications:
  *
  *   N : number of bytes sent (user land bytes sent, without including web socket headers).
  *   0 : no bytes sent (see errno indication). See also \ref nopoll_conn_complete_pending_write
@@ -3838,8 +3864,8 @@ int           nopoll_conn_send_text (noPollConn * conn, const char * content, lo
  *
  * The function returns the number of bytes sent, being \p length the 
  * max amount of bytes that can be reported as sent by
- * this funciton. This means value reported by this function do not
- * includes headers.  The funciton also returns the following general indications:
+ * this function. This means value reported by this function do not
+ * includes headers.  The function also returns the following general indications:
  *
  *   N : number of bytes sent (user land bytes sent, without including web socket headers).
  *   0 : no bytes sent (see errno indication). See also \ref nopoll_conn_complete_pending_write
@@ -3858,8 +3884,8 @@ int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * co
  *
  * @param conn The connection where the message will be sent.
  *
- * @param content The content to be sent (it should be utf-8 content
- * or the function will fail).
+ * @param content The content to be sent (binary content: unlike \ref
+ * nopoll_conn_send_text, no UTF-8 check is done over it).
  *
  * @param length Amount of bytes to take from the content to be
  * sent. Note you cannot pass in -1 (unlike \ref nopoll_conn_send_text).
@@ -3873,8 +3899,8 @@ int           nopoll_conn_send_text_fragment (noPollConn * conn, const char * co
  *
  * The function returns the number of bytes sent, being \p length the 
  * max amount of bytes that can be reported as sent by
- * this funciton. This means value reported by this function do not
- * includes headers.  The funciton also returns the following general indications:
+ * this function. This means value reported by this function do not
+ * includes headers.  The function also returns the following general indications:
  *
  *   N : number of bytes sent (user land bytes sent, without including web socket headers).
  *   0 : no bytes sent (see errno indication). See also \ref nopoll_conn_complete_pending_write
@@ -3894,8 +3920,8 @@ int           nopoll_conn_send_binary (noPollConn * conn, const char * content, 
  *
  * @param conn The connection where the message will be sent.
  *
- * @param content The content to be sent (it should be utf-8 content
- * or the function will fail).
+ * @param content The content to be sent (binary content: unlike \ref
+ * nopoll_conn_send_text, no UTF-8 check is done over it).
  *
  * @param length Amount of bytes to take from the content to be
  * sent. Note you cannot pass in -1 (unlike \ref
@@ -3911,8 +3937,8 @@ int           nopoll_conn_send_binary (noPollConn * conn, const char * content, 
  *
  * The function returns the number of bytes sent, being \p length the 
  * max amount of bytes that can be reported as sent by
- * this funciton. This means value reported by this function do not
- * includes headers.  The funciton also returns the following general indications:
+ * this function. This means value reported by this function do not
+ * includes headers.  The function also returns the following general indications:
  *
  *   N : number of bytes sent (user land bytes sent, without including web socket headers).
  *   0 : no bytes sent (see errno indication). See also \ref nopoll_conn_complete_pending_write
@@ -3957,11 +3983,12 @@ int           nopoll_conn_send_binary_fragment (noPollConn * conn, const char * 
  * returns -1 when no content is available to be read and you pass
  * block == nopoll_false
  *
- * Note that the function doesn't clear the buffer received. Only
- * memory (bytes) notified by the value returned by this function
- * should be accessed by the caller. In the same direction you can't
- * use the buffer as a nul-terminated string because the function
- * doesn't add the final \0 to the content read.
+ * Note that the function clears the buffer received (the first \p
+ * bytes octets) before reading, but only memory (bytes) notified by
+ * the value returned by this function should be accessed by the
+ * caller. In the same direction you can't use the buffer as a
+ * nul-terminated string because the function doesn't add the final \0
+ * to the content read.
  *
  * <b>More calls to nopoll_conn_read might be needed</b><br>
  *
@@ -4070,7 +4097,7 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 	} /* end if */
 
 
-	/* for for the content */
+	/* wait for the content */
 	while (nopoll_true) {
 		/* call to get next message */
 		msg = nopoll_conn_get_msg (conn);
@@ -4163,22 +4190,22 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 }
 
 /** 
- * @brief Allows to check if the are pending bytes to be read on the
+ * @brief Allows to check if there are pending bytes to be read on the
  * provided connection and that are retained in internal buffers so
  * the socket associated will not report pending content.
  *
  * See \ref nopoll_conn_read documentation to know more about this
  * function. This API is not useful if you are not using \ref
- * nopoll_conn_read (stream oriented APi).
+ * nopoll_conn_read (stream oriented API).
  *
  * This function is designed to be used *after* you have completed a
  * \ref nopoll_conn_read so you can get a quick indication if there
  * are pending data that can be read without waiting and blocking
  * (especially when you use non blocking I/O).
  *
- * You have an working example at:
+ * You have a working example at vortex_websocket_read () inside:
  *
- * https://github.com/ASPLes/libvortex-1.1/blob/master/web-socket/vortex_websocket.c#L404
+ * https://github.com/ASPLes/libvortex-1.1/blob/master/web-socket/vortex_websocket.c
  *
  * @param conn The connection where the operation takes place
  *
@@ -4302,9 +4329,14 @@ void          nopoll_conn_set_on_close (noPollConn            * conn,
  * connection provided. The function will not block the caller. This
  * function is not intended to be used by normal API consumer.
  *
- * @param conn The connection where the PING operation will be sent.
+ * @param conn The connection where the PONG operation will be sent.
  *
- * @param nopoll_true if the operation was sent without any error,
+ * @param length The amount of bytes to be sent as PONG payload.
+ *
+ * @param content The payload to be sent back (usually the payload
+ * received in the PING frame being replied).
+ *
+ * @return nopoll_true if the operation was sent without any error,
  * otherwise nopoll_false is returned.
  */
 nopoll_bool      nopoll_conn_send_pong (noPollConn * conn, long length, noPollPtr content)
@@ -4326,9 +4358,9 @@ int __nopoll_conn_complete_pending_write_reduce_header (noPollConn * conn, int b
         while (conn->pending_write_added_header > 0 && bytes_written > 0) {
 	        bytes_written --;
 		conn->pending_write_added_header--;
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Reduced added header (bytes_written=%d, conn->pending_write_added_header=%d)", 
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Reduced added header (bytes_written=%d, conn->pending_write_added_header=%d)",
 			    bytes_written, conn->pending_write_added_header);
-	} /* end if */
+	} /* end while */
 	return bytes_written;
 }
 
@@ -4477,7 +4509,7 @@ int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_resu
  * @internal Function used to send a frame over the provided
  * connection.
  *
- * @param conn The connection where the send operation will hapen.
+ * @param conn The connection where the send operation will happen.
  *
  * @param fin If the frame to be sent must be flagged as a fin frame.
  *
@@ -4489,10 +4521,14 @@ int nopoll_conn_flush_writes (noPollConn * conn, long timeout, int previous_resu
  *
  * @param content Pointer to the data to be sent in the frame.
  *
- * @return The function returns the number of bytes sent, being @length the 
+ * @param sleep_in_header Optional hacking option that allows to
+ * include a pause (in microseconds) between sending the header and
+ * the rest of the content. Use 0 to disable it.
+ *
+ * @return The function returns the number of bytes sent, being \p length the
  * max amount of bytes that can be reported as sent by
- * this funciton. This means value reported by this function do not
- * includes headers.  The funciton also returns the following general indications:
+ * this function. This means value reported by this function do not
+ * includes headers.  The function also returns the following general indications:
  *
  *   N : number of bytes sent (user land bytes sent, without including web socket headers).
  *   0 : no bytes sent (see errno indication). See also \ref nopoll_conn_complete_pending_write
@@ -4594,8 +4630,8 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	} /* end if */
 	
 	/* copy content to be sent */
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Copying into the buffer %d bytes of header (total memory allocated: %d)", 
-		    header_size, (int) length + header_size + 1);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Copying into the buffer %d bytes of header (total memory allocated: %d)",
+		    header_size, (int) length + header_size + 2);
 	memcpy (send_buffer, header, header_size);
 	if (length > 0) {
 		memcpy (send_buffer + header_size, content, length);
@@ -4608,8 +4644,8 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 
 	
 	/* send content */
-	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Mask used for this delivery: %d (about to send %d bytes)",
-		    nopoll_get_32bit (send_buffer + header_size - 2), (int) length + header_size);
+	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Mask used for this delivery: %u (masked? %d, about to send %d bytes)",
+		    mask_value, masked, (int) length + header_size);
 
 	/* clear errno status before writting */
 	desp  = 0;
@@ -4664,7 +4700,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 				    "Requested to write %d bytes but found %d written (masked? %d, mask: %u, header size: %d, length: %d), errno = %d : %s", 
 				    (int) length + header_size - desp, bytes_written, masked, mask_value, header_size, (int) length, errno, strerror (errno));
 		} else {
-			/* accomulate bytes written to continue */
+			/* accumulate bytes written to continue */
 			if (bytes_written > 0)
 				desp += bytes_written;
 
@@ -4673,7 +4709,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 			break;
 		} /* end if */
 
-		/* accomulate bytes written to continue */
+		/* accumulate bytes written to continue */
 		if (bytes_written > 0)
 			desp += bytes_written;
 
@@ -4681,7 +4717,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 		tries++;
 
 		if ((errno != 0) || tries > 50) {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Found errno=%d (%s) value while trying to bytes to the WebSocket conn-id=%d or max tries reached=%d",
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Found errno=%d (%s) value while trying to write bytes to the WebSocket conn-id=%d or max tries reached=%d",
 				    errno, strerror (errno), conn->id, tries);
 			break;
 		} /* end if */
@@ -4750,7 +4786,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	if (bytes_sent == 0 && errno == NOPOLL_EWOULDBLOCK) 
 	        return -2;
 
-	/* report what was was written (which can be everything, part,
+	/* report what was written (which can be everything, part,
 	   anything or error) */
 	return bytes_sent;
 }
@@ -4775,12 +4811,12 @@ noPollConn * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener)
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Calling to accept web socket connection over master id=%d, socket=%d",
 		    listener->id, listener->session);
 
-	/* recevied a new connection: accept the
+	/* received a new connection: accept the
 	 * connection and ask the app level to accept
 	 * or not */
 	session = nopoll_listener_accept (listener->session);
 	if (session == NOPOLL_INVALID_SOCKET) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received invalid socket value from accept(2): %d, error code errno=: %d", 
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received invalid socket value from accept(2): %d, error code errno=%d",
 			    session, errno);
 		return NULL;
 	} /* end if */
@@ -4851,7 +4887,8 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 		return nopoll_false;
 	} /* end if */
 
-	/* configure non blocking mode */
+	/* configure blocking mode: TLS sessions switch to non blocking
+	 * below, once the SSL object is prepared */
 	nopoll_conn_set_sock_block (session, nopoll_true);
 
 	/* record max frame size accepted for this connection (taken
@@ -4882,7 +4919,10 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 		 * session */
 		conn->tls_on = nopoll_true;
 
-		/* get here SNI to query about the serverName */
+		/* NOTE: serverName is left NULL here: SNI is not yet
+		 * queried at this point, so the lookup done below
+		 * through nopoll_ctx_find_certificate () always asks
+		 * for the default certificate */
 
 		/* 1) GET FROM OPTIONS: detect here if we have
 		 * certificates provided through options */
@@ -4970,7 +5010,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			if (conn->ssl_ctx == NULL)
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept incoming connection, failed to create SSL context. Context creator returned NULL pointer");
 			else 
-				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "there was an error while setting certificate file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_certificate_file function. Tried certificate file: %s", 
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "there was an error while setting certificate file into the SSL context, unable to start TLS profile. Failure found at SSL_CTX_use_certificate_chain_file function. Tried certificate file: %s", 
 					    certificateFile);
 
 			/* dump error stack */
@@ -4986,7 +5026,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Using certificate key: %s", privateKey);
 		if (SSL_CTX_use_PrivateKey_file (conn->ssl_ctx, privateKey, SSL_FILETYPE_PEM) != 1) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
-				    "there was an error while setting private file into the SSl context, unable to start TLS profile. Failure found at SSL_CTX_use_PrivateKey_file function. Tried private file: %s", 
+				    "there was an error while setting private file into the SSL context, unable to start TLS profile. Failure found at SSL_CTX_use_PrivateKey_file function. Tried private file: %s", 
 				    privateKey);
 			/* dump error stack */
 			nopoll_conn_shutdown (conn);
@@ -5069,7 +5109,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
  * @param tls_on A boolean indication if the TLS interface should be
  * enabled or not.
  *
- * @return nopoll_true if the listener was accepted otherwise nopoll_false is returned.
+ * @return nopoll_true if the connection was accepted otherwise nopoll_false is returned.
  */
 nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session, nopoll_bool tls_on) {
 
