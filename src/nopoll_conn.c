@@ -3610,10 +3610,21 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		return NULL; 	
 	} /* end if */
 
-	/* check here for the limit of message we are willing to accept */
-	/* FIX SECURITY ISSUE */
-
 read_payload:
+
+	/* final check for the limit of message we are willing to
+	 * accept: it is repeated here because this label is also
+	 * reached (goto read_payload) when continuing a frame that was
+	 * partially read, ensuring no allocation or read operation is
+	 * ever done with a wrong payload size */
+	if (msg->payload_size < 0 || msg->payload_size > max_frame_size) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL,
+			    "Refusing to read a payload with a wrong size (%ld), maximum frame size accepted is %ld, closing session id: %d",
+			    msg->payload_size, max_frame_size, conn->id);
+		nopoll_msg_unref (msg);
+		nopoll_conn_shutdown (conn);
+		return NULL;
+	} /* end if */
 
 	/* copy payload received */
 	msg->payload = nopoll_new (char, msg->payload_size + 1);	/* allow extra byte for string terminator */
