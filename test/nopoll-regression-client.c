@@ -46,12 +46,30 @@ nopoll_bool test_sending_and_check_echo (noPollConn * conn, const char * label, 
 	char  buffer[1024];
 	int   length = strlen (msg);
 	int   bytes_read;
+	int   tries;
 
-	/* wait for the reply */
-	while (nopoll_true) {
+	/* wait for the connection to be ready but limiting how much we
+	 * are willing to wait: without this limit, any connection
+	 * failure (for example, expired test certificates) makes the
+	 * regression test to hang for ever instead of reporting a
+	 * failure */
+	tries = 3000; /* 3000 x 10ms = 30 seconds */
+	while (tries > 0) {
 		if (nopoll_conn_is_ready (conn))
 			break;
+
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR: %s: connection failure detected while waiting for it to be ready..\n", label);
+			return nopoll_false;
+		} /* end if */
+
 		nopoll_sleep (10000);
+		tries--;
+	} /* end while */
+
+	if (! nopoll_conn_is_ready (conn)) {
+		printf ("ERROR: %s: timeout reached (30 seconds) while waiting for the connection to be ready..\n", label);
+		return nopoll_false;
 	} /* end if */
 
 	/* send content text(utf-8) */
