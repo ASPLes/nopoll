@@ -62,13 +62,19 @@ void __nopoll_ctx_sigpipe_do_nothing (int _signal)
 }
 
 
-/** 
- * @brief Creates an empty Nopoll context. 
+/**
+ * @brief Creates an empty noPoll context.
+ *
+ * The context is created with one reference, so the caller must
+ * release it by calling \ref nopoll_ctx_unref once it is done with it
+ * (and after having terminated every connection created under it).
+ *
+ * @return A newly created \ref noPollCtx or NULL if it fails.
  */
 noPollCtx * nopoll_ctx_new (void) {
 	noPollCtx * result;
 
-	/* call to create context after checkign WinSock */
+	/* create the context and, on Windows, initialize WinSock over it */
 	result = nopoll_new (noPollCtx, 1);
 	if (result == NULL)
 		return NULL;
@@ -148,7 +154,11 @@ nopoll_bool    nopoll_ctx_ref (noPollCtx * ctx)
  * @brief allows to release a reference acquired to the provided
  * noPoll context.
  *
- * @param ctx The noPoll context reference to release..
+ * When the last reference is released the context itself is
+ * destroyed, releasing the certificate store and the connection
+ * registry, so the reference received must not be used after that.
+ *
+ * @param ctx The noPoll context reference to release.
  */
 void           nopoll_ctx_unref (noPollCtx * ctx)
 {
@@ -228,6 +238,11 @@ int            nopoll_ctx_ref_count (noPollCtx * ctx)
  * @internal Function used to register the provided connection on the
  * provided context.
  *
+ * The function acquires a reference to the connection and another one
+ * to the context. The connection reference is released by \ref
+ * nopoll_ctx_unregister_conn, while the context reference is released
+ * when the connection object itself is finally destroyed.
+ *
  * @param ctx The context where the connection will be registered.
  *
  * @param conn The connection to be registered.
@@ -268,7 +283,7 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 			/* acquire reference */
 			nopoll_ctx_ref (ctx);
 			
-			/* acquire a reference to the conection */
+			/* acquire a reference to the connection */
 			nopoll_conn_ref (conn);
 
 			/* release mutex here */
@@ -306,14 +321,15 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 }
 
 /** 
- * @internal Function used to register the provided connection on the
- * provided context.
+ * @internal Function used to unregister the provided connection from
+ * the provided context, releasing the reference that was acquired on
+ * it by \ref nopoll_ctx_register_conn.
  *
- * @param ctx The context where the connection will be registered.
+ * @param ctx The context where the connection is registered.
  *
- * @param conn The connection to be registered.
+ * @param conn The connection to be unregistered.
  */
-void           nopoll_ctx_unregister_conn (noPollCtx  * ctx, 
+void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 					   noPollConn * conn)
 {
 	int iterator;
@@ -338,7 +354,7 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 			/* release */
 			nopoll_mutex_unlock (ctx->ref_mutex);
 
-			/* acquire a reference to the conection */
+			/* acquire a reference to the connection */
 			nopoll_conn_unref (conn);
 
 			return; 
@@ -455,15 +471,15 @@ nopoll_bool    nopoll_ctx_find_certificate (noPollCtx   * ctx,
  *
  * @param ctx The context where the certificate will be installed.
  *
- * @param serverName The optional server name to to limit the use of
+ * @param serverName The optional server name to limit the use of
  * this certificate to the value provided here. Provide a NULL value
- * to make the certificate provide to work under any server notified
+ * to make the certificate work under any server notified
  * (Host: header) or via SNI (server name identification associated to
  * the TLS transport).
  *
  * @param certificateFile The certificate file to be installed. 
  *
- * @param privateKey The private key file to use used.
+ * @param privateKey The private key file to be used.
  *
  * @param optionalChainFile Optional chain file with additional
  * material to complete the certificate definition.
@@ -568,7 +584,7 @@ void           nopoll_ctx_set_on_open (noPollCtx            * ctx,
  * Unlike handlers configured at \ref nopoll_ctx_set_on_open and \ref
  * nopoll_ctx_set_on_accept which get notified when the connection
  * isn't still working (because WebSocket handshake wasn't finished
- * yet), on read handlers configured here will get called just after
+ * yet), on ready handlers configured here will get called just after
  * the WebSocket handshake has taken place.
  *
  * @param ctx The context that will be configured.
@@ -640,7 +656,7 @@ void              nopoll_ctx_set_on_accept (noPollCtx            * ctx,
  * @param user_data User defined pointer that is passed in into the
  * handler when called.
  *
- * Note that the handler configured here will be overriden by the handler configured by \ref nopoll_conn_set_on_msg
+ * Note that the handler configured here will be overridden by the handler configured by \ref nopoll_conn_set_on_msg
  *
  */
 void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
@@ -685,7 +701,7 @@ void           nopoll_ctx_set_ssl_context_creator (noPollCtx                * ct
 }
 
 /** 
- * @brief Allows to configure a function that will implement an post SSL/TLS check.
+ * @brief Allows to configure a function that will implement a post SSL/TLS check.
  *
  * See the following function to get more information: \ref noPollSslPostCheck
  *
@@ -781,9 +797,9 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
 
 
 /** 
- * @brief Allows to change the protocol version that is send in all
+ * @brief Allows to change the protocol version that is sent in all
  * client connections created under the provided context and the
- * protocol version accepted by listener created under this context
+ * protocol version accepted by listeners created under this context
  * too.
  *
  * This is a really basic (mostly fake) protocol version support
