@@ -81,13 +81,15 @@ noPollCtx * nopoll_ctx_new (void) {
 
 #if defined(NOPOLL_OS_WIN32)
 	if (! nopoll_win32_init (result)) {
+		/* release the context just created: returning here
+		 * without freeing it leaked it */
+		nopoll_free (result);
 		return NULL;
 	} /* end if */
 #endif
 
 	/* set initial reference */
-	result->conn_id = 1;
-	result->refs = 1;
+	result->refs    = 1;
 	result->conn_id = 1;
 
 	/* 20 seconds for connection timeout */
@@ -179,7 +181,8 @@ void           nopoll_ctx_unref (noPollCtx * ctx)
 	/* release mutex here */
 	nopoll_mutex_unlock (ctx->ref_mutex);
 
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Releasing no poll context %p (%d, conns: %d)", ctx, ctx->refs, ctx->conn_length);
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Releasing noPoll context %p (refs: %d, conns registered: %d, list size: %d)",
+		    ctx, ctx->refs, ctx->conn_num, ctx->conn_length);
 
 	iterator = 0;
 	while (iterator < ctx->certificates_length) {
@@ -195,6 +198,15 @@ void           nopoll_ctx_unref (noPollCtx * ctx)
 		/* next position */
 		iterator++;
 	} /* end while */
+
+	/* release the I/O engine in the case it is still created: it
+	 * is normally released by nopoll_loop_stop (), but an
+	 * application that never ran (or never stopped) the loop
+	 * leaked it */
+	if (ctx->io_engine) {
+		nopoll_io_release_engine (ctx->io_engine);
+		ctx->io_engine = NULL;
+	} /* end if */
 
 	/* release mutex */
 	nopoll_mutex_destroy (ctx->ref_mutex);
@@ -277,16 +289,17 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 
 			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "registered connection id %d, role: %d", conn->id, conn->role);
 
-			/* release */
+			/* release the mutex before acquiring references:
+			 * both nopoll_ctx_ref and nopoll_conn_ref take
+			 * their own locks */
 			nopoll_mutex_unlock (ctx->ref_mutex);
 
-			/* acquire reference */
+			/* acquire a reference to the context */
 			nopoll_ctx_ref (ctx);
-			
+
 			/* acquire a reference to the connection */
 			nopoll_conn_ref (conn);
 
-			/* release mutex here */
 			return nopoll_true;
 		}
 		
@@ -351,13 +364,15 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 			/* update connection list number */
 			ctx->conn_num--;
 
-			/* release */
+			/* release the mutex before dropping the
+			 * reference: nopoll_conn_unref takes its own
+			 * lock and may destroy the connection */
 			nopoll_mutex_unlock (ctx->ref_mutex);
 
-			/* acquire a reference to the connection */
+			/* release the reference acquired at registration */
 			nopoll_conn_unref (conn);
 
-			return; 
+			return;
 		} /* end if */
 		
 		iterator++;
@@ -378,8 +393,17 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
  */ 
 int            nopoll_ctx_conns (noPollCtx * ctx)
 {
+	int result;
+
 	nopoll_return_val_if_fail (ctx, ctx, -1);
-	return ctx->conn_num;
+
+	/* read the counter under the mutex: it is updated by
+	 * nopoll_ctx_register_conn and nopoll_ctx_unregister_conn */
+	nopoll_mutex_lock (ctx->ref_mutex);
+	result = ctx->conn_num;
+	nopoll_mutex_unlock (ctx->ref_mutex);
+
+	return result;
 }
 
 /** 
@@ -388,8 +412,10 @@ int            nopoll_ctx_conns (noPollCtx * ctx)
  * @param ctx The context where the operation will take place.
  *
  * @param serverName the servername to use as pattern to find the
- * right certificate. If NULL is provided the first certificate not
- * refering to any serverName will be returned.
+ * right certificate. If NULL is provided the function first looks for
+ * a certificate that isn't associated to any serverName and, when
+ * there is none, it falls back to reporting the first certificate
+ * stored, whatever serverName it is associated to.
  *
  * @param certificateFile If provided a reference and the function
  * returns nopoll_true, it will contain the certificateFile found.
@@ -399,6 +425,11 @@ int            nopoll_ctx_conns (noPollCtx * ctx)
  *
  * @param optionalChainFile If provided a reference and the function
  * returns nopoll_true, it will contain the optionalChainFile found.
+ *
+ * NOTE: the values reported are references owned by the context, not
+ * copies: they must not be released by the caller and they are only
+ * valid while the context is alive and the certificate is not
+ * replaced.
  *
  * @return nopoll_true in the case the certificate was found,
  * otherwise nopoll_false is returned.
@@ -416,56 +447,91 @@ nopoll_bool    nopoll_ctx_find_certificate (noPollCtx   * ctx,
 
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Finding a certificate for serverName=%s", serverName ? serverName : "<not defined>");
 
+	/* acquire the mutex to walk the certificate store while it may
+	 * be updated by nopoll_ctx_set_certificate () */
+	nopoll_mutex_lock (ctx->ref_mutex);
+
 	while (iterator < ctx->certificates_length) {
 		/* get cert */
 		cert = &(ctx->certificates[iterator]);
-		if (cert) {
-			/* found a certificate */
-		        nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "   certificate stored associated to serverName=%s", cert->serverName ? cert->serverName : "<not defined>");
-			if ((serverName == NULL && cert->serverName == NULL)  ||
-			    (nopoll_cmp (serverName, cert->serverName))) {
-				if (certificateFile)
-					(*certificateFile)   = cert->certificateFile;
-				if (privateKey)
-					(*privateKey)        = cert->privateKey;
-				if (optionalChainFile)
-					(*optionalChainFile) = cert->optionalChainFile;
-				return nopoll_true;
-			} /* end if */
+
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "   certificate stored associated to serverName=%s", cert->serverName ? cert->serverName : "<not defined>");
+		if ((serverName == NULL && cert->serverName == NULL)  ||
+		    (nopoll_cmp (serverName, cert->serverName))) {
+			if (certificateFile)
+				(*certificateFile)   = cert->certificateFile;
+			if (privateKey)
+				(*privateKey)        = cert->privateKey;
+			if (optionalChainFile)
+				(*optionalChainFile) = cert->optionalChainFile;
+
+			nopoll_mutex_unlock (ctx->ref_mutex);
+			return nopoll_true;
 		} /* end if */
 
 		/* next position */
 		iterator++;
-	}
+	} /* end while */
 
-	/* check for default certificate when serverName isn't defined */
-	if (serverName == NULL) {
-	        /* requested a certificate for an undefined serverName */
-	        iterator = 0;
-		while (iterator < ctx->certificates_length) {
-		        /* get cert */
-		        cert = &(ctx->certificates[iterator]);
-			if (cert) {
-			      /* found a certificate */
-			      nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "   serverName not defined, selecting first certificate from the list");
-			      if (certificateFile)
-			              (*certificateFile)   = cert->certificateFile;
-			      if (privateKey)
-			              (*privateKey)        = cert->privateKey;
-			      if (optionalChainFile)
-			              (*optionalChainFile) = cert->optionalChainFile;
-			      return nopoll_true;
-			} /* end if */
-		} /* end if */
+	/* check for default certificate when serverName isn't defined:
+	 * report the first certificate stored, whatever serverName it
+	 * is associated to.
+	 *
+	 * NOTE: this loop used to have the iterator++ placed outside
+	 * the while body (a misplaced brace). It did not spin because
+	 * cert is the address of an array position, so it is never
+	 * NULL and the first iteration always returned */
+	if (serverName == NULL && ctx->certificates_length > 0) {
+		cert = &(ctx->certificates[0]);
 
-		/* next position */
-		iterator++;
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "   serverName not defined, selecting first certificate from the list");
+		if (certificateFile)
+			(*certificateFile)   = cert->certificateFile;
+		if (privateKey)
+			(*privateKey)        = cert->privateKey;
+		if (optionalChainFile)
+			(*optionalChainFile) = cert->optionalChainFile;
+
+		nopoll_mutex_unlock (ctx->ref_mutex);
+		return nopoll_true;
 	} /* end if */
+
+	nopoll_mutex_unlock (ctx->ref_mutex);
 
 	return nopoll_false;
 }
 
-/** 
+/**
+ * @internal Looks for a certificate stored under exactly the
+ * serverName provided, without the fallback to the default
+ * certificate implemented by \ref nopoll_ctx_find_certificate.
+ *
+ * NOTE: the caller must hold ctx->ref_mutex.
+ *
+ * @param ctx The context whose certificate store is checked.
+ *
+ * @param serverName The serverName to look for (NULL matches the
+ * certificate stored without serverName).
+ *
+ * @return nopoll_true when a certificate with that exact serverName
+ * is stored, otherwise nopoll_false.
+ */
+static nopoll_bool __nopoll_ctx_find_certificate_exact (noPollCtx * ctx, const char * serverName)
+{
+	int iterator = 0;
+
+	while (iterator < ctx->certificates_length) {
+		if (nopoll_cmp (serverName, ctx->certificates[iterator].serverName))
+			return nopoll_true;
+
+		/* next position */
+		iterator++;
+	} /* end while */
+
+	return nopoll_false;
+}
+
+/**
  * @brief Allows to install a certificate to be used in general by all
  * listener connections working under the provided context.
  *
@@ -495,21 +561,48 @@ nopoll_bool           nopoll_ctx_set_certificate (noPollCtx  * ctx,
 {
 	int length;
 	noPollCertificate * cert;
+	noPollCertificate * certificates;
 
 	/* check values before proceed */
 	nopoll_return_val_if_fail (ctx, ctx && certificateFile && privateKey, nopoll_false);
 
-	/* check if the certificate is already installed */
-	if (nopoll_ctx_find_certificate (ctx, serverName, NULL, NULL, NULL))
+	/* acquire the mutex to protect the certificate store while it
+	 * is checked and updated */
+	nopoll_mutex_lock (ctx->ref_mutex);
+
+	/* check if the certificate is already installed
+	 *
+	 * NOTE: this check used to call nopoll_ctx_find_certificate (),
+	 * which falls back to reporting the first certificate stored
+	 * when serverName is NULL. That made installing a certificate
+	 * without serverName a silent no-op as soon as any other
+	 * certificate was present. An exact match is what is needed
+	 * here (and doing it inside the critical section also removes
+	 * the check/update race) */
+	if (__nopoll_ctx_find_certificate_exact (ctx, serverName)) {
+		nopoll_mutex_unlock (ctx->ref_mutex);
 		return nopoll_true;
+	} /* end if */
 
 	/* update certificate storage to hold all values */
-	ctx->certificates_length++;
-	length = ctx->certificates_length;
+	length = ctx->certificates_length + 1;
 	if (length == 1)
-		ctx->certificates = nopoll_new (noPollCertificate, 1);
+		certificates = nopoll_new (noPollCertificate, 1);
 	else
-		ctx->certificates = (noPollCertificate *) nopoll_realloc (ctx->certificates, sizeof (noPollCertificate) * (length));
+		certificates = (noPollCertificate *) nopoll_realloc (ctx->certificates, sizeof (noPollCertificate) * (length));
+
+	/* check the allocation before using it: storing the result
+	 * directly into ctx->certificates and then indexing it
+	 * dereferenced NULL when the allocation failed, and left
+	 * certificates_length already increased */
+	if (certificates == NULL) {
+		nopoll_mutex_unlock (ctx->ref_mutex);
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store the certificate provided");
+		return nopoll_false;
+	} /* end if */
+
+	ctx->certificates        = certificates;
+	ctx->certificates_length = length;
 
 	/* hold certificate */
 	cert = &(ctx->certificates[length - 1]);
@@ -530,16 +623,19 @@ nopoll_bool           nopoll_ctx_set_certificate (noPollCtx  * ctx,
 	if (optionalChainFile)
 		cert->optionalChainFile  = nopoll_strdup (optionalChainFile);
 
+	/* release the mutex */
+	nopoll_mutex_unlock (ctx->ref_mutex);
+
 	return nopoll_true;
 }
 
 /** 
  * @brief Allows to configure the on open handler, the handler that is
- * called when it is received an incoming websocket connection and all
- * websocket client handshake data was received (but still not required).
+ * called when an incoming websocket connection is received and all
+ * websocket client handshake data was received (but not yet replied).
  *
- * This handler differs from \ref nopoll_ctx_set_on_accept this
- * handler is called after all client handshake data was received.
+ * This handler differs from \ref nopoll_ctx_set_on_accept in that this
+ * one is called after all client handshake data was received.
  *
  * Note the connection is still not fully working at this point
  * because the handshake hasn't been sent to the remote peer yet. This
@@ -565,14 +661,14 @@ void           nopoll_ctx_set_on_open (noPollCtx            * ctx,
 				       noPollActionHandler    on_open,
 				       noPollPtr              user_data)
 {
+	/* NOTE: a NULL handler is rejected by the check above, so the
+	 * handler cannot be uninstalled through this function (unlike
+	 * \ref nopoll_ctx_set_on_msg, which does accept NULL) */
 	nopoll_return_if_fail (ctx, ctx && on_open);
 
 	/* set the handler */
-	ctx->on_open = on_open;
-	if (ctx->on_open == NULL)
-		ctx->on_open_data = NULL;
-	else
-		ctx->on_open_data = user_data;
+	ctx->on_open      = on_open;
+	ctx->on_open_data = user_data;
 	return;
 }
 
@@ -603,14 +699,12 @@ void           nopoll_ctx_set_on_ready (noPollCtx          * ctx,
 					noPollActionHandler  on_ready,
 					noPollPtr            user_data)
 {
+	/* see note at nopoll_ctx_set_on_open () about NULL handlers */
 	nopoll_return_if_fail (ctx, ctx && on_ready);
 
 	/* set the handler */
-	ctx->on_ready = on_ready;
-	if (ctx->on_ready == NULL)
-		ctx->on_ready_data = NULL;
-	else
-		ctx->on_ready_data = user_data;
+	ctx->on_ready      = on_ready;
+	ctx->on_ready_data = user_data;
 	return;
 }
 
@@ -632,14 +726,12 @@ void              nopoll_ctx_set_on_accept (noPollCtx            * ctx,
 					    noPollActionHandler    on_accept,
 					    noPollPtr              user_data)
 {
+	/* see note at nopoll_ctx_set_on_open () about NULL handlers */
 	nopoll_return_if_fail (ctx, ctx && on_accept);
 
 	/* set the handler */
-	ctx->on_accept = on_accept;
-	if (ctx->on_accept == NULL)
-		ctx->on_accept_data = NULL;
-	else
-		ctx->on_accept_data = user_data;
+	ctx->on_accept      = on_accept;
+	ctx->on_accept_data = user_data;
 	return;
 }
 
@@ -686,6 +778,14 @@ void           nopoll_ctx_set_on_msg    (noPollCtx              * ctx,
  * See \ref noPollSslContextCreator for more information about this
  * handler.
  *
+ * @param ctx The context that will be configured.
+ *
+ * @param context_creator The handler to be called to create the
+ * SSL_CTX object. Passing NULL restores the default creation done by
+ * the library.
+ *
+ * @param user_data User defined pointer to be passed to the handler
+ * when it is called.
  */
 void           nopoll_ctx_set_ssl_context_creator (noPollCtx                * ctx,
 						   noPollSslContextCreator    context_creator,
@@ -743,10 +843,10 @@ void           nopoll_ctx_set_post_ssl_check (noPollCtx          * ctx,
  * @param user_data An optional reference to a pointer that will be
  * passed to the handler.
  *
- * @return Returns the connection selected (in the case the foreach
- * function returns nopoll_false) or NULL in the case all foreach
- * executions returned nopoll_true. Keep in mind the function also
- * returns NULL if ctx or foreach parameter is NULL.
+ * @return Returns the connection selected (that is, the one for which
+ * the foreach handler returned nopoll_true) or NULL in the case all
+ * foreach executions returned nopoll_false. Keep in mind the function
+ * also returns NULL if ctx or foreach parameter is NULL.
  *
  * See \ref noPollForeachConn for a signature example.
  */
@@ -771,17 +871,32 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
 		if (ctx->conn_list[iterator]) {
 
 			result = ctx->conn_list[iterator];
-			
+
+			/* acquire a reference before releasing the
+			 * mutex: otherwise another thread may
+			 * unregister and destroy this connection while
+			 * the handler below is using it */
+			nopoll_conn_ref (result);
+
+			/* release the mutex before calling user code:
+			 * the handler may call back into the API */
 			nopoll_mutex_unlock (ctx->ref_mutex);
-			
+
 			/* call to notify connection */
 			if (foreach (ctx, result, user_data)) {
-				
-				/* release here the mutex to protect connection list */
+
+				/* selected: drop our own reference and
+				 * report it to the caller (the mutex is
+				 * already released here) */
+				nopoll_conn_unref (result);
 				return result;
 			} /* end if */
 
-			/* realloc again */
+			/* not selected: drop our own reference */
+			nopoll_conn_unref (result);
+
+			/* acquire the mutex again to continue walking
+			 * the connection list */
 			nopoll_mutex_lock (ctx->ref_mutex);
 
 		} /* end if */
@@ -815,8 +930,12 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
  */ 
 void           nopoll_ctx_set_protocol_version (noPollCtx * ctx, int version)
 {
-	/* check input data */
-	nopoll_return_if_fail (ctx, ctx || version);
+	/* check input data
+	 *
+	 * NOTE: this used to check (ctx || version), which lets a NULL
+	 * ctx through whenever version is not 0, dereferencing it
+	 * right below */
+	nopoll_return_if_fail (ctx, ctx);
 
 	/* setup the new protocol version */
 	ctx->protocol_version = version;

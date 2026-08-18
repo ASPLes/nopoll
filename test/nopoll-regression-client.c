@@ -1539,8 +1539,44 @@ nopoll_bool test_13 (void)
 	if (! test_13_test (ctx, "another.server.com", "another.test.crt", "another.test.key")) 
 		return nopoll_false;
 
-	if (! test_13_test (ctx, "other.server.com", "other.test.crt", "other.test.key")) 
+	if (! test_13_test (ctx, "other.server.com", "other.test.crt", "other.test.key"))
 		return nopoll_false;
+
+	/* NOTE: nopoll_conn.c always looks up certificates with
+	 * serverName == NULL, so that path must be checked too.
+	 *
+	 * With only named certificates stored, the lookup must fall
+	 * back to reporting the first certificate of the list */
+	printf ("Test 13: checking lookup with serverName == NULL (fallback to first certificate)..\n");
+	if (! test_13_test (ctx, NULL, "test.crt", "test.key"))
+		return nopoll_false;
+
+	/* now install a certificate not associated to any serverName:
+	 * it must take precedence over the fallback above */
+	if (! nopoll_ctx_set_certificate (ctx, NULL, "default.test.crt", "default.test.key", NULL)) {
+		printf ("Test 13: unable to install certificate (no serverName)...\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 13: checking lookup with serverName == NULL (certificate without serverName)..\n");
+	if (! test_13_test (ctx, NULL, "default.test.crt", "default.test.key"))
+		return nopoll_false;
+
+	/* and the named ones must keep on being found */
+	if (! test_13_test (ctx, "another.server.com", "another.test.crt", "another.test.key"))
+		return nopoll_false;
+
+	/* check ctx API guards: these must not crash nor modify anything */
+	printf ("Test 13: checking noPollCtx API guards with NULL references..\n");
+	nopoll_ctx_set_protocol_version (NULL, 13);
+	if (nopoll_ctx_conns (NULL) != -1) {
+		printf ("Test 13: expected -1 when asking connections to a NULL context..\n");
+		return nopoll_false;
+	} /* end if */
+	if (nopoll_ctx_ref_count (NULL) != -1) {
+		printf ("Test 13: expected -1 when asking reference count to a NULL context..\n");
+		return nopoll_false;
+	} /* end if */
 
 	/* release ctx */
 	nopoll_ctx_unref (ctx);
