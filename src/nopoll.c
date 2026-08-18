@@ -224,15 +224,21 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 	/* get the amount of memory to be allocated */
 	size = nopoll_vprintf_len (chunk, args);
 
-	/* check result */
-	if (size == -1) {
+	/* check result: nopoll_vprintf_len () reports 0 when it is
+	 * unable to compute the length (the previous check for -1
+	 * could never be true) */
+	if (size <= 0) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to calculate the amount of memory for the strdup_printf operation");
 		return NULL;
 	} /* end if */
 
 	/* allocate memory */
 	result   = nopoll_new (char, size + 2);
-	
+	if (result == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to allocate memory for the strdup_printf operation");
+		return NULL;
+	} /* end if */
+
 	/* copy current size */
 #    if defined(NOPOLL_OS_WIN32) && ! defined (__GNUC__)
 	size = _vsnprintf_s (result, size + 1, size, chunk, args);
@@ -412,7 +418,11 @@ noPollPtr   nopoll_mutex_create (void)
  */
 void        nopoll_mutex_lock    (noPollPtr mutex)
 {
-	if (! __nopoll_mutex_lock)
+	/* NOTE: the mutex reference must be checked too (as this
+	 * function documents): when the user provided mutex_create
+	 * handler fails it reports NULL, and passing that NULL down to
+	 * the lock handler crashes inside the threading library */
+	if (! __nopoll_mutex_lock || mutex == NULL)
 		return;
 
 	/* call defined handler */
@@ -432,7 +442,8 @@ void        nopoll_mutex_lock    (noPollPtr mutex)
  */
 void        nopoll_mutex_unlock  (noPollPtr mutex)
 {
-	if (! __nopoll_mutex_unlock)
+	/* see note at nopoll_mutex_lock () about the NULL check */
+	if (! __nopoll_mutex_unlock || mutex == NULL)
 		return;
 
 	/* call defined handler */
@@ -452,7 +463,8 @@ void        nopoll_mutex_unlock  (noPollPtr mutex)
  */
 void        nopoll_mutex_destroy (noPollPtr mutex)
 {
-	if (! __nopoll_mutex_destroy)
+	/* see note at nopoll_mutex_lock () about the NULL check */
+	if (! __nopoll_mutex_destroy || mutex == NULL)
 		return;
 
 	/* call defined handler */
@@ -590,8 +602,9 @@ nopoll_bool nopoll_base64_decode (const char * content,
 {
 	BIO     * b64;
 	BIO     * bmem;
+	int       bytes_read;
 
-	if (content == NULL || output == NULL || length <= 0 || output_size == NULL)
+	if (content == NULL || output == NULL || length <= 0 || output_size == NULL || (*output_size) <= 0)
 		return nopoll_false;
 
 	/* create bio */
@@ -601,11 +614,25 @@ nopoll_bool nopoll_base64_decode (const char * content,
 	
 	/* push */
 	bmem  = BIO_push(b64, bmem);
-	
-	*output_size = BIO_read (bmem, output, *output_size);
-	output[*output_size] = 0;
+
+	/* reserve one position for the nul terminator added below:
+	 * without it, a full buffer makes the terminator to be written
+	 * one position past the end of the buffer provided */
+	bytes_read = BIO_read (bmem, output, (*output_size) - 1);
 
 	BIO_free_all (bmem);
+
+	/* check the read operation: BIO_read reports <= 0 when it
+	 * fails, and using that value directly caused a write before
+	 * the beginning of the buffer (output[-1]) */
+	if (bytes_read <= 0) {
+		*output_size = 0;
+		output[0]    = 0;
+		return nopoll_false;
+	} /* end if */
+
+	*output_size = bytes_read;
+	output[bytes_read] = 0;
 
 	return nopoll_true;
 }
@@ -698,6 +725,7 @@ nopoll_bool nopoll_nonce (char * buffer, int nonce_size)
 {
 	long int       random_value;
 	int            iterator;
+	int            amount;
 	struct timeval tv;
 
 	if (buffer == NULL || nonce_size <= 0)
@@ -709,7 +737,16 @@ nopoll_bool nopoll_nonce (char * buffer, int nonce_size)
 		gettimeofday (&tv, NULL);
 #endif
 
-		srand (time(0) * tv.tv_usec);
+		/* NOTE: seed the same generator that is used below:
+		 * calling srand () while taking values from random ()
+		 * only works because glibc aliases both, and leaves the
+		 * sequence at its default seed (that is, predictable)
+		 * on other C libraries */
+#if defined(NOPOLL_OS_WIN32)
+		srand ((unsigned int) (time (0) * tv.tv_usec));
+#else
+		srandom ((unsigned int) (time (0) * tv.tv_usec));
+#endif
 		__nopoll_nonce_init = nopoll_true;
 	} /* end if */
 
@@ -723,9 +760,16 @@ nopoll_bool nopoll_nonce (char * buffer, int nonce_size)
 		random_value = random ();
 #endif
 
-		/* copy into the buffer */
-		memcpy (buffer + iterator, &random_value, sizeof (random_value));
-		iterator += sizeof (random_value);
+		/* copy into the buffer taking care of the last chunk:
+		 * copying sizeof (random_value) unconditionally writes
+		 * past the end of the caller buffer whenever nonce_size
+		 * is not a multiple of that size */
+		amount = nonce_size - iterator;
+		if (amount > (int) sizeof (random_value))
+			amount = (int) sizeof (random_value);
+
+		memcpy (buffer + iterator, &random_value, amount);
+		iterator += amount;
 	} /* end while */
 
 	return nopoll_true;
@@ -772,16 +816,25 @@ void nopoll_show_byte (noPollCtx * ctx, char byte, const char * label) {
 }
 
 char * nopoll_int2bin (int a, char *buffer, int buf_size) {
-	int i;
+	int          i;
+	unsigned int value = (unsigned int) a;
+
+	/* NOTE: the function writes 32 positions going backwards, so
+	 * refuse to run when the buffer provided cannot hold them:
+	 * otherwise it writes before the beginning of the buffer */
+	if (buffer == NULL || buf_size < 32)
+		return buffer;
 
 	buffer += (buf_size - 1);
-	
+
 	for (i = 31; i >= 0; i--) {
-		*buffer-- = (a & 1) + '0';
-		
-		a >>= 1;
+		*buffer-- = (value & 1) + '0';
+
+		/* shift as unsigned: right shifting a negative signed
+		 * value is implementation defined */
+		value >>= 1;
 	}
-	
+
 	return buffer;
 }
 
@@ -809,10 +862,14 @@ void nopoll_int2bin_print (noPollCtx * ctx, int value) {
  */
 int    nopoll_get_16bit (const char * buffer)
 {
-	int high_part = buffer[0] << 8;
+	/* NOTE: mask each octet before shifting it. Shifting
+	 * buffer[0] directly relies on char being unsigned (it is not
+	 * on x86) and left shifting a negative value is undefined
+	 * behaviour, even though the final mask hides the result */
+	int high_part = (buffer[0] & 0x000000ff) << 8;
 	int low_part  = buffer[1] & 0x000000ff;
 
-	return (high_part | low_part) & 0x000000ffff;
+	return (high_part | low_part) & 0x0000ffff;
 }
 
 /** 
@@ -871,12 +928,15 @@ void   nopoll_set_32bit (int value, char * buffer)
  */
 int    nopoll_get_32bit (const char * buffer)
 {
-	int part1 = (int)(buffer[0] & 0x0ff) << 24;
-	int part2 = (int)(buffer[1] & 0x0ff) << 16;
-	int part3 = (int)(buffer[2] & 0x0ff) << 8;
-	int part4 = (int)(buffer[3] & 0x0ff);
+	/* NOTE: build the value using unsigned arithmetic: shifting an
+	 * octet >= 0x80 into bit 31 of a signed int overflows it,
+	 * which is undefined behaviour */
+	unsigned int part1 = ((unsigned int)(buffer[0] & 0x0ff)) << 24;
+	unsigned int part2 = ((unsigned int)(buffer[1] & 0x0ff)) << 16;
+	unsigned int part3 = ((unsigned int)(buffer[2] & 0x0ff)) << 8;
+	unsigned int part4 = ((unsigned int)(buffer[3] & 0x0ff));
 
-	return part1 | part2 | part3 | part4;
+	return (int) (part1 | part2 | part3 | part4);
 }
 
 extern nopoll_bool __nopoll_tls_was_init;

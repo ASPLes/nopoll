@@ -184,6 +184,97 @@ nopoll_bool test_01_base64 (void) {
 	return nopoll_true;
 }
 
+/**
+ * @internal Checks for the support functions at nopoll.c that are
+ * used all over the library: the nonce generator, base64 decoding
+ * failures and the integer accessors used to parse frame headers.
+ */
+nopoll_bool test_01_support (void) {
+
+	char  guarded[64];
+	char  value[4];
+	int   size;
+	int   iterator;
+	int   round;
+
+	printf ("Test 01-support: checking nopoll_nonce does not write past the size requested..\n");
+
+	/* ask for sizes that are not a multiple of sizeof (long int)
+	 * and check the rest of the area is left untouched. Several
+	 * rounds are done so a random value matching the pattern by
+	 * chance cannot hide the problem */
+	round = 0;
+	while (round < 20) {
+		memset (guarded, 0xAA, 64);
+
+		if (! nopoll_nonce (guarded, 13)) {
+			printf ("ERROR: expected to be able to create a nonce of 13 bytes..\n");
+			return nopoll_false;
+		} /* end if */
+
+		iterator = 13;
+		while (iterator < 64) {
+			if (guarded[iterator] != (char) 0xAA) {
+				printf ("ERROR: nopoll_nonce wrote past the size requested (position %d was modified)..\n", iterator);
+				return nopoll_false;
+			} /* end if */
+			iterator++;
+		} /* end while */
+
+		round++;
+	} /* end while */
+
+	printf ("Test 01-support: checking base64 decode reports failures..\n");
+
+	/* decoding invalid content must report failure: reporting
+	 * success left the caller using an undefined buffer */
+	memset (guarded, 0xBB, 64);
+	size = 16;
+	if (nopoll_base64_decode ("!!!!", 4, guarded + 32, &size)) {
+		printf ("ERROR: expected nopoll_base64_decode to fail with invalid content, but it reported success..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* and it must not touch memory before the buffer provided */
+	if (guarded[31] != (char) 0xBB) {
+		printf ("ERROR: nopoll_base64_decode wrote before the buffer provided..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* a valid decode must keep on working */
+	size = 64;
+	if (! nopoll_base64_decode ("VGhpcyBpcyBhIHRlc3Q=", 20, guarded, &size)) {
+		printf ("ERROR: expected nopoll_base64_decode to decode valid content..\n");
+		return nopoll_false;
+	} /* end if */
+	if (size != 14 || ! nopoll_cmp (guarded, "This is a test")) {
+		printf ("ERROR: expected to decode 'This is a test' (14 bytes) but found '%s' (%d bytes)..\n", guarded, size);
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 01-support: checking integer accessors with the high bit set..\n");
+
+	/* these values exercise the octets >= 0x80 used by frame
+	 * lengths, close codes and masks */
+	value[0] = (char) 0xff;
+	value[1] = (char) 0xfe;
+	if (nopoll_get_16bit (value) != 0xfffe) {
+		printf ("ERROR: expected nopoll_get_16bit to report 0xfffe but found 0x%x..\n", nopoll_get_16bit (value));
+		return nopoll_false;
+	} /* end if */
+
+	value[0] = (char) 0x80;
+	value[1] = (char) 0x00;
+	value[2] = (char) 0x00;
+	value[3] = (char) 0x01;
+	if (nopoll_get_32bit (value) != (int) 0x80000001) {
+		printf ("ERROR: expected nopoll_get_32bit to report 0x80000001 but found 0x%x..\n", nopoll_get_32bit (value));
+		return nopoll_false;
+	} /* end if */
+
+	return nopoll_true;
+}
+
 nopoll_bool test_01_masking (void) {
 
 	char         mask[4];
@@ -3409,6 +3500,13 @@ int main (int argc, char ** argv)
 		printf ("Test 01-base64: Library base64 support [   OK   ]\n");
 	}else {
 		printf ("Test 01-base64: Library base64 support [ FAILED ]\n");
+		return -1;
+	}
+
+	if (test_01_support ()) {
+		printf ("Test 01-support: library support functions [   OK   ]\n");
+	}else {
+		printf ("Test 01-support: library support functions [ FAILED ]\n");
 		return -1;
 	}
 
