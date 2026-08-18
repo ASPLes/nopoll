@@ -79,12 +79,12 @@ nopoll_bool                 nopoll_conn_set_sock_block         (NOPOLL_SOCKET so
 			return nopoll_false;
 		}
 #else
-		if ((flags = fcntl (socket, F_GETFL, 0)) < -1) {
+		if ((flags = fcntl (socket, F_GETFL, 0)) < 0) {
 			return nopoll_false;
 		} /* end if */
 
 		flags &= ~O_NONBLOCK;
-		if (fcntl (socket, F_SETFL, flags) < -1) {
+		if (fcntl (socket, F_SETFL, flags) < 0) {
 			return nopoll_false;
 		} /* end if */
 #endif
@@ -97,12 +97,12 @@ nopoll_bool                 nopoll_conn_set_sock_block         (NOPOLL_SOCKET so
 		}
 #else
 		/* unix case */
-		if ((flags = fcntl (socket, F_GETFL, 0)) < -1) {
+		if ((flags = fcntl (socket, F_GETFL, 0)) < 0) {
 			return nopoll_false;
 		}
-		
+
 		flags |= O_NONBLOCK;
-		if (fcntl (socket, F_SETFL, flags) < -1) {
+		if (fcntl (socket, F_SETFL, flags) < 0) {
 			return nopoll_false;
 		}
 #endif
@@ -272,8 +272,13 @@ NOPOLL_SOCKET __nopoll_conn_sock_connect_opts_internal (noPollCtx       * ctx,
 		/* create the socket (it is checked right after the switch) */
 		session      = socket (AF_INET6, SOCK_STREAM, 0);
 		break;
+	default:
+		/* unsupported transport requested: nothing was resolved
+		 * so there is nothing to release either */
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received unsupported transport value (%d), unable to create connection", transport);
+		return -1;
 	} /* end switch */
-	
+
 	if (session == NOPOLL_INVALID_SOCKET) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to create socket");
 
@@ -450,13 +455,13 @@ int nopoll_conn_log_ssl (noPollConn * conn)
 
 		/* dump error */
 		ERR_error_string_n (err, log_buffer, sizeof (log_buffer));
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "tls stack: err=%d, %s (find reason(code) at openssl/ssl.h)", err, log_buffer);
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "tls stack: err=%lu, %s (find reason(code) at openssl/ssl.h)", err, log_buffer);
 
 		/* Check for recoverable errors:
 		 * - openssl errstr 1409442E :: error:1409442E:SSL routines:SSL3_READ_BYTES:tlsv1 alert protocol version
 		 */
 		if (strstr (log_buffer, "1409442E")) 
-			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "tls stack: err=%d, %s :: found TLS mismatch (peers running different TLS versions)", err, log_buffer);
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "tls stack: err=%lu, %s :: found TLS mismatch (peers running different TLS versions)", err, log_buffer);
 
 		/* find error code position */
 		error_position = 0;
@@ -1045,7 +1050,14 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 				/* TLS post check failed */
 				nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "TLS/SSL post check function failed, dropping connection");
 				nopoll_conn_shutdown (conn);
-				return NULL;
+
+				/* release content and connection options
+				 * (like the rest of failure paths in this
+				 * function do) */
+				nopoll_free (content);
+				__nopoll_conn_opts_release_if_needed (options);
+
+				return conn;
 			} /* end if */
 		} /* end if */
 
@@ -2585,10 +2597,14 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 
 	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Processing content: %s", buffer); */
 	
-	/* ok, find the first : */
+	/* ok, find the first :
+	 *
+	 * NOTE: iterator == buffer_size must be checked before
+	 * accessing buffer[iterator]: otherwise the check below reads
+	 * one octet past the end of the buffer received */
 	while (iterator < buffer_size && buffer[iterator] && buffer[iterator] != ':')
 		iterator++;
-	if (buffer[iterator] != ':') {
+	if (iterator == buffer_size || buffer[iterator] != ':') {
 	        /* ensure print always ends */
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Expected to find mime header separator : but it wasn't found, buffer_size=%d, iterator=%d..",
 			    buffer_size, iterator);
@@ -2603,7 +2619,8 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 	iterator2 = iterator + 1;
 	while (iterator2 < buffer_size && buffer[iterator2] && buffer[iterator2] != '\n')
 		iterator2++;
-	if (buffer[iterator2] != '\n') {
+	/* same as above: do not read past the end of the buffer */
+	if (iterator2 == buffer_size || buffer[iterator2] != '\n') {
 	        nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, 
 			    "Expected to find mime header value end (10) but it wasn't found (iterator=%d, iterator2=%d, buffer_size=%d, for header: [%s], found value: [%d])..",
 			    iterator, iterator2, buffer_size, (*header), (int)buffer[iterator2]);
@@ -2695,6 +2712,7 @@ char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_k
 	/* now convert into base64 */
 	if (! nopoll_base64_encode ((const char *) buffer, md_len, (char *) accept_key, &accept_key_size)) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to base64 sec-websocket-key value..");
+		nopoll_free (accept_key);
 		return NULL;
 	}
 
@@ -2797,7 +2815,11 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 
 	/* produce accept key */
 	accept_key = nopoll_conn_produce_accept_key (ctx, conn->handshake->websocket_key);
-	
+	if (accept_key == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to produce Sec-WebSocket-Accept value for the reply, closing session");
+		return nopoll_false;
+	} /* end if */
+
 	/* ok, send handshake reply */
 	if (conn->protocols || conn->accepted_protocol) {
 		/* set protocol in the reply taking preference by the
@@ -2853,14 +2875,25 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 		return nopoll_false;
 	} /* end if */
 
-	/* check accept value here */
+	/* check accept value here: the value expected is the one
+	 * derived from the Sec-WebSocket-Key we sent (recorded at
+	 * conn->handshake->expected_accept) and it must match the
+	 * Sec-WebSocket-Accept replied by the listener (recorded at
+	 * conn->handshake->websocket_accept).
+	 *
+	 * NOTE: this used to derive the key from
+	 * conn->handshake->websocket_key, which is never set at client
+	 * side, and to compare it against that same NULL value, so
+	 * nopoll_cmp (NULL, NULL) reported ok and the reply from the
+	 * server was never really checked (RFC 6455, section 4.1) */
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Checking accept key from listener..");
-	accept = nopoll_conn_produce_accept_key (ctx, conn->handshake->websocket_key);
-	
-	result = nopoll_cmp (accept, conn->handshake->websocket_key);
+	accept = nopoll_conn_produce_accept_key (ctx, conn->handshake->expected_accept);
+
+	result = nopoll_cmp (accept, conn->handshake->websocket_accept);
 	if (! result) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept connection Sec-Websocket-Accept %s is not expected %s, closing session",
-			    accept, conn->handshake->websocket_key);
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to accept connection: received Sec-Websocket-Accept %s but expected %s, closing session",
+			    conn->handshake->websocket_accept ? conn->handshake->websocket_accept : "<not defined>",
+			    accept ? accept : "<not defined>");
 		nopoll_conn_shutdown (conn);
 	}
 	nopoll_free (accept);
@@ -2920,8 +2953,11 @@ int nopoll_conn_complete_handshake_listener (noPollCtx * ctx, noPollConn * conn,
 
 	/* handle content */
 	if (nopoll_ncmp (buffer, "GET ", 4)) {
-		/* get url method */
-		nopoll_conn_get_http_url (conn, buffer, buffer_size, "GET", &conn->get_url);
+		/* get url method: in the case it fails, the function
+		 * already shut down the connection, so stop processing
+		 * instead of continuing to read lines over it */
+		if (! nopoll_conn_get_http_url (conn, buffer, buffer_size, "GET", &conn->get_url))
+			return 0;
 		return 1;
 	} /* end if */
 
@@ -3284,7 +3320,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	} /* end if */
 
 	if (conn->previous_msg) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reading bytes (previously read %d) from a previous unfinished frame (pending: %d) over conn-id=%d",
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Reading bytes (previously read %ld) from a previous unfinished frame (pending: %d) over conn-id=%d",
 			    conn->previous_msg->payload_size, conn->previous_msg->remain_bytes, conn->id);
 
 		if (conn->read_pending_header) {
@@ -3337,7 +3373,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			/* update remaining bytes */
 			msg->payload_size = msg->remain_bytes;
 			nopoll_free (msg->payload);
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "reusing noPollMsg reference (%p) since last payload read was 0, remaining: %d", msg,
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "reusing noPollMsg reference (%p) since last payload read was 0, remaining: %ld", msg,
 				    msg->payload_size);
 		}
 
@@ -3566,7 +3602,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		} /* end if */
 
 		/* received close frame with content, try to read the content */
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Proper connection close frame received id=%d with content bytes=%d, reading reason..", 
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Proper connection close frame received id=%d with content bytes=%ld, reading reason..", 
 			    conn->id, msg->payload_size);
 	} /* end if */
 
@@ -3708,7 +3744,7 @@ read_payload:
 
 	/* now unmask content (if required) */
 	if (msg->is_masked) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Unmasking (payload size %d, mask: %d, msg: %p, desp: %d)", 
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Unmasking (payload size %ld, mask: %d, msg: %p, desp: %d)", 
 			    msg->payload_size, nopoll_get_32bit (msg->mask), msg, msg->unmask_desp);
 		nopoll_conn_mask_content (conn->ctx, (char*) msg->payload, msg->payload_size, (char*) msg->mask, msg->unmask_desp);
 
@@ -3724,8 +3760,8 @@ read_payload:
 
 		/* try to read reason and report those values */
 		if (msg->payload_size >= 2) {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Close frame received id=%d with content bytes=%d, peer status=%d, peer reason=%s, reading reason..", 
-				    conn->id, msg->payload_size, nopoll_get_16bit (msg->payload), msg->payload + 2);
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Close frame received id=%d with content bytes=%ld, peer status=%d, peer reason=%s, reading reason..", 
+				    conn->id, msg->payload_size, nopoll_get_16bit (msg->payload), (const char *) msg->payload + 2);
 
 			/* get values so the user can get them */
 			conn->peer_close_status = nopoll_get_16bit ((const char *) msg->payload);
@@ -3742,7 +3778,7 @@ read_payload:
 
 	/* Received ping frame with payload */
 	if (msg->payload_size != 0 && msg->op_code == NOPOLL_PING_FRAME) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PING received over connection id=%d and payload_size=%d, replying PONG",
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "PING received over connection id=%d and payload_size=%ld, replying PONG",
 			    conn->id, msg->payload_size);
 		nopoll_conn_send_pong (conn, nopoll_msg_get_payload_size (msg), (noPollPtr)nopoll_msg_get_payload (msg));
 		nopoll_msg_unref (msg);
@@ -3947,7 +3983,8 @@ int           nopoll_conn_send_binary (noPollConn * conn, const char * content, 
  */
 int           nopoll_conn_send_binary_fragment (noPollConn * conn, const char * content, long length)
 {
-	return __nopoll_conn_send_common (conn, content, length, nopoll_true, 0, NOPOLL_BINARY_FRAME);
+	/* do a send common operation with FIN = 0 */
+	return __nopoll_conn_send_common (conn, content, length, nopoll_false, 0, NOPOLL_BINARY_FRAME);
 }
 
 
@@ -4684,13 +4721,24 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 				
 				/* now send the rest of the content (without the header) */
 				bytes_written = conn->send (conn, send_buffer + header_size, length);
-				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Rest of content written %d (header size: %d, length: %d)", 
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Rest of content written %d (header size: %d, length: %ld)",
 					    bytes_written, header_size, length);
-				bytes_written = length + header_size;
+
+				/* account for what was really written: the
+				 * header (already confirmed) plus whatever
+				 * the second send reported. Assuming
+				 * length + header_size here hides partial
+				 * writes and makes the caller believe
+				 * everything was flushed */
+				if (bytes_written > 0)
+					bytes_written += header_size;
+				else
+					bytes_written = header_size;
 				nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "final bytes_written %d", bytes_written);
 			} else {
 				nopoll_log (conn->ctx, NOPOLL_LEVEL_WARNING, "Requested to write %d bytes for the header but %d were written",
 					    header_size, bytes_written);
+				nopoll_free (send_buffer);
 				return -1;
 			} /* end if */
 		} /* end if */
@@ -4774,7 +4822,7 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	if (conn->pending_write_bytes > 0) {
 		conn->pending_write = send_buffer;
 		conn->pending_write_desp = desp;
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Stored %d bytes starting from %d out of %d bytes (header size: %d)", 
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Stored %d bytes starting from %d out of %ld bytes (header size: %d)", 
 			    conn->pending_write_bytes, desp, length + header_size, header_size);
 	} else {
 		/* release memory */
@@ -4975,7 +5023,13 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 		/* create ssl context */
 		conn->ssl_ctx  = __nopoll_conn_get_ssl_context (ctx, conn, listener->opts, nopoll_false);
 		if (conn->ssl_ctx == NULL) {
-		        nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to get Ssl Context (conn->ssl_ctx = __nopoll_conn_get_ssl_context), function returned NULL");
+		        nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to get SSL context (conn->ssl_ctx = __nopoll_conn_get_ssl_context), function returned NULL");
+			nopoll_conn_shutdown (conn);
+			nopoll_ctx_unregister_conn (ctx, conn);
+
+			/* release connection options */
+			__nopoll_conn_opts_release_if_needed (options);
+
 			return nopoll_false;
 		} /* end if */
 
@@ -4984,7 +5038,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Setting up CA certificate: %s", options->ca_certificate);
 			if (SSL_CTX_load_verify_locations (conn->ssl_ctx, options->ca_certificate, NULL) != 1) {
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to configure CA certificate (%s), SSL_CTX_load_verify_locations () failed", options->ca_certificate);
-				return nopoll_false;
+				goto fail_accept_tls;
 			} /* end if */
 
 		} /* end if */
@@ -4992,7 +5046,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 		/* enable default verification paths */
 		if (SSL_CTX_set_default_verify_paths (conn->ssl_ctx) != 1) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to configure default verification paths, SSL_CTX_set_default_verify_paths () failed");
-			return nopoll_false;
+			goto fail_accept_tls;
 		} /* end if */
 
 		/* configure chain certificate */
@@ -5000,6 +5054,17 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Setting up chain certificate: %s", chainCertificate);
 			if (SSL_CTX_use_certificate_chain_file (conn->ssl_ctx, chainCertificate) != 1) {
 				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to configure chain certificate (%s), SSL_CTX_use_certificate_chain_file () failed", chainCertificate);
+
+			fail_accept_tls:
+				/* common cleanup for TLS setup failures:
+				 * shutdown, unregister and release options
+				 * like the rest of failure paths do */
+				nopoll_conn_shutdown (conn);
+				nopoll_ctx_unregister_conn (ctx, conn);
+
+				/* release connection options */
+				__nopoll_conn_opts_release_if_needed (options);
+
 				return nopoll_false;
 			} /* end if */
 		} /* end if */
@@ -5045,6 +5110,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 				    certificateFile, privateKey);
 			/* dump error stack */
 			nopoll_conn_shutdown (conn);
+			nopoll_ctx_unregister_conn (ctx, conn);
 
 			/* release connection options */
 			__nopoll_conn_opts_release_if_needed (options);

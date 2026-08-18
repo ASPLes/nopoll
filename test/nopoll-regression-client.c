@@ -3115,6 +3115,246 @@ nopoll_bool test_40 (void) {
 	return nopoll_true;
 }
 
+/**
+ * @internal Same check done by test_14 but using the binary fragment
+ * API: nopoll_conn_send_binary_fragment () must flag the frame with
+ * FIN = 0 so the remote peer waits for the completion frame instead of
+ * handling the piece as a complete message.
+ */
+nopoll_bool test_42 (void) {
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	noPollMsg  * msg;
+	int          iter;
+	nopoll_bool  result;
+
+	/* create context */
+	ctx = create_ctx ();
+
+	/* call to create a connection */
+	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 42: sending partial binary frame (Hel..)..\n");
+	if (nopoll_conn_send_binary_fragment (conn, "Hel", 3) != 3) {
+		printf ("ERROR: expected to be able to send Hel binary fragment..\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 42: sending completing binary frame (..lo)..\n");
+	if (nopoll_conn_send_binary (conn, "lo", 2) != 2) {
+		printf ("ERROR: expected to be able to send lo completion frame..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* wait for the reply */
+	iter = 0;
+	while ((msg = nopoll_conn_get_msg (conn)) == NULL) {
+
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR: received websocket connection close during wait reply..\n");
+			return nopoll_false;
+		} /* end if */
+
+		nopoll_sleep (10000);
+		iter++;
+
+		if (iter > 100)
+			break;
+	} /* end while */
+
+	if (msg == NULL) {
+		printf ("ERROR: expected to find a reply from the listener but NULL was received..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* check content received: getting "Hel" here means the
+	 * fragment was sent with FIN = 1, so the listener handled it
+	 * as a complete message instead of waiting for the rest */
+	result = nopoll_cmp ((char *) nopoll_msg_get_payload (msg), "Hello");
+	if (! result) {
+		printf ("ERROR: expected to find message 'Hello' but something different was received: '%s'..\n",
+			(const char *) nopoll_msg_get_payload (msg));
+	} /* end if */
+
+	/* unref message */
+	nopoll_msg_unref (msg);
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	return result;
+}
+
+/* internal API used by the test below to compute the Sec-WebSocket-Accept
+   value the same way the library does */
+char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_key);
+
+/**
+ * @internal Common function that creates a raw TCP listener (we need
+ * to reply a handcrafted handshake, which the regression listener
+ * cannot do), lets a noPoll client connect to it and replies a 101
+ * with either the right or a wrong Sec-WebSocket-Accept value.
+ *
+ * It checks the client accepts the connection only when the value
+ * replied is the one derived from the Sec-WebSocket-Key it sent
+ * (RFC 6455, section 4.1).
+ */
+nopoll_bool test_41_common_accept_key (const char * label, nopoll_bool send_valid_accept)
+{
+	noPollCtx          * ctx;
+	noPollConn         * conn;
+	NOPOLL_SOCKET        listener_sock;
+	NOPOLL_SOCKET        session;
+	struct sockaddr_in   addr;
+	char                 buffer[4096];
+	char                 key[128];
+	char               * accept_key = NULL;
+	char               * reply;
+	char               * key_start;
+	int                  bytes;
+	int                  iterator;
+	int                  tries;
+	int                  reuse  = 1;
+	nopoll_bool          result = nopoll_false;
+
+	printf ("Test %s: creating raw listener at 127.0.0.1:1250..\n", label);
+
+	/* create the raw listener */
+	listener_sock = socket (AF_INET, SOCK_STREAM, 0);
+	if (listener_sock == NOPOLL_INVALID_SOCKET) {
+		printf ("ERROR: unable to create raw listener socket..\n");
+		return nopoll_false;
+	} /* end if */
+
+	setsockopt (listener_sock, SOL_SOCKET, SO_REUSEADDR, (char *) &reuse, sizeof (reuse));
+
+	memset (&addr, 0, sizeof (addr));
+	addr.sin_family      = AF_INET;
+	addr.sin_addr.s_addr = inet_addr ("127.0.0.1");
+	addr.sin_port        = htons (1250);
+
+	if (bind (listener_sock, (struct sockaddr *) &addr, sizeof (addr)) != 0 || listen (listener_sock, 1) != 0) {
+		printf ("ERROR: unable to bind/listen at 127.0.0.1:1250, errno=%d..\n", errno);
+		nopoll_close_socket (listener_sock);
+		return nopoll_false;
+	} /* end if */
+
+	/* init context and connect to our raw listener */
+	ctx  = create_ctx ();
+	conn = nopoll_conn_new (ctx, "127.0.0.1", "1250", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		nopoll_close_socket (listener_sock);
+		return nopoll_false;
+	} /* end if */
+
+	/* accept the connection and read the client handshake */
+	session = accept (listener_sock, NULL, NULL);
+	if (session == NOPOLL_INVALID_SOCKET) {
+		printf ("ERROR: unable to accept the incoming connection, errno=%d..\n", errno);
+		nopoll_close_socket (listener_sock);
+		return nopoll_false;
+	} /* end if */
+
+	bytes = recv (session, buffer, sizeof (buffer) - 1, 0);
+	if (bytes <= 0) {
+		printf ("ERROR: expected to receive the client handshake but found %d bytes..\n", bytes);
+		nopoll_close_socket (session);
+		nopoll_close_socket (listener_sock);
+		return nopoll_false;
+	} /* end if */
+	buffer[bytes] = 0;
+
+	/* find the Sec-WebSocket-Key sent by the client */
+	key_start = strstr (buffer, "Sec-WebSocket-Key: ");
+	if (key_start == NULL) {
+		printf ("ERROR: unable to find Sec-WebSocket-Key inside the client handshake..\n");
+		nopoll_close_socket (session);
+		nopoll_close_socket (listener_sock);
+		return nopoll_false;
+	} /* end if */
+
+	key_start += 19; /* strlen ("Sec-WebSocket-Key: ") */
+	iterator   = 0;
+	while (iterator < ((int) sizeof (key) - 1) && key_start[iterator] && key_start[iterator] != '\r' && key_start[iterator] != '\n') {
+		key[iterator] = key_start[iterator];
+		iterator++;
+	} /* end while */
+	key[iterator] = 0;
+
+	printf ("Test %s: received Sec-WebSocket-Key: %s\n", label, key);
+
+	/* build the reply */
+	if (send_valid_accept) {
+		accept_key = nopoll_conn_produce_accept_key (ctx, key);
+	} else {
+		/* a syntactically valid but wrong accept value */
+		accept_key = nopoll_strdup ("AAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+	} /* end if */
+
+	if (accept_key == NULL) {
+		printf ("ERROR: unable to produce the Sec-WebSocket-Accept value for the reply..\n");
+		nopoll_close_socket (session);
+		nopoll_close_socket (listener_sock);
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test %s: replying Sec-WebSocket-Accept: %s (valid: %d)\n", label, accept_key, send_valid_accept);
+
+	reply = nopoll_strdup_printf ("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n",
+				      accept_key);
+	send (session, reply, strlen (reply), 0);
+
+	/* let the client process the reply */
+	tries = 50;
+	while (tries > 0) {
+		if (nopoll_conn_is_ready (conn))
+			break;
+		if (! nopoll_conn_is_ok (conn))
+			break;
+		nopoll_sleep (100000);
+		tries--;
+	} /* end while */
+
+	if (send_valid_accept) {
+		/* the handshake must be completed */
+		result = nopoll_conn_is_ok (conn) && nopoll_conn_is_ready (conn);
+		if (! result)
+			printf ("ERROR: expected the connection to be accepted after replying the right Sec-WebSocket-Accept..\n");
+	} else {
+		/* the connection must have been closed by the client */
+		result = ! nopoll_conn_is_ok (conn);
+		if (! result)
+			printf ("ERROR: expected the connection to be closed after replying a wrong Sec-WebSocket-Accept, but it is still working..\n");
+	} /* end if */
+
+	/* release everything */
+	nopoll_free (reply);
+	nopoll_free (accept_key);
+	nopoll_conn_close (conn);
+	nopoll_ctx_unref (ctx);
+	nopoll_close_socket (session);
+	nopoll_close_socket (listener_sock);
+
+	return result;
+}
+
+nopoll_bool test_41 (void) {
+	/* a listener replying the right accept value must be accepted */
+	if (! test_41_common_accept_key ("41", nopoll_true))
+		return nopoll_false;
+
+	/* a listener replying a wrong accept value must be rejected */
+	return test_41_common_accept_key ("41", nopoll_false);
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -3525,6 +3765,20 @@ int main (int argc, char ** argv)
 		printf ("Test 40: check max frame size configuration (ctx and conn opts)  [   OK    ]\n");
 	} else {
 		printf ("Test 40: check max frame size configuration (ctx and conn opts)  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_41 ()) {
+		printf ("Test 41: check client side Sec-WebSocket-Accept validation  [   OK    ]\n");
+	} else {
+		printf ("Test 41: check client side Sec-WebSocket-Accept validation  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_42 ()) {
+		printf ("Test 42: check binary fragment is sent with FIN = 0  [   OK    ]\n");
+	} else {
+		printf ("Test 42: check binary fragment is sent with FIN = 0  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 
