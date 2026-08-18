@@ -113,12 +113,14 @@ nopoll_bool nopoll_ncmp (const char * string1, const char * string2, int bytes)
 
 
 /** 
- * @brief Allows to produce an newly allocated string produced by the
+ * @brief Allows to produce a newly allocated string produced by the
  * chunk received plus arguments, using the printf-like format.
  *
- * @param chunk The chunk to copy.
- * 
- * @return A newly allocated chunk.
+ * @param chunk The printf-like format used to build the result. It is
+ * followed by the arguments the format requires.
+ *
+ * @return A newly allocated string that must be released by the
+ * caller using \ref nopoll_free, or NULL if it fails.
  */
 char      * nopoll_strdup_printf   (const char * chunk, ...)
 {
@@ -152,13 +154,13 @@ char      * nopoll_strdup_printf   (const char * chunk, ...)
  * <i><b>NOTE:</b> not all printf specification is supported. Generally, the
  * following is supported: %s, %d, %f, %g, %ld, %lg and all
  * combinations that provides precision, number of items inside the
- * integer part, etc: %6.2f, %+2d, etc. An especial case not supported
+ * integer part, etc: %6.2f, %+2d, etc. A special case not supported
  * is %lld, %llu and %llg.</i>
  *
  * @return Return the number of bytes that must be allocated to hold
- * the string (including the string terminator \0). If the format is
- * not correct or it is not properly formated according to the value
- * found at the argument set, the function will return -1.
+ * the string (including the string terminator \0). The function
+ * returns 0 when a NULL format is received or when the underlying
+ * vsnprintf () call reports a failure.
  */
 int nopoll_vprintf_len (const char * format, va_list args)
 {
@@ -242,12 +244,19 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 	return result;
 }
 
-/** 
- * @internal Function used by \ref nopoll_trim.
+/**
+ * @brief Allows to check if the first character of the provided string
+ * is a white space (space, tab, new line or carriage return). Used by
+ * \ref nopoll_trim.
+ *
+ * @param chunk The string whose first character will be checked.
+ *
+ * @return nopoll_true when the first character is a white space,
+ * otherwise nopoll_false (also when a NULL reference is received).
  */
 nopoll_bool        nopoll_is_white_space  (char * chunk)
 {
-	/* do not complain about receive a null refernce chunk */
+	/* do not complain about receiving a null reference chunk */
 	if (chunk == NULL)
 		return nopoll_false;
 	
@@ -391,12 +400,12 @@ noPollPtr   nopoll_mutex_create (void)
 
 /** 
  * @brief Implements a mutex lock operation on the provided
- * reference. The function just skip when no mutex reference is
- * received o no lock handler was defined.
+ * reference. The function just skips when no mutex reference is
+ * received or no lock handler was defined.
  *
  * See \ref nopoll_thread_handlers for more information.
  *
- * @param mutex The mutex where do the lock operation. 
+ * @param mutex The mutex where the lock operation will be done.
  *
  * The function will just return if the reference isn't defined or the
  * lock handler wasn't installed.
@@ -413,12 +422,12 @@ void        nopoll_mutex_lock    (noPollPtr mutex)
 
 /** 
  * @brief Implements a mutex unlock operation on the provided
- * reference. The function just skip when no mutex reference is
- * received o no unlock handler was defined.
+ * reference. The function just skips when no mutex reference is
+ * received or no unlock handler was defined.
  *
  * See \ref nopoll_thread_handlers for more information.
  *
- * @param mutex The mutex where do the unlock operation. 
+ * @param mutex The mutex where the unlock operation will be done.
  *
  */
 void        nopoll_mutex_unlock  (noPollPtr mutex)
@@ -433,12 +442,12 @@ void        nopoll_mutex_unlock  (noPollPtr mutex)
 
 /** 
  * @brief Implements a mutex destroy operation on the provided
- * reference. The function just skip when no mutex reference is
- * received o no destroy handler was defined.
+ * reference. The function just skips when no mutex reference is
+ * received or no destroy handler was defined.
  *
  * See \ref nopoll_thread_handlers for more information.
  *
- * @param mutex The mutex to destroy operation. 
+ * @param mutex The mutex to be destroyed. 
  *
  */
 void        nopoll_mutex_destroy (noPollPtr mutex)
@@ -452,8 +461,8 @@ void        nopoll_mutex_destroy (noPollPtr mutex)
 }
 
 /** 
- * @brief Global optional mutex handlers used by noPoll library to
- * create, destroy, lock and unlock mutex.
+ * @brief Allows to install the optional global mutex handlers used by
+ * the noPoll library to create, destroy, lock and unlock mutexes.
  *
  * If you set this handlers, the library will use these functions to
  * secure sensitive code paths that mustn't be protected while working
@@ -496,15 +505,18 @@ void        nopoll_thread_handlers (noPollMutexCreate  mutex_create,
  * @param length Content byte-length to encode.
  *
  * @param output Reference to the already allocated buffer where to
- * place the output.
+ * place the output. The result is left nul-terminated.
  *
- * @param output_size The buffer size.
+ * @param output_size In/out parameter: on input it must hold the size
+ * of the buffer provided at \p output. When the buffer is too small
+ * the function fails and leaves in this variable the size required to
+ * hold the result.
  *
  * @return nopoll_true if the conversion was properly done, otherwise
  * nopoll_false is returned. The function also returns nopoll_false in
  * the case some parameter is not defined.
  */
-nopoll_bool nopoll_base64_encode (const char  * content, 
+nopoll_bool nopoll_base64_encode (const char  * content,
 				  int           length, 
 				  char        * output, 
 				  int         * output_size)
@@ -558,12 +570,14 @@ nopoll_bool nopoll_base64_encode (const char  * content,
  *
  * @param content The content to be decoded.
  *
- * @param length Content byte-length to encode.
+ * @param length Content byte-length to decode.
  *
  * @param output Reference to the already allocated buffer where to
- * place the output.
+ * place the output. The result is left nul-terminated.
  *
- * @param output_size The buffer size.
+ * @param output_size In/out parameter: on input it must hold the size
+ * of the buffer provided at \p output; on return it holds the amount
+ * of bytes decoded.
  *
  * @return nopoll_true if the conversion was properly done, otherwise
  * nopoll_false is returned. The function also returns nopoll_false in
@@ -603,14 +617,19 @@ nopoll_bool nopoll_base64_decode (const char * content,
  *
  * @param a First parameter to substract
  *
- * @param b Second parameter to substract
+ * @param b Second parameter to substract.
  *
- * @param result Result variable. Do no used a or b to place the
+ * NOTE: this parameter is modified by the function: its fields are
+ * normalized (carry applied) so the subtraction can be done. The
+ * instant it represents does not change, but do not rely on its
+ * fields keeping the exact values passed in.
+ *
+ * @param result Result variable. Do not use a or b to place the
  * result.
  *
- * @return 1 if the difference is negative, otherwise 0 (operations
+ * @return 1 if the difference is negative, otherwise 0 (operation
  * implemented is a - b).
- */ 
+ */
 int     nopoll_timeval_substract                  (struct timeval * a, 
 						   struct timeval * b,
 						   struct timeval * result)
@@ -658,15 +677,22 @@ nopoll_bool __nopoll_nonce_init = nopoll_false;
 
 /** 
  * @brief Fills the buffer provided with a random nonce of the
- * requested size. The function try to read random bytes from the
- * local PRNG to complete the bytes requested on the buffer..
+ * requested size. The function fills the buffer with values taken
+ * from the C library pseudo random number generator (random () or
+ * rand () according to the platform), seeded on first use.
  *
- * @param buffer The buffer where the output is left
+ * NOTE: this is not a cryptographically secure source. It is enough
+ * for the Sec-WebSocket-Key value required by RFC 6455, which only
+ * needs to be unpredictable enough to prevent caching intermediaries
+ * from confusing responses, but it must not be used for key material.
  *
- * @param nonce_size The size of the requested nonce to written into the caller buffer.
+ * @param buffer The buffer where the output is left. It must be able
+ * to hold at least \p nonce_size bytes.
+ *
+ * @param nonce_size The size of the requested nonce to be written into the caller buffer.
  *
  * @return nopoll_true if the nonce was created otherwise nopoll_false
- * is returned.
+ * is returned (which only happens when wrong parameters are received).
  */
 nopoll_bool nopoll_nonce (char * buffer, int nonce_size)
 {
@@ -795,7 +821,7 @@ int    nopoll_get_16bit (const char * buffer)
  *
  * @param buffer The buffer pointer to extract the 8bit integer from.
  *
- * @erturn The 8 bit integer value found at the buffer pointer.
+ * @return The 8 bit integer value found at the buffer pointer.
  */
 int    nopoll_get_8bit  (const char * buffer)
 {
@@ -839,7 +865,7 @@ void   nopoll_set_32bit (int value, char * buffer)
 /** 
  * @brief Allows to get a 32bits integer value from the buffer.
  *
- * @param buffer The buffer where the integer will be retreived from.
+ * @param buffer The buffer where the integer will be retrieved from.
  *
  * @return The integer value reported by the buffer.
  */
@@ -877,9 +903,9 @@ void nopoll_cleanup_library (void)
 		/* notify the library isn't initialized */
 		__nopoll_tls_was_init = nopoll_false;
 	} /* end if */
-	
+
 	return;
-} /* end if */
+}
 
 /**
  * @}
@@ -890,21 +916,21 @@ void nopoll_cleanup_library (void)
  *
  * \section intro noPoll: a toolkit to add WebSocket support to your project
  *
- * <b>noPoll</b> is a clean implemetnation of the <b>RFC 6455 : The Websocket protocol</b> definition, written in <b>ANSI C</b>.
+ * <b>noPoll</b> is a clean implementation of the <b>RFC 6455 : The Websocket protocol</b> definition, written in <b>ANSI C</b>.
  *
  * Some of its features are:
  *
  * - Context based API design making the library stateless. Support to run several execution contexts in the same process.
  * - Support for stream based API and message based API (handler notified)
  * - Robust and well tested implementation checked by a strong regression test to ensure the library keeps on working as new features are added.
- * - Flexible design that allows its integration into a external loop or to use its own waiting loop
+ * - Flexible design that allows its integration into an external loop or to use its own waiting loop
  * - Support for port share which allows running native protocol and WebSocket protocol on the same port.
  *
  * noPoll has been developed by <b>Advanced Software Production Line,
  * S.L.</b> (http://www.aspl.es). It is \ref license "licensed under the LGPL 2.1"
  * which allows open source and commercial usage.
  *
- * noPoll manual is available in the following link: 
+ * noPoll manual is available in the following links: 
  *
  * - \ref nopoll_core_library_manual
  * - \ref license
@@ -966,7 +992,7 @@ void nopoll_cleanup_library (void)
  * - \ref nopoll_implementing_tls_extended_validation_post_check
  * - \ref nopoll_implementing_tls_context_creator
  *
- * <b>Section 4: Android platfom notes: </b>
+ * <b>Section 4: Android platform notes: </b>
  * 
  * - \ref nopoll_android_usage "4.1 Android noPoll's usage"
  *
@@ -981,7 +1007,7 @@ void nopoll_cleanup_library (void)
  * itself. 
  *
  * After having that library installed in your system (check your OS
- * documentation), download lastest tar.gz noPoll library from: http://www.aspl.es/nopoll/downloads
+ * documentation), download latest tar.gz noPoll library from: http://www.aspl.es/nopoll/downloads
  *
  * Then, to compile the library follow the standard autoconf voodoo:
  *
@@ -1006,10 +1032,10 @@ void nopoll_cleanup_library (void)
  * >> ./nopoll-regression-client
  * \endcode
  *
- * <b>Notes about preparing sources if you use SVN/GIT from https://github.com/asples/nopoll</b>
+ * <b>Notes about preparing sources if you use GIT from https://github.com/ASPLes/nopoll</b>
  *
- * In the case you want to work directly using SVN latest sources,
- * just download them from githubt as usual from: https://github.com/asples/nopoll
+ * In the case you want to work directly using the latest sources,
+ * just clone them from github as usual from: https://github.com/ASPLes/nopoll
  *
  * After that, run the following command to prepare all compilation files:
  *
@@ -1042,7 +1068,7 @@ void nopoll_cleanup_library (void)
  *
  * \code
  * dnl check for websocket support (through noPoll)
- * AC_ARG_ENABLE(websocket-support, [  --disable-websocket-support  Makes the built with WebSocket extension library], 
+ * AC_ARG_ENABLE(websocket-support, [  --disable-websocket-support  Build with WebSocket extension library support], 
  *	      enable_websocket_support="$enableval", 
  *	      enable_websocket_support=yes)
  * if test "$enable_websocket_support" != "no" ; then
@@ -1092,7 +1118,7 @@ void nopoll_cleanup_library (void)
  *
  * \section creating_basic_web_socket_server 1.5. Creating a basic WebSocket server with noPoll (using noPoll own loop)
  *
- * \note Remember you can see many of the code already supported by noPoll by checking the nopoll regression listener at: https://dolphin.aspl.es/svn/publico/nopoll/trunk/test/nopoll-regression-listener.c
+ * \note Remember you can see much of the code already supported by noPoll by checking the nopoll regression listener at: https://github.com/ASPLes/nopoll/blob/master/test/nopoll-regression-listener.c
  *
  * Now let's see how to create a simple WebSocket server using noPoll own loop:
  * \code
@@ -1116,10 +1142,12 @@ void nopoll_cleanup_library (void)
  * \code
  * void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr  user_data) {
  *         // print the message (for debugging purposes) and reply
- *         printf ("Listener received (size: %d, ctx refs: %d): (first %d bytes, fragment: %d) '%s'\n", 
+ *         printf ("Listener received (size: %d, ctx refs: %d, fragment: %d): '%s'\n",
  *                 nopoll_msg_get_payload_size (msg),
- *                 nopoll_ctx_ref_count (ctx), shown, nopoll_msg_is_fragment (msg), example);
- *     
+ *                 nopoll_ctx_ref_count (ctx),
+ *                 nopoll_msg_is_fragment (msg),
+ *                 (const char *) nopoll_msg_get_payload (msg));
+ *
  *         // reply to the message
  *         nopoll_conn_send_text (conn, "Message received", 16);
  *   
@@ -1129,7 +1157,7 @@ void nopoll_cleanup_library (void)
  * 
  * \section creating_basic_web_socket_client 1.6. Creating a basic WebSocket client with noPoll
  *
- * \note Remember you can see many of the code already supported by noPoll by checking the nopoll regression client at: https://dolphin.aspl.es/svn/publico/nopoll/trunk/test/nopoll-regression-client.c
+ * \note Remember you can see much of the code already supported by noPoll by checking the nopoll regression client at: https://github.com/ASPLes/nopoll/blob/master/test/nopoll-regression-client.c
  *
  * The process of creating a WebSocket connection is really
  * simple. After creating a context (\ref noPollCtx) you connect to
@@ -1163,7 +1191,8 @@ void nopoll_cleanup_library (void)
  * \code
  * // send a message 
  * if (nopoll_conn_send_text (conn, "Hello there! this is a test", 27) != 27) {
- *         // send a message
+ *         // the message was not completely sent: see
+ *         // \ref nopoll_manual_retrying_write_operations
  * }
  * \endcode
  *
@@ -1177,9 +1206,9 @@ void nopoll_cleanup_library (void)
  *
  * - Use your already working I/O loop to wait for changes on the
  *   socket associated to the noPollConn object (see \ref
- *   nopoll_conn_socket). In the case of detecting changes on a master listener connection use to \ref nopoll_conn_accept to accept new incoming connections. In the case of detecting changes in connections with I/O, call to \ref nopoll_conn_get_msg to receive entire messages or \ref nopoll_conn_read (if you want to use streaming API).
+ *   nopoll_conn_socket). In the case of detecting changes on a master listener connection use \ref nopoll_conn_accept to accept new incoming connections. In the case of detecting changes in connections with I/O, call to \ref nopoll_conn_get_msg to receive entire messages or \ref nopoll_conn_read (if you want to use streaming API).
  *
- * \section nopoll_manual_handling_fragments_with_websocket 1.8 Will noPoll automatically integrate fragments into a single  message?.
+ * \section nopoll_manual_handling_fragments_with_websocket 1.8 Will noPoll automatically integrate fragments into a single message?
  *  
  * Ok, in general it does, however we would have to look into the
  * particular case to give a correct answer. That's because the term
@@ -1217,11 +1246,12 @@ void nopoll_cleanup_library (void)
  *
  * Every time you do a write operation (using for example \ref
  * nopoll_conn_send_text or \ref nopoll_conn_send_text_fragment) there
- * is a possibility that the write operation <b>failes because the socket
+ * is a possibility that the write operation <b>fails because the socket
  * isn't capable to keep on accepting more data</b>.
  *
- * In that case, errno == 11 (or \ref NOPOLL_EWOULDBLOCK) is returned
- * so you can check this to later retry the write operation.
+ * In that case, errno is set to \ref NOPOLL_EWOULDBLOCK (11 on Linux,
+ * but the value is platform dependent so always compare against the
+ * macro) so you can check this to later retry the write operation.
  *
  * Because websocket involves sending headers that already includes
  * the size of the message sent, <b>you can't just retry by calling again
@@ -1257,7 +1287,7 @@ void nopoll_cleanup_library (void)
  *                  // ok, unable to write all data but that data is waiting to be flushed
  *                  // you can return here and then make your application to retry again or
  *                  // try it right now, but with a little pause before continue
- *                  nopoll_sleep (10000); // lets wait 10ns
+ *                  nopoll_sleep (10000); // lets wait 10 milliseconds
  *
  *                  // flush and check if write operation completed
  *                  if (nopoll_conn_complete_pending_write (conn) == 0)
@@ -1283,7 +1313,7 @@ void nopoll_cleanup_library (void)
  * here (second part) but let the engine looping and waiting for this
  * WebSocket to retry later, letting the overall application to keep
  * on doing other things meanwhile (like writing or handling I/O in other
- * connections) rather than locking the caller (as the example do).
+ * connections) rather than locking the caller (as the example does).
  *
  * Knowing this, if you want a ready to use function that implements
  * concept (for the second part), you can directly use:
@@ -1296,7 +1326,7 @@ void nopoll_cleanup_library (void)
  * // do write operation 
  * bytes_written = nopoll_conn_send_text (conn, content, length);
  *
- * // complete pending write by flushing and limitting operation for 2 seconds
+ * // complete pending write by flushing and limiting operation for 2 seconds
  * // pass to the function bytes_written as returned by nopoll_conn_send_text
  * bytes_written = nopoll_conn_flush_writes (conn, 2000000, bytes_written);
  *
@@ -1319,7 +1349,7 @@ void nopoll_cleanup_library (void)
  *
  * - 1. Let the legacy application to accept the socket by the standard call accept ()
  *
- * - 2. Then, call to recv (socket, buffer[3], 3, MSG_PEEK); to get just 3 bytes from the socket without removing them from the queue.
+ * - 2. Then, call to recv (socket, bytes, 3, MSG_PEEK); (where bytes is a char array of at least 3 positions) to get just 3 bytes from the socket without removing them from the queue.
  *
  * - 3. Then check with something like the following to know if the incoming connection seems to be a WebSocket one or not:
  *
@@ -1327,9 +1357,9 @@ void nopoll_cleanup_library (void)
  *  // detect tls conn 
  *  nopoll_bool is_tls_conn = bytes[0] == 22 && bytes[1] == 3 && bytes[2] == 1;
  *
- *  // detect then both values (TLS WebSocket and just WebScoket)
- *  if (! axl_memcmp ("GET", bytes, 3) && ! is_tls_conn)
- *          return nopoll_false; // nothing detected here (it doesn't seems
+ *  // detect then both values (TLS WebSocket and just WebSocket)
+ *  if (memcmp ("GET", bytes, 3) != 0 && ! is_tls_conn)
+ *          return nopoll_false; // nothing detected here (it does not seem
  *			         // to be a websocket connection) continue as normal
  *  
  *  // nice, it seems we've found an incoming WebSocket connection
@@ -1402,7 +1432,7 @@ void nopoll_cleanup_library (void)
  *  // create listener	    
  *  listener2 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1239");
  *  if (! nopoll_conn_is_ok (listener2)) {
- *	printf ("ERROR: Expected to find proper listener TLS connection status (:1236, SSLv23), but found..\n");
+ *	printf ("ERROR: Expected to find proper listener TLS connection status (:1239), but found..\n");
  *	return -1;
  *  } 
  * \endcode
@@ -1413,7 +1443,7 @@ void nopoll_cleanup_library (void)
  * peer's certificate which usually is not provided). However, this is
  * not true for clients which is by default enabled (of course, client
  * must always verify server's certificate when connecting with
- * TLS/SSL, was we have said, this can be controlled by \ref
+ * TLS/SSL, as we have said, this can be controlled by \ref
  * nopoll_conn_opts_ssl_peer_verify too).
  *
  * Now, in the case you want to provide client certificate for a
@@ -1455,7 +1485,7 @@ void nopoll_cleanup_library (void)
  * {
  *        
  *       // Do here some additional checks on the certificate received (using SSL_CTX and SSL). 
- *       // I the case of error, return nopoll_false to ensure the connection is not accepted. 
+ *       // In the case of error, return nopoll_false to ensure the connection is not accepted. 
  *            
  *       return nopoll_true; // to accept connection 
  * }
@@ -1467,7 +1497,7 @@ void nopoll_cleanup_library (void)
  *    cert = SSL_get_peer_certificate (SSL);
  * \endcode
  *
- * \section nopoll_implementing_tls_context_creator  3.3. Creating TLS/SSL context to implement especific validation options
+ * \section nopoll_implementing_tls_context_creator  3.3. Creating TLS/SSL context to implement specific validation options
  *
  * In the case you want to create the SSL_CTX/SSL object so it uses
  * certain configurations like chain certificates, etc, so that the
@@ -1491,7 +1521,10 @@ void nopoll_cleanup_library (void)
  * SSL_CTX * your_ssl_context_creator (noPollCtx * ctx, noPollConn * conn, noPollConnOpts * opts, nopoll_bool is_client, noPollPtr user_data)
  * {
  *     // very basic context creation using default settings provided by OpenSSL
- *     return SSL_CTX_new (is_client ? TLSv1_client_method () : TLSv1_server_method ()); 
+ *     // NOTE: use the flexible method (TLS_client_method/TLS_server_method) so the
+ *     // highest protocol version supported by both peers is negotiated. The old
+ *     // TLSv1_*_method () calls are deprecated and removed in OpenSSL 1.1 and later.
+ *     return SSL_CTX_new (is_client ? TLS_client_method () : TLS_server_method ());
  * }
  * \endcode
  *
@@ -1587,21 +1620,21 @@ void nopoll_cleanup_library (void)
  * \section nopoll_using_install_bundle Using the install bundle
  *
  * Assuming previous information, please, uncompress
- * nopoll-VERSION-instal.zip bundle. Inside it, you'll find a
+ * nopoll-VERSION-install.zip bundle. Inside it, you'll find a
  * "install" folder that inside includes the following structure:
  * 
  * \code
  * install/<android-platform>/lib/&lt;arch>/{libfiles}.so
  * \endcode
  * 
- * That way, if you need ready to use compiled libraries for android-21, arch mips64, the look at:
- * 
+ * That way, if you need ready to use compiled libraries for android-21, arch mips64, then look at:
+ *
  * \code
- * install/android-21/&lt;arch>/lib/mips64/{libfiles}.so files.
+ * install/android-21/lib/mips64/{libfiles}.so
  * \endcode
  * 
  * You might wonder why don't use a &lt;android-platform>/&lt;arch>/lib
- * scheme? That's good question.  This is because Android
+ * scheme? That is a good question.  This is because Android
  * architectural design. See "Native code in app packages" in the
  * following link https://developer.android.com/ndk/guides/abis.html
  * to know more about this structure.
@@ -1646,13 +1679,13 @@ void nopoll_cleanup_library (void)
  * 1) Compiler flags:
  *     
  * \code
- *    CFLAGS="-I/full/arm/android-14/include -I/full/arm/android-14/include/vortex -I/full/arm/android-14/include/axl -I/full/arm/android-14/include/nopoll"
+ *    CFLAGS="-I/full/arm/android-14/include -I/full/arm/android-14/include/nopoll"
  * \endcode
- * 
+ *
  * 2) Linker flags:
- * 
+ *
  * \code
- *    LDFLAGS=" -L/full/arm/android-14/lib -lvortex -lvortex-tls-1.1 -l axl -lssl -lcrypto -lpthread -pthread -lm"
+ *    LDFLAGS="-L/full/arm/android-14/lib -lnopoll -lssl -lcrypto -lpthread -pthread -lm"
  * \endcode
  * 
  * 3) And your compiler must match the target platform, for example, for ARM:
@@ -1674,12 +1707,12 @@ void nopoll_cleanup_library (void)
  * \page license noPoll License
  *
  * \section licence_intro noPoll terms of use
- * The noPoll is release under the terms of the Lesser General
+ * noPoll is released under the terms of the Lesser General
  * Public license (LGPL). You can find it at
  * http://www.gnu.org/licenses/licenses.html#LGPL.
  *
  * The main implication this license has is that you are allowed to
- * use the noPoll for commercial application as well on open
+ * use the noPoll for commercial applications as well as on open
  * source application using GPL/LGPL compatible licenses. 
  *
  * Restrictions for proprietary development are the following: 
@@ -1702,14 +1735,14 @@ void nopoll_cleanup_library (void)
  * Statically linking noPoll or any other component based on GPL/LGPL
  * <b>is strictly forbidden by the license</b> unless all components
  * taking part into the final products are all of them GPL, LGPL, MIT,
- * Bsds, etc, or similar licenses that allow an end user or the
+ * BSD, etc, or similar licenses that allow an end user or the
  * customer to download the entire product source code and clear
  * instructions to rebuild it.
  *
  * If the library is being used by a proprietary product the only
  * allowed option is dynamic linking (so final user is capable of
  * updating that dynamic linked part) or a practical procedure where
- * the propritary binary object along with the instructions to relink
+ * the proprietary binary object along with the instructions to relink
  * the LGPL part (including an update or modification of it) is
  * provided.
  * 
@@ -1717,7 +1750,7 @@ void nopoll_cleanup_library (void)
  * be able to rebuild those components by introducing updates or
  * improvements.
  * 
- * Thus, statically linking a LGPL components without considering
+ * Thus, statically linking an LGPL component without considering
  * previous points takes away this user/customer right because he/she
  * cannot replace/update that LGPL component anymore unless you can
  * have access to the whole solution.
