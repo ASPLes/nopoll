@@ -23,6 +23,11 @@
 #ifndef __NOPOLL_CONFIG_H__
 #define __NOPOLL_CONFIG_H__
 
+/* required for INT_PTR, used by nopoll_socket_is_valid () to compare a
+ * SOCKET (an unsigned type on Windows) through a signed type of the
+ * same width. The 64bit configuration header already includes it */
+#include <basetsd.h>
+
 /**
  * \addtogroup nopoll_decl_module
  * @{

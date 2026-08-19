@@ -589,6 +589,8 @@ typedef enum {
 
 BEGIN_C_DECLS
 
+nopoll_bool nopoll_socket_is_valid (NOPOLL_SOCKET socket);
+
 noPollPtr  nopoll_calloc  (size_t count, size_t size);
 
 noPollPtr  nopoll_realloc (noPollPtr ref, size_t size);

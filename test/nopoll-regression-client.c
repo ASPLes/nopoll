@@ -3319,6 +3319,107 @@ nopoll_bool test_42 (void) {
 	return result;
 }
 
+/**
+ * @internal Checks the parameter validation paths of the listener
+ * creation API, which were not covered by any test: they are the ones
+ * that reject wrong host/port values before touching the network.
+ */
+nopoll_bool test_43 (void) {
+
+	noPollCtx  * ctx;
+	noPollConn * listener;
+	noPollConn * conn;
+	noPollConn * accepted;
+
+	/* init context */
+	ctx = create_ctx ();
+
+	printf ("Test 43: checking listener creation with a NULL port..\n");
+	/* NOTE: this used to evaluate strlen (NULL) and crash */
+	listener = nopoll_listener_new (ctx, "0.0.0.0", NULL);
+	if (listener != NULL) {
+		printf ("ERROR: expected to fail creating a listener without port, but a listener was reported..\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 43: checking listener creation with an empty port..\n");
+	listener = nopoll_listener_new (ctx, "0.0.0.0", "");
+	if (listener != NULL) {
+		printf ("ERROR: expected to fail creating a listener with an empty port, but a listener was reported..\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 43: checking listener creation with a NULL host..\n");
+	listener = nopoll_listener_new (ctx, NULL, "1251");
+	if (listener != NULL) {
+		printf ("ERROR: expected to fail creating a listener without host, but a listener was reported..\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 43: checking IPv6 listener rejects an IPv4 address..\n");
+	listener = nopoll_listener_new6 (ctx, "0.0.0.0", "1251");
+	if (listener != NULL) {
+		printf ("ERROR: expected to fail creating an IPv6 listener over 0.0.0.0, but a listener was reported..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* and after all those failures, a normal listener must keep on
+	 * working (that is, nothing was left in a broken state) */
+	printf ("Test 43: checking a regular listener still works after the failures..\n");
+	listener = nopoll_listener_new (ctx, "0.0.0.0", "1251");
+	if (! nopoll_conn_is_ok (listener)) {
+		printf ("ERROR: expected to create a proper listener at 0.0.0.0:1251..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (nopoll_conn_role (listener) != NOPOLL_ROLE_MAIN_LISTENER) {
+		printf ("ERROR: expected the listener to report NOPOLL_ROLE_MAIN_LISTENER role..\n");
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_conn_close (listener);
+
+	/* now check the remote host recorded for a connection accepted
+	 * over IPv6: reading it into a sockaddr_in truncated the
+	 * address, so every IPv6 connection was reporting 0.0.0.0 */
+	printf ("Test 43: checking remote host reported for an IPv6 accepted connection..\n");
+	listener = nopoll_listener_new6 (ctx, "::1", "1253");
+	if (! nopoll_conn_is_ok (listener)) {
+		printf ("ERROR: expected to create a proper IPv6 listener at ::1:1253..\n");
+		return nopoll_false;
+	} /* end if */
+
+	conn = nopoll_conn_new6 (ctx, "::1", "1253", NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: expected to connect to the IPv6 listener at ::1:1253..\n");
+		return nopoll_false;
+	} /* end if */
+
+	accepted = nopoll_conn_accept (ctx, listener);
+	if (accepted == NULL) {
+		printf ("ERROR: expected to accept the incoming IPv6 connection..\n");
+		return nopoll_false;
+	} /* end if */
+
+	if (! nopoll_cmp (nopoll_conn_host (accepted), "::1")) {
+		printf ("ERROR: expected to find remote host '::1' for the accepted IPv6 connection but found '%s'..\n",
+			nopoll_conn_host (accepted) ? nopoll_conn_host (accepted) : "<null>");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 43: IPv6 accepted connection reports host=%s port=%s\n",
+		nopoll_conn_host (accepted), nopoll_conn_port (accepted));
+
+	nopoll_conn_close (accepted);
+	nopoll_conn_close (conn);
+	nopoll_conn_close (listener);
+
+	/* release context */
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 /* internal API used by the test below to compute the Sec-WebSocket-Accept
    value the same way the library does */
 char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_key);
@@ -3913,6 +4014,13 @@ int main (int argc, char ** argv)
 		printf ("Test 42: check binary fragment is sent with FIN = 0  [   OK    ]\n");
 	} else {
 		printf ("Test 42: check binary fragment is sent with FIN = 0  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_43 ()) {
+		printf ("Test 43: check listener creation parameter validation  [   OK    ]\n");
+	} else {
+		printf ("Test 43: check listener creation parameter validation  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

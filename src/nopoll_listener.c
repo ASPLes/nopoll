@@ -47,18 +47,83 @@
  * @{
  */
 
-/* 
- * @internal Implementation used by all sock listener functions.
+/**
+ * @internal Fills the host and port strings out of the socket address
+ * provided, supporting both IPv4 and IPv6.
+ *
+ * PORTABILITY NOTE (inet_ntop): noPoll uses inet_ntop () instead of
+ * inet_ntoa (). inet_ntoa () keeps its result in a static buffer (so
+ * it is not thread safe: two connections accepted at the same time
+ * could report each other's address) and it cannot represent IPv6
+ * addresses at all. Platforms that only provide inet_ntoa () are NOT
+ * supported: this function is the only place that would have to be
+ * revisited to add such support, so grep for "PORTABILITY NOTE
+ * (inet_ntop)" if that need ever appears.
+ *
+ * @param addr The address to format, as reported by getsockname () or
+ * getpeername ().
+ *
+ * @param host Reference where the address will be left (newly
+ * allocated).
+ *
+ * @param port Reference where the port will be left (newly
+ * allocated).
+ *
+ * @return nopoll_true if both values were produced, otherwise
+ * nopoll_false.
+ */
+static nopoll_bool __nopoll_listener_get_host_port (struct sockaddr_storage  * addr,
+						    char                    ** host,
+						    char                    ** port)
+{
+	char   buffer[64];
+	int    _port;
+
+	memset (buffer, 0, sizeof (buffer));
+
+	if (addr->ss_family == AF_INET6) {
+		struct sockaddr_in6 * sin6 = (struct sockaddr_in6 *) addr;
+
+		if (inet_ntop (AF_INET6, &(sin6->sin6_addr), buffer, sizeof (buffer)) == NULL)
+			return nopoll_false;
+		_port = ntohs (sin6->sin6_port);
+	} else {
+		struct sockaddr_in * sin4 = (struct sockaddr_in *) addr;
+
+		if (inet_ntop (AF_INET, &(sin4->sin_addr), buffer, sizeof (buffer)) == NULL)
+			return nopoll_false;
+		_port = ntohs (sin4->sin_port);
+	} /* end if */
+
+	(*host) = nopoll_strdup (buffer);
+	(*port) = nopoll_strdup_printf ("%d", _port);
+
+	return (*host) != NULL && (*port) != NULL;
+}
+
+/**
+ * @internal Implementation used by all sock listener functions: it
+ * resolves the host/port received, creates the socket, binds it and
+ * leaves it listening.
+ *
+ * @return The listening socket, or a negative value if it fails: -1
+ * when the listener could not be created and -2 when wrong parameters
+ * were received.
  */
 NOPOLL_SOCKET     __nopoll_listener_sock_listen_internal      (noPollCtx        * ctx,
 							       noPollTransport    transport,
 							       const char       * host,
 							       const char       * port)
 {
-	struct sockaddr_in   sin;
+	/* NOTE: sockaddr_storage is required to hold an IPv6 address:
+	 * with a sockaddr_in, getsockname () reports success but
+	 * truncates the address */
+	struct sockaddr_storage sin;
 	NOPOLL_SOCKET        fd;
 	int                  tries;
 	struct addrinfo      hints, *res = NULL;
+	char               * local_host = NULL;
+	char               * local_port = NULL;
 
 #if defined(NOPOLL_OS_WIN32)
 	int                  sin_size  = sizeof (sin);
@@ -73,7 +138,10 @@ NOPOLL_SOCKET     __nopoll_listener_sock_listen_internal      (noPollCtx        
 
 	nopoll_return_val_if_fail (ctx, ctx,  -2);
 	nopoll_return_val_if_fail (ctx, host, -2);
-	nopoll_return_val_if_fail (ctx, port || strlen (port) == 0, -2);
+	/* NOTE: this check used to be (port || strlen (port) == 0),
+	 * which evaluates strlen (NULL) precisely when port is NULL:
+	 * passing NULL crashed instead of being rejected */
+	nopoll_return_val_if_fail (ctx, port && strlen (port) > 0, -2);
 
 	/* clear hints structure */
 	memset (&hints, 0, sizeof(struct addrinfo));
@@ -99,8 +167,11 @@ NOPOLL_SOCKET     __nopoll_listener_sock_listen_internal      (noPollCtx        
 		hints.ai_socktype = SOCK_STREAM;
 		hints.ai_flags    = AI_PASSIVE | AI_NUMERICHOST;
 
-		/* check value received */
-		if (memcmp (host, "0.0.0.0", 7) == 0) {
+		/* check value received
+		 *
+		 * NOTE: memcmp () was reading 7 octets unconditionally,
+		 * running past the end of shorter host values like "::1" */
+		if (nopoll_cmp (host, "0.0.0.0")) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received an address (%s) that is not a valid IPv6 address..", host);
 			return -1;
 		} /* end if */
@@ -111,14 +182,28 @@ NOPOLL_SOCKET     __nopoll_listener_sock_listen_internal      (noPollCtx        
 			return -1;
 		} /* end if */
 		break;
+	default:
+		/* unsupported transport: nothing was resolved, so there
+		 * is nothing to release either. Without this case res
+		 * stays NULL and it is dereferenced right below */
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received unsupported transport value (%d), unable to create listener", transport);
+		return -1;
 	} /* end switch */
 
 	/* create socket */
 	fd = socket (res->ai_family, res->ai_socktype, res->ai_protocol);
+	if (! nopoll_socket_is_valid (fd)) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "failed to create listener socket (errno=%d : %s)", errno, strerror (errno));
+		freeaddrinfo (res);
+		return -1;
+	} /* end if */
+
 	if (fd <= 2) {
 		/* do not allow creating sockets reusing stdin (0),
-		   stdout (1), stderr (2) */
+		   stdout (1), stderr (2): close the descriptor before
+		   reporting the failure, otherwise it is leaked */
 		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "failed to create listener socket: %d (errno=%d)", fd, errno);
+		nopoll_close_socket (fd);
 		freeaddrinfo (res);
 		return -1;
         } /* end if */
@@ -176,17 +261,31 @@ NOPOLL_SOCKET     __nopoll_listener_sock_listen_internal      (noPollCtx        
 	freeaddrinfo (res);
 	
 	if (listen(fd, ctx->backlog) == NOPOLL_SOCKET_ERROR) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "an error have occur while executing listen");
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "an error was found while executing listen () over socket %d (errno=%d : %s)",
+			    fd, errno, strerror (errno));
+		nopoll_close_socket (fd);
 		return -1;
         } /* end if */
 
-	/* notify listener */
-	if (getsockname (fd, (struct sockaddr *) &sin, &sin_size) < -1) {
+	/* notify listener
+	 *
+	 * NOTE: the check used to be (< -1), which is never true
+	 * because getsockname () reports -1 on failure, so errors were
+	 * silently ignored and the socket was leaked on that path */
+	if (getsockname (fd, (struct sockaddr *) &sin, &sin_size) < 0) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to get local address for socket %d (errno=%d : %s)",
+			    fd, errno, strerror (errno));
+		nopoll_close_socket (fd);
 		return -1;
 	} /* end if */
 
 	/* report and return fd */
-	nopoll_log  (ctx, NOPOLL_LEVEL_DEBUG, "running listener at %s:%d (socket: %d)", inet_ntoa(sin.sin_addr), ntohs (sin.sin_port), fd);
+	if (__nopoll_listener_get_host_port (&sin, &local_host, &local_port)) {
+		nopoll_log  (ctx, NOPOLL_LEVEL_DEBUG, "running listener at %s:%s (socket: %d)", local_host, local_port, fd);
+		nopoll_free (local_host);
+		nopoll_free (local_port);
+	} /* end if */
+
 	return fd;
 }
 
@@ -204,15 +303,26 @@ noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
 
 	nopoll_return_val_if_fail (ctx, ctx && host, NULL);
 
-	/* call to create the socket */
+	/* call to create the socket
+	 *
+	 * NOTE: the internal function also reports -2 when it receives
+	 * wrong parameters, and checking only against
+	 * NOPOLL_INVALID_SOCKET (-1) let that value through, building
+	 * a listener over an invalid socket. \ref nopoll_socket_is_valid
+	 * covers every failure indication */
 	session = __nopoll_listener_sock_listen_internal (ctx, transport, host, port);
-	if (session == NOPOLL_INVALID_SOCKET) {
+	if (! nopoll_socket_is_valid (session)) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to start listener error was: errno=%d", errno);
 		return NULL;
 	} /* end if */
 
-	/* create noPollConn ection object */
+	/* create the noPollConn object */
 	listener           = nopoll_new (noPollConn, 1);
+	if (listener == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory for the listener, closing socket %d", session);
+		nopoll_close_socket (session);
+		return NULL;
+	} /* end if */
 	listener->refs     = 1;
 	/* create mutex */
 	listener->ref_mutex = nopoll_mutex_create ();
@@ -226,7 +336,21 @@ noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
 	listener->port      = nopoll_strdup (port);
 
 	/* register connection into context */
-	nopoll_ctx_register_conn (ctx, listener);
+	if (! nopoll_ctx_register_conn (ctx, listener)) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to register listener into the context, unable to create listener");
+
+		/* release what was acquired so far: the context
+		 * reference is only taken on a successful
+		 * registration, so nopoll_conn_unref () must not be
+		 * used here */
+		nopoll_free (listener->host);
+		nopoll_free (listener->port);
+		nopoll_mutex_destroy (listener->handshake_mutex);
+		nopoll_mutex_destroy (listener->ref_mutex);
+		nopoll_free (listener);
+		nopoll_close_socket (session);
+		return NULL;
+	} /* end if */
 
 	/* configure default handlers */
 	listener->receive   = nopoll_conn_default_receive;
@@ -264,7 +388,7 @@ NOPOLL_SOCKET     nopoll_listener_sock_listen      (noPollCtx   * ctx,
  *
  * @param host The hostname or address interface to bind on.
  *
- * @param port The port where to listen, or NULL to use default port: 80.
+ * @param port The port where to listen. It is required: passing NULL or an empty string makes the function to fail.
  *
  * @return A reference to a \ref noPollConn object representing the
  * listener or NULL if it fails.
@@ -307,7 +431,7 @@ noPollConn      * nopoll_listener_new6 (noPollCtx  * ctx,
  *
  * @param host The hostname or address interface to bind on.
  *
- * @param port The port where to listen, or NULL to use default port: 80.
+ * @param port The port where to listen. It is required: passing NULL or an empty string makes the function to fail.
  *
  * @return A reference to a \ref noPollConn object representing the
  * listener or NULL if it fails.
@@ -355,7 +479,7 @@ noPollConn      * nopoll_listener_new_opts6 (noPollCtx      * ctx,
  *
  * @param host The hostname or address interface to bind on.
  *
- * @param port The port where to listen, or NULL to use default port: 80.
+ * @param port The port where to listen. It is required: passing NULL or an empty string makes the function to fail.
  *
  * @return A reference to a \ref noPollConn object representing the
  * listener or NULL if it fails.
@@ -406,9 +530,12 @@ noPollConn      * __nopoll_listener_tls_new_opts_internal (noPollCtx      * ctx,
 	if (! listener)
 		return listener;
 
-	/* setup TLS support */
+	/* setup TLS support
+	 *
+	 * NOTE: listener->opts is already configured by
+	 * __nopoll_listener_new_opts_internal (), so assigning it
+	 * again here was redundant */
 	listener->tls_on = nopoll_true;
-	listener->opts   = opts;
 
 	return listener;
 }
@@ -425,7 +552,7 @@ noPollConn      * __nopoll_listener_tls_new_opts_internal (noPollCtx      * ctx,
  *
  * @param host The hostname or address interface to bind on.
  *
- * @param port The port where to listen, or NULL to use default port: 80.
+ * @param port The port where to listen. It is required: passing NULL or an empty string makes the function to fail.
  *
  * @return A reference to a \ref noPollConn object representing the
  * listener or NULL if it fails.
@@ -468,7 +595,7 @@ noPollConn      * nopoll_listener_tls_new_opts6 (noPollCtx      * ctx,
  * @brief Allows to configure the TLS certificate and key to be used
  * on the provided connection.
  *
- * @param listener The listener that is going to be configured with the providing certificate and key.
+ * @param listener The listener that is going to be configured with the provided certificate and key.
  *
  * @param certificate The path to the public certificate file (PEM
  * format) to be used for every TLS connection received under the
@@ -513,17 +640,24 @@ nopoll_bool           nopoll_listener_set_certificate (noPollConn * listener,
 		/* check private file */
 		handle = fopen (chain_file, "r");
 		if (! handle) {
-			nopoll_log (listener->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to open chain certificate file from %s", private_key);
+			nopoll_log (listener->ctx, NOPOLL_LEVEL_CRITICAL, "Failed to open chain certificate file from %s", chain_file);
 			return nopoll_false;
 		} /* end if */
 		fclose (handle);
 	} /* end if */
 
-	/* copy certificates to be used */
+	/* copy certificates to be used
+	 *
+	 * NOTE: release any value configured by a previous call:
+	 * assigning over the previous pointers leaked them */
+	nopoll_free (listener->certificate);
+	nopoll_free (listener->private_key);
 	listener->certificate   = nopoll_strdup (certificate);
 	listener->private_key   = nopoll_strdup (private_key);
-	if (chain_file)
+	if (chain_file) {
+		nopoll_free (listener->chain_certificate);
 		listener->chain_certificate = nopoll_strdup (chain_file);
+	} /* end if */
 	    
 	nopoll_log (listener->ctx, NOPOLL_LEVEL_DEBUG, "Configured certificate: %s, key: %s, for conn id: %d",
 		    listener->certificate, listener->private_key, listener->id);
@@ -532,21 +666,37 @@ nopoll_bool           nopoll_listener_set_certificate (noPollConn * listener,
 	return nopoll_true;
 }
 
-/** 
- * @brief Creates a websocket listener from the socket provided.
+/**
+ * @brief Creates a websocket connection object from the socket
+ * provided, representing a connection already accepted by a listener:
+ * the object is created with role \ref NOPOLL_ROLE_LISTENER, not with
+ * \ref NOPOLL_ROLE_MAIN_LISTENER.
  *
- * @param ctx The context where the listener will be associated.
+ * The socket received must be a connected one, because the function
+ * queries the remote peer through getpeername () to record its
+ * address and port.
  *
- * @param session The session to associate to the listener.
+ * This is the function used to implement port sharing, where the
+ * socket is accepted by the application and then handed over to
+ * noPoll (see \ref nopoll_conn_accept_complete).
  *
- * @return A reference to a listener connection object or NULL if it
+ * @param ctx The context where the connection will be associated.
+ *
+ * @param session The already accepted socket to associate to the
+ * connection.
+ *
+ * @return A reference to the connection object created or NULL if it
  * fails.
  */
 noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 					    NOPOLL_SOCKET    session)
 {
 	noPollConn         * listener;
-	struct sockaddr_in   sin;
+	/* NOTE: sockaddr_storage is required to hold an IPv6 peer:
+	 * with a sockaddr_in, getpeername () reports success but the
+	 * address is truncated, so every IPv6 connection accepted was
+	 * recording 0.0.0.0 as remote host */
+	struct sockaddr_storage sin;
 #if defined(NOPOLL_OS_WIN32)
 	/* windows flavors */
 	int                  sin_size = sizeof (sin);
@@ -557,8 +707,12 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 
 	nopoll_return_val_if_fail (ctx, ctx && session > 0, NULL);
 	
-	/* create noPollConn ection object */
+	/* create the noPollConn object */
 	listener            = nopoll_new (noPollConn, 1);
+	if (listener == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to create the connection object");
+		return NULL;
+	} /* end if */
 	listener->refs      = 1;
 	/* create mutex */
 	listener->ref_mutex = nopoll_mutex_create ();
@@ -567,18 +721,39 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 	listener->ctx       = ctx;
 	listener->role      = NOPOLL_ROLE_LISTENER;
 
-	/* get peer value */
-	memset (&sin, 0, sizeof (struct sockaddr_in));
-	if (getpeername (session, (struct sockaddr *) &sin, &sin_size) < -1) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to get remote hostname and port");
+	/* get peer value
+	 *
+	 * NOTE: the check used to be (< -1), which is never true
+	 * because getpeername () reports -1 on failure, so a failure
+	 * went unnoticed and the connection was created recording
+	 * 0.0.0.0:0 as the remote peer */
+	memset (&sin, 0, sizeof (sin));
+	if (getpeername (session, (struct sockaddr *) &sin, &sin_size) < 0) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to get remote hostname and port (errno=%d : %s)", errno, strerror (errno));
+
+		/* release what was acquired so far (the connection is
+		 * not registered yet, so no context reference was
+		 * taken) */
+		nopoll_mutex_destroy (listener->handshake_mutex);
+		nopoll_mutex_destroy (listener->ref_mutex);
+		nopoll_free (listener);
 		return NULL;
 	} /* end if */
 
 	/* record host and port */
-	/* lock mutex here to protect inet_ntoa */
-	listener->host    = nopoll_strdup (inet_ntoa (sin.sin_addr));
-	/* release mutex here to protect inet_ntoa */
-	listener->port    = nopoll_strdup_printf ("%d", ntohs (sin.sin_port));
+	if (! __nopoll_listener_get_host_port (&sin, &(listener->host), &(listener->port))) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to format remote hostname and port for the connection received");
+
+		/* release what was acquired so far (the connection is
+		 * not registered yet, so no context reference was
+		 * taken) */
+		nopoll_free (listener->host);
+		nopoll_free (listener->port);
+		nopoll_mutex_destroy (listener->handshake_mutex);
+		nopoll_mutex_destroy (listener->ref_mutex);
+		nopoll_free (listener);
+		return NULL;
+	} /* end if */
 
 	/* configure default handlers */
 	listener->receive = nopoll_conn_default_receive;
@@ -587,7 +762,18 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 	/* register connection into context */
 	if (! nopoll_ctx_register_conn (ctx, listener)) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to register connection into the context, unable to create connection");
-		nopoll_conn_ref (listener);
+
+		/* NOTE: this used to call nopoll_conn_ref (), acquiring
+		 * a reference instead of releasing anything, so the
+		 * whole connection object was leaked. It cannot call
+		 * nopoll_conn_unref () either, because that would drop
+		 * a context reference that was never acquired (the
+		 * registration is what takes it) */
+		nopoll_free (listener->host);
+		nopoll_free (listener->port);
+		nopoll_mutex_destroy (listener->handshake_mutex);
+		nopoll_mutex_destroy (listener->ref_mutex);
+		nopoll_free (listener);
 		return NULL;
 	} /* end if */
 
@@ -601,7 +787,7 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 }
 
 /** 
- * @internal Public function that performs a TCP listener accept.
+ * @internal Function that performs a TCP listener accept.
  *
  * @param server_socket The listener socket where the accept()
  * operation will be called.
@@ -616,10 +802,19 @@ NOPOLL_SOCKET nopoll_listener_accept (NOPOLL_SOCKET server_socket)
 #else
 	socklen_t         addrlen;
 #endif
+	NOPOLL_SOCKET     result;
+
 	addrlen       = sizeof(struct sockaddr_in);
 
-	/* accept the connection new connection */
-	return accept (server_socket, (struct sockaddr *)&inet_addr, &addrlen);
+	/* accept the new connection, retrying when the call is
+	 * interrupted by a signal: an EINTR is not a failure */
+	while (nopoll_true) {
+		result = accept (server_socket, (struct sockaddr *)&inet_addr, &addrlen);
+		if (result == NOPOLL_INVALID_SOCKET && errno == NOPOLL_EINTR)
+			continue;
+
+		return result;
+	} /* end while */
 }
 
 /**

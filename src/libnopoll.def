@@ -207,6 +207,7 @@ nopoll_set_32bit
 nopoll_set_bit
 nopoll_show_byte
 nopoll_sleep
+nopoll_socket_is_valid
 nopoll_strdup
 nopoll_strdup_printf
 nopoll_strdup_printfv

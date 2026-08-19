@@ -827,9 +827,9 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 
 	session = socket;
 	/* create socket connection in a non block manner */
-	if (session == NOPOLL_INVALID_SOCKET)
+	if (! nopoll_socket_is_valid (session))
 		session = __nopoll_conn_sock_connect_opts_internal (ctx, transport, host_ip, host_port, options);
-	if (session == NOPOLL_INVALID_SOCKET) {
+	if (! nopoll_socket_is_valid (session)) {
 		/* release connection options */
 		__nopoll_conn_opts_release_if_needed (options);
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to connect to remote host %s:%s", host_ip, host_port);

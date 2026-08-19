@@ -366,7 +366,52 @@ void        nopoll_trim  (char * chunk, int * trimmed)
 	return;	
 }
 
-/** 
+/**
+ * @brief Allows to check if the socket value provided is a usable
+ * socket descriptor.
+ *
+ * Use this function instead of comparing against \ref
+ * NOPOLL_INVALID_SOCKET by hand. Several functions in the library
+ * report failures through negative values other than \ref
+ * NOPOLL_INVALID_SOCKET (for example \ref
+ * nopoll_listener_sock_listen, which reports -2 when it receives
+ * wrong parameters), and \ref NOPOLL_SOCKET is a signed type on UNIX
+ * but an unsigned one on Windows. That makes a plain comparison both
+ * easy to get wrong and hard to read, so this function keeps all
+ * those details inside the library.
+ *
+ * NOTE: this function only answers whether the value is a usable
+ * socket. It deliberately does not implement any additional policy,
+ * like the rejection of the descriptors associated to stdin, stdout
+ * and stderr done while creating listeners.
+ *
+ * @param socket The socket value to be checked, usually the value
+ * reported by a function that returns a \ref NOPOLL_SOCKET.
+ *
+ * @return nopoll_true when the value received can be used as a
+ * socket, otherwise nopoll_false.
+ */
+nopoll_bool nopoll_socket_is_valid (NOPOLL_SOCKET socket)
+{
+#if defined(NOPOLL_OS_WIN32)
+	/* SOCKET is unsigned on Windows, so a negative error code cast
+	 * into it lands at the top of the range and would not be
+	 * caught by comparing against INVALID_SOCKET alone: compare
+	 * through a signed type of the same width (INT_PTR, which is
+	 * provided by basetsd.h, included by the configuration
+	 * header) */
+	if (socket == NOPOLL_INVALID_SOCKET)
+		return nopoll_false;
+
+	return ((INT_PTR) socket) >= 0;
+#else
+	/* NOPOLL_SOCKET is a signed int here, so every failure
+	 * indication (NOPOLL_INVALID_SOCKET included) is negative */
+	return socket >= 0;
+#endif
+}
+
+/**
  * @brief Portable subsecond sleep. Suspends the calling thread during
  * the provided amount of time.
  *
