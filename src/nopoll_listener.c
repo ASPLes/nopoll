@@ -803,18 +803,32 @@ NOPOLL_SOCKET nopoll_listener_accept (NOPOLL_SOCKET server_socket)
 	socklen_t         addrlen;
 #endif
 	NOPOLL_SOCKET     result;
+	int               tries = 0;
 
 	addrlen       = sizeof(struct sockaddr_in);
 
-	/* accept the new connection, retrying when the call is
-	 * interrupted by a signal: an EINTR is not a failure */
-	while (nopoll_true) {
+	/* accept the new connection, retrying a bounded number of
+	 * times when the call is interrupted by a signal: an EINTR is
+	 * not a failure.
+	 *
+	 * NOTE: the retry is limited on purpose. The listener socket is
+	 * blocking, so this is not a busy loop (the process sleeps
+	 * inside accept () between signals), but retrying without a
+	 * limit would let a high rate of signals keep this function
+	 * from ever returning, taking the control away from the
+	 * caller. After exhausting the retries the error is reported
+	 * back so the caller decides what to do. */
+	while (tries < 5) {
 		result = accept (server_socket, (struct sockaddr *)&inet_addr, &addrlen);
-		if (result == NOPOLL_INVALID_SOCKET && errno == NOPOLL_EINTR)
+		if (result == NOPOLL_INVALID_SOCKET && errno == NOPOLL_EINTR) {
+			tries++;
 			continue;
+		} /* end if */
 
 		return result;
 	} /* end while */
+
+	return result;
 }
 
 /**
