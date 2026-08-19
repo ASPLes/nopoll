@@ -3420,6 +3420,84 @@ nopoll_bool test_43 (void) {
 	return nopoll_true;
 }
 
+/**
+ * @internal Checks the reference lifecycle of a noPollConnOpts object
+ * flagged for reuse and shared by every connection accepted by a
+ * listener. Nothing else in the suite exercises
+ * nopoll_conn_opts_set_reuse (), which is how the leak below survived.
+ */
+nopoll_bool test_44 (void) {
+
+	noPollCtx      * ctx;
+	noPollConnOpts * opts;
+	noPollConn     * listener;
+	noPollConn     * conn;
+	noPollConn     * accepted;
+	int              iterator;
+
+	printf ("Test 44: checking noPollConnOpts reference lifecycle with reuse enabled..\n");
+
+	ctx  = create_ctx ();
+	opts = nopoll_conn_opts_new ();
+	if (opts == NULL) {
+		printf ("ERROR: expected to create a connection options object..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* the documented way of reusing one options object across the
+	 * connections accepted by a listener: with reuse enabled the
+	 * object belongs to the caller */
+	nopoll_conn_opts_set_reuse (opts, nopoll_true);
+	nopoll_conn_opts_set_cookie (opts, "session=test-44");
+
+	listener = nopoll_listener_new_opts (ctx, opts, "0.0.0.0", "1254");
+	if (! nopoll_conn_is_ok (listener)) {
+		printf ("ERROR: expected to create a listener at 0.0.0.0:1254..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* accept a few connections: each one acquires a reference over
+	 * the options object and must release it when done */
+	iterator = 0;
+	while (iterator < 3) {
+		conn = nopoll_conn_new (ctx, "127.0.0.1", "1254", NULL, NULL, NULL, NULL);
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR: expected to connect to the listener (iteration %d)..\n", iterator);
+			return nopoll_false;
+		} /* end if */
+
+		accepted = nopoll_conn_accept (ctx, listener);
+		if (accepted == NULL) {
+			printf ("ERROR: expected to accept the incoming connection (iteration %d)..\n", iterator);
+			return nopoll_false;
+		} /* end if */
+
+		nopoll_conn_close (accepted);
+		nopoll_conn_close (conn);
+
+		iterator++;
+	} /* end while */
+
+	/* the object must be back to the single reference held by the
+	 * caller: every accepted connection acquired one and had to
+	 * release it. A bigger value means those references were
+	 * leaked and the object will never be released */
+	if (opts->refs != 1) {
+		printf ("ERROR: expected 1 reference over the options object after accepting %d connections, but found %d..\n",
+			iterator, opts->refs);
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_conn_close (listener);
+
+	/* reuse was enabled, so releasing it is up to us */
+	nopoll_conn_opts_free (opts);
+
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 /* internal API used by the test below to compute the Sec-WebSocket-Accept
    value the same way the library does */
 char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_key);
@@ -4021,6 +4099,13 @@ int main (int argc, char ** argv)
 		printf ("Test 43: check listener creation parameter validation  [   OK    ]\n");
 	} else {
 		printf ("Test 43: check listener creation parameter validation  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_44 ()) {
+		printf ("Test 44: check conn opts reference lifecycle (reuse)  [   OK    ]\n");
+	} else {
+		printf ("Test 44: check conn opts reference lifecycle (reuse)  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

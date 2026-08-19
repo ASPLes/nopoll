@@ -4916,6 +4916,17 @@ noPollConn * nopoll_conn_accept_socket (noPollCtx * ctx, noPollConn * listener, 
 
 /**
  * @internal Function to support accept listener operations.
+ *
+ * NOTE about the options object: this function is only reached from
+ * \ref nopoll_conn_accept_complete, which always acquires a reference
+ * over listener->opts before calling here. Therefore every exit path
+ * must drop exactly that reference with nopoll_conn_opts_unref ().
+ *
+ * Using __nopoll_conn_opts_release_if_needed () here was wrong: that
+ * function honours the reuse flag and skips the release, so with a
+ * listener configured through nopoll_conn_opts_set_reuse () every
+ * accepted connection leaked one reference and the options object was
+ * never released.
  */
 nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpts * options, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session, nopoll_bool tls_on) {
 
@@ -4930,7 +4941,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 		nopoll_ctx_unregister_conn (ctx, conn);
 
 		/* release connection options */
-		__nopoll_conn_opts_release_if_needed (options);
+		nopoll_conn_opts_unref (options);
 
 		return nopoll_false;
 	} /* end if */
@@ -4953,7 +4964,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			nopoll_ctx_unregister_conn (ctx, conn);
 
 			/* release connection options */
-			__nopoll_conn_opts_release_if_needed (options);
+			nopoll_conn_opts_unref (options);
 
 			return nopoll_false;
 		} /* end if */
@@ -5001,7 +5012,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			nopoll_ctx_unregister_conn (ctx, conn);
 
 			/* release connection options */
-			__nopoll_conn_opts_release_if_needed (options);
+			nopoll_conn_opts_unref (options);
 
 			return nopoll_false;
 		} /* end if */
@@ -5028,7 +5039,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			nopoll_ctx_unregister_conn (ctx, conn);
 
 			/* release connection options */
-			__nopoll_conn_opts_release_if_needed (options);
+			nopoll_conn_opts_unref (options);
 
 			return nopoll_false;
 		} /* end if */
@@ -5063,7 +5074,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 				nopoll_ctx_unregister_conn (ctx, conn);
 
 				/* release connection options */
-				__nopoll_conn_opts_release_if_needed (options);
+				nopoll_conn_opts_unref (options);
 
 				return nopoll_false;
 			} /* end if */
@@ -5083,7 +5094,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			nopoll_ctx_unregister_conn (ctx, conn);
 
 			/* release connection options */
-			__nopoll_conn_opts_release_if_needed (options);
+			nopoll_conn_opts_unref (options);
 
 			return nopoll_false;
 		} /* end if */
@@ -5098,7 +5109,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			nopoll_ctx_unregister_conn (ctx, conn);
 
 			/* release connection options */
-			__nopoll_conn_opts_release_if_needed (options);
+			nopoll_conn_opts_unref (options);
 
 			return nopoll_false;
 		}
@@ -5113,7 +5124,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			nopoll_ctx_unregister_conn (ctx, conn);
 
 			/* release connection options */
-			__nopoll_conn_opts_release_if_needed (options);
+			nopoll_conn_opts_unref (options);
 
 			return nopoll_false;
 		} /* end if */
@@ -5137,7 +5148,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 			nopoll_ctx_unregister_conn (ctx, conn);
 
 			/* release connection options */
-			__nopoll_conn_opts_release_if_needed (options);
+			nopoll_conn_opts_unref (options);
 
 			return nopoll_false;
 		} /* end if */
@@ -5155,7 +5166,7 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
 	} /* end if */
 
 	/* release connection options */
-	__nopoll_conn_opts_release_if_needed (options);
+	nopoll_conn_opts_unref (options);
 
 	return nopoll_true;
 }

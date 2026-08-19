@@ -101,16 +101,17 @@ void nopoll_conn_opts_set_ssl_protocol (noPollConnOpts * opts, noPollSslProtocol
 
 
 /** 
- * @brief Allows to certificate, private key and optional chain
- * certificate and ca for on a particular options that can be used for
- * a client and a listener connection.
+ * @brief Allows to configure the certificate, the private key and the
+ * optional chain certificate and CA certificate on a particular
+ * options object, which can be used both for a client and for a
+ * listener connection.
  *
  * @param opts The connection options where these settings will be
  * applied.
  *
  * @param certificate The certificate to use on the connection.
  *
- * @param private_key client_certificate private key.
+ * @param private_key The private key matching the certificate provided.
  *
  * @param chain_certificate Optional chain certificate to use 
  *
@@ -128,7 +129,18 @@ nopoll_bool        nopoll_conn_opts_set_ssl_certs    (noPollConnOpts * opts,
 {
 	if (opts == NULL)
 		return nopoll_false;
-	
+
+	/* release any value configured by a previous call: assigning
+	 * over the previous pointers leaked them */
+	nopoll_free (opts->certificate);
+	nopoll_free (opts->private_key);
+	nopoll_free (opts->chain_certificate);
+	nopoll_free (opts->ca_certificate);
+	opts->certificate       = NULL;
+	opts->private_key       = NULL;
+	opts->chain_certificate = NULL;
+	opts->ca_certificate    = NULL;
+
 	/* store certificate settings */
 	opts->certificate        = nopoll_strdup (certificate);
 	if (opts->certificate)
@@ -151,23 +163,30 @@ nopoll_bool        nopoll_conn_opts_set_ssl_certs    (noPollConnOpts * opts,
 }
 
 /** 
- * @brief Allows to disable peer ssl certificate verification. This is
- * not recommended for production enviroment. This affects in a
- * different manner to a listener connection and a client connection.
+ * @brief Allows to enable or disable peer ssl certificate
+ * verification for the connections created with these options.
+ * Disabling it is not recommended for a production environment.
  *
- * For a client connection, by default, peer verification is enabled
- * and this function may help to disable it during development or
- * other reasons.
+ * IMPORTANT: read carefully what the default is, because it depends
+ * on whether a \ref noPollConnOpts object is used at all:
  *
- * In the case of the servers (created by using \ref
- * nopoll_listener_new for example) this is not required because by
- * default peer verification is disabled by default.
+ * - When NO options object is provided, a client connection verifies
+ *   the certificate presented by the server.
+ *
+ * - When an options object created by \ref nopoll_conn_opts_new is
+ *   provided, verification starts DISABLED, so a client that only
+ *   wanted to configure something unrelated (a cookie, extra headers,
+ *   a frame size limit...) stops verifying the server certificate
+ *   unless this function is called with nopoll_true.
+ *
+ * For servers (created by using \ref nopoll_listener_new for example)
+ * verification of the client certificate is disabled by default, and
+ * this function is what enables the mutual authentication scenario.
  *
  * @param opts The connection option to configure.
  *
- * @param verify nopoll_true to disable verification
- * otherwise, nopoll_false should be used. By default SSL verification
- * is enabled.
+ * @param verify nopoll_true to ENABLE peer certificate verification,
+ * nopoll_false to disable it.
  *
  */
 void nopoll_conn_opts_ssl_peer_verify (noPollConnOpts * opts, nopoll_bool verify)
@@ -193,12 +212,14 @@ void        nopoll_conn_opts_set_cookie (noPollConnOpts * opts, const char * coo
 	if (opts == NULL)
 		return;
 
+	/* release any value configured by a previous call before
+	 * storing the new one: assigning over it leaked it */
+	nopoll_free (opts->cookie);
+	opts->cookie = NULL;
+
 	if (cookie_content) {
 		/* configure cookie content to be sent */
 		opts->cookie = nopoll_strdup (cookie_content);
-	} else {
-		nopoll_free (opts->cookie);
-		opts->cookie = NULL;
 	} /* end if */
 
 	return;
@@ -221,12 +242,14 @@ void        nopoll_conn_opts_set_extra_headers (noPollConnOpts * opts, const cha
 	if (opts == NULL)
 		return;
 
+	/* release any value configured by a previous call before
+	 * storing the new one: assigning over it leaked it */
+	nopoll_free (opts->extra_headers);
+	opts->extra_headers = NULL;
+
 	if (header_string) {
 		/* configure extra_header content to be sent */
 		opts->extra_headers = nopoll_strdup (header_string);
-	} else {
-		nopoll_free (opts->extra_headers);
-		opts->extra_headers = NULL;
 	} /* end if */
 
 	return;
@@ -237,7 +260,7 @@ void        nopoll_conn_opts_set_extra_headers (noPollConnOpts * opts, const cha
  * @brief Allows to skip origin check for an incoming connection.
  *
  * This option is highly not recommended because the Origin header
- * must be provided by all WebSocket clients so the the server side
+ * must be provided by all WebSocket clients so the server side
  * can check it.
  *
  * In most environments not doing so will make the connection to not succeed.
@@ -275,7 +298,7 @@ void        nopoll_conn_opts_skip_origin_check (noPollConnOpts * opts, nopoll_bo
  * @param opts The connection options to configure.
  *
  * @param add nopoll_bool Adds Origin header (either provided by user
- * or interred by the library). In case nopoll_false is provided, no
+ * or inferred by the library). In case nopoll_false is provided, no
  * Origin header will be added.
  *
  * By default this configuration option is set to nopoll_true. You do
@@ -324,7 +347,14 @@ nopoll_bool nopoll_conn_opts_ref (noPollConnOpts * opts)
 }
 
 /** 
- * @brief Allows to unref a reference acquired by \ref nopoll_conn_opts_ref
+ * @brief Allows to unref a reference acquired by \ref
+ * nopoll_conn_opts_ref.
+ *
+ * NOTE: this function and \ref nopoll_conn_opts_free share the same
+ * implementation: both drop one reference and release the object when
+ * the last one is dropped. They are kept apart only to express the
+ * intent at the call site (releasing a reference you acquired versus
+ * releasing an object you own).
  *
  * @param opts The connection opts to release.
  */
@@ -337,12 +367,12 @@ void        nopoll_conn_opts_unref (noPollConnOpts * opts)
 
 
 /** 
- * @brief Set reuse-flag be used on the API receiving this
+ * @brief Set reuse-flag to be used on the API receiving this
  * configuration object. By setting nopoll_true will cause the API to
  * not release the object when finished. Instead, the caller will be
  * able to use this object in additional API calls but, after
- * finishing, a call to \ref nopoll_conn_opts_set_reuse function is
- * required.
+ * finishing, a call to \ref nopoll_conn_opts_free is required to
+ * release it.
  *
  * @param opts The connection options object. 
  *
@@ -372,12 +402,14 @@ void nopoll_conn_opts_set_interface    (noPollConnOpts * opts, const char * _int
 	if (opts == NULL)
 		return;
 
+	/* release any value configured by a previous call before
+	 * storing the new one: assigning over it leaked it */
+	nopoll_free (opts->_interface);
+	opts->_interface = NULL;
+
 	if (_interface) {
 		/* configure interface */
 		opts->_interface = nopoll_strdup (_interface);
-	} else {
-		nopoll_free (opts->_interface);
-		opts->_interface = NULL;
 	} /* end if */
 
 	return;
@@ -418,6 +450,13 @@ void nopoll_conn_opts_set_max_frame_size (noPollConnOpts * opts, long int max_fr
 	return;
 }
 
+/**
+ * @internal Drops one reference from the options object provided,
+ * releasing it (and everything it holds) when the last reference is
+ * dropped.
+ *
+ * @param opts The options object whose reference is dropped.
+ */
 void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
 {
 	if (opts == NULL)
@@ -468,7 +507,7 @@ void nopoll_conn_opts_free (noPollConnOpts * opts)
 {
 	__nopoll_conn_opts_free_common (opts);
 	return;
-} /* end if */
+}
 
 /** 
  * @internal API. Do not use it. It may change at any time without any
