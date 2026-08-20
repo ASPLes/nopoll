@@ -343,7 +343,7 @@ nopoll_bool test_01 (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 	        printf ("ERROR: Expected to find proper client connection status, but found error (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d)..\n",
 			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET);
@@ -409,7 +409,7 @@ nopoll_bool test_02 (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
 			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
@@ -479,8 +479,8 @@ nopoll_bool test_02a (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	printf ("Test 02a: connecting IPv6 (::1:2234)..\n");
-	conn = nopoll_conn_new6 (ctx, "::1", "2234", NULL, NULL, NULL, NULL);
+	printf ("Test 02a: connecting IPv6 (::1:%s)..\n", regtest_port (2234));
+	conn = nopoll_conn_new6 (ctx, "::1", regtest_port (2234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
 			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
@@ -538,8 +538,8 @@ nopoll_bool test_02b (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	printf ("Test 02-b: creating connection localhost:1234 (errno=%d)\n", errno);
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	printf ("Test 02-b: creating connection localhost:%s (errno=%d)\n", regtest_port (1234), errno);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error.. (conn=%p, conn->session=%d, NOPOLL_INVALID_SOCKET=%d, errno=%d, strerr=%s)..\n",
 			conn, (int) nopoll_conn_socket (conn), (int) NOPOLL_INVALID_SOCKET, errno, strerror (errno));
@@ -598,7 +598,7 @@ nopoll_bool test_03 (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -667,7 +667,7 @@ nopoll_bool test_04 (int chunk_size) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -758,7 +758,7 @@ nopoll_bool test_04a (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -816,7 +816,7 @@ nopoll_bool test_04b (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -888,7 +888,7 @@ nopoll_bool test_04b (void) {
 	nopoll_conn_close (conn);
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -936,7 +936,7 @@ nopoll_bool test_04c (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1116,7 +1116,7 @@ nopoll_bool test_05 (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1168,7 +1168,7 @@ nopoll_bool test_06 (void) {
 	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
 
 	/* call to create a connection */
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1235), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1216,7 +1216,7 @@ nopoll_bool test_06a (void) {
 	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
 
 	/* call to create a connection */
-	conn = nopoll_conn_tls_new6 (ctx, opts, "::1", "2235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new6 (ctx, opts, "::1", regtest_port (2235), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1264,7 +1264,7 @@ nopoll_bool test_07 (void) {
 	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
 
 	/* call to create a connection */
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1235), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1306,7 +1306,7 @@ nopoll_bool test_08 (void) {
 	ctx = create_ctx ();
 
 	/* call to connect to TLS port expecting non-TLS protocol */
-	conn = nopoll_conn_new (ctx, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1235), NULL, NULL, NULL, NULL);
 
 	/* wait a bit 100ms */
 	nopoll_sleep (100000);
@@ -1337,7 +1337,7 @@ nopoll_bool test_09 (void) {
 	nopoll_ctx_set_protocol_version (ctx, 12);
 
 	/* call to connect to TLS port expecting non-TLS protocol */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 
 	/* wait a bit 100ms */
 	nopoll_sleep (100000);
@@ -1365,7 +1365,7 @@ nopoll_bool test_10 (void) {
 	ctx = create_ctx ();
 
 	/* call to connect from an origining that shouldn't be allowed */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, "http://deny.aspl.es");
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, "http://deny.aspl.es");
 
 	/* wait a bit 100ms */
 	nopoll_sleep (100000);
@@ -1393,7 +1393,7 @@ nopoll_bool test_11 (void) {
 	ctx = create_ctx ();
 
 	/* create a working connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 
 	if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
 		printf ("ERROR: Expected a FAILING connection status due to origing denied, but it working..\n");
@@ -1435,7 +1435,7 @@ nopoll_bool test_12 (void) {
 	iterator = 0;
 	while (iterator < 4000) {
 		/* create a working connection */
-		conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+		conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 		
 		if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
 			printf ("ERROR: Expected NOT to find a FAILING connection status, errno is=%d..\n", errno);
@@ -1605,7 +1605,7 @@ nopoll_bool test_14 (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1675,7 +1675,7 @@ nopoll_bool test_15 (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1749,7 +1749,7 @@ nopoll_bool test_16 (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -1921,7 +1921,7 @@ nopoll_bool test_17 (void) {
 	printf ("Test 17: created master listener (conn-id=%d, status=%d)\n", 
 		nopoll_conn_get_id (master), nopoll_conn_is_ok (master));
 	if (! nopoll_conn_is_ok (master)) {
-		printf ("ERROR: expected proper master listener at 0.0.0.0:2235 creation but a failure was found..\n");
+		printf ("ERROR: expected proper master listener at 0.0.0.0:%s creation but a failure was found..\n", regtest_port (2235));
 		return nopoll_false;
 	} /* end if */
 
@@ -2014,7 +2014,7 @@ nopoll_bool test_18 (void) {
 	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
 
 	/* call to create a connection */
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1235), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2052,7 +2052,7 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_SSLV23);
 
 	/* create connection */
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1236", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1236), NULL, NULL, NULL, NULL);
 
 	/* check connection */
 	if (! nopoll_conn_is_ok (conn)) {
@@ -2075,7 +2075,7 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_SSLV23);
 
 	/* create connection */
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1235), NULL, NULL, NULL, NULL);
 
 	/* check connection */
 	if (! nopoll_conn_is_ok (conn)) {
@@ -2097,7 +2097,7 @@ nopoll_bool test_19 (void) {
 
 	/* create connection */
 	printf ("Test 19: checking SSLv3 with TLSv1..\n");
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 
 	/* check connection */
 	if (nopoll_conn_is_ok (conn)) {
@@ -2123,7 +2123,7 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1);
 
 	/* create connection */
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1235), NULL, NULL, NULL, NULL);
 
 	/* check connection */
 	if (! nopoll_conn_is_ok (conn)) {
@@ -2146,7 +2146,7 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_1);
 
 	/* create connection */
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1238", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1238), NULL, NULL, NULL, NULL);
 
 	/* check connection */
 	if (! nopoll_conn_is_ok (conn)) {
@@ -2167,7 +2167,7 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_1);
 
 	/* create connection */
-	conn = nopoll_conn_tls_new6 (ctx, opts, "::1", "2238", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new6 (ctx, opts, "::1", regtest_port (2238), NULL, NULL, NULL, NULL);
 
 	/* check connection */
 	if (! nopoll_conn_is_ok (conn)) {
@@ -2191,7 +2191,7 @@ nopoll_bool test_19 (void) {
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_2);
 
 	/* create connection */
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1240", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1240), NULL, NULL, NULL, NULL);
 
 	/* check connection */
 	if (! nopoll_conn_is_ok (conn)) {
@@ -2256,7 +2256,7 @@ nopoll_bool test_21 (void) {
 
 	/* call to create a connection */
 	printf ("Test 21: check ssl connection (with auth certificate)..\n");
-	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", "1239", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, NULL, "localhost", regtest_port (1239), NULL, NULL, NULL, NULL);
 	if (nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to FAILURE client connection status, but ok..\n");
 		return nopoll_false;
@@ -2297,7 +2297,7 @@ nopoll_bool test_21 (void) {
 					NULL,
 					/* ca certificate */
 					"root.pem");
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1239", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1239), NULL, NULL, NULL, NULL);
 	if (! test_sending_and_check_echo (conn, "Test 21", "This is a test")) {
 		printf ("ERROR: it should WORK, client certificate isn't working..\n");
 		return nopoll_false;
@@ -2337,7 +2337,7 @@ nopoll_bool test_22 (void) {
 	ctx = create_ctx ();
 
 	/* create connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2378,7 +2378,7 @@ nopoll_bool test_22 (void) {
 	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
 
 	/* call to create a connection */
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1235), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2466,7 +2466,7 @@ nopoll_bool test_23 (void) {
 	ctx = create_ctx ();
 
 	/* create connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2481,7 +2481,7 @@ nopoll_bool test_23 (void) {
 	nopoll_conn_close (conn);
 
 	/* create connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2506,7 +2506,7 @@ nopoll_bool test_23 (void) {
 	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
 
 	/* call to create a connection */
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1235), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2522,7 +2522,7 @@ nopoll_bool test_23 (void) {
 	/* call to create a connection second connection */
 	opts = nopoll_conn_opts_new ();
 	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
-	conn = nopoll_conn_tls_new (ctx, opts, "localhost", "1235", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1235), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2560,7 +2560,7 @@ nopoll_bool test_24 (void) {
 	nopoll_conn_opts_set_cookie (opts, "theme=light; sessionToken=abc123");
 
 	/* create connection */
-	conn = nopoll_conn_new_opts (ctx, opts, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new_opts (ctx, opts, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2615,7 +2615,7 @@ nopoll_bool test_25_check_cookie (noPollCtx * ctx, const char * cookie) {
 	nopoll_conn_opts_set_cookie (opts, cookie);
 
 	/* create connection */
-	conn = nopoll_conn_new_opts (ctx, opts, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new_opts (ctx, opts, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2710,7 +2710,7 @@ nopoll_bool test_27 (void) {
 	ctx = create_ctx ();
 
 	/* create connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, "/", "chat-protocol", "http://www.aspl.es");
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, "/", "chat-protocol", "http://www.aspl.es");
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2733,7 +2733,7 @@ nopoll_bool test_27 (void) {
 	nopoll_conn_close (conn);	
 
 	/* create connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, "/", "hello-protocol", "http://www.aspl.es");
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, "/", "hello-protocol", "http://www.aspl.es");
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2773,7 +2773,7 @@ nopoll_bool test_28 (void) {
 	ctx = create_ctx ();
 
 	/* create connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2835,7 +2835,7 @@ nopoll_bool test_29 (void) {
 	nopoll_conn_opts_set_extra_headers (opts, "\r\nfoo: bar");
 
 	/* create connection */
-	conn = nopoll_conn_new_opts (ctx, opts, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new_opts (ctx, opts, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -2872,7 +2872,7 @@ nopoll_bool test_30_common_header_stop (const char * label, int bytes_to_send_be
 	ctx = create_ctx ();
 
 	/* create connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -3012,7 +3012,7 @@ nopoll_bool test_36 (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: not expected connection error but found connection ok..\n");
 		return nopoll_false;
@@ -3029,7 +3029,7 @@ nopoll_bool test_36 (void) {
 	printf ("Test 36: connecting again to ensure listener is working..\n");
 	
 	/* call to create a connection */
-	conn2 = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn2 = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn2)) {
 		printf ("ERROR: not expected connection error but found connection ok..\n");
 		return nopoll_false;
@@ -3066,7 +3066,7 @@ nopoll_bool test_37_common_crafted_frame (const char * label, const char * frame
 	ctx = create_ctx ();
 
 	/* create connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -3103,7 +3103,7 @@ nopoll_bool test_37_common_crafted_frame (const char * label, const char * frame
 	/* now check the listener is still working: without the fix
 	 * the crafted frame crashes it */
 	printf ("Test %s: connecting again to ensure listener is working..\n", label);
-	conn2 = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn2 = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn2)) {
 		printf ("ERROR: expected proper connection after sending the crafted frame (listener gone?)..\n");
 		return nopoll_false;
@@ -3197,7 +3197,7 @@ nopoll_bool test_40 (void) {
 	opts = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_max_frame_size (opts, 64);
 
-	conn = nopoll_conn_new_opts (ctx, opts, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new_opts (ctx, opts, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -3259,7 +3259,7 @@ nopoll_bool test_42 (void) {
 	ctx = create_ctx ();
 
 	/* call to create a connection */
-	conn = nopoll_conn_new (ctx, "localhost", "1234", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		return nopoll_false;
@@ -3350,14 +3350,14 @@ nopoll_bool test_43 (void) {
 	} /* end if */
 
 	printf ("Test 43: checking listener creation with a NULL host..\n");
-	listener = nopoll_listener_new (ctx, NULL, "1251");
+	listener = nopoll_listener_new (ctx, NULL, regtest_port (1251));
 	if (listener != NULL) {
 		printf ("ERROR: expected to fail creating a listener without host, but a listener was reported..\n");
 		return nopoll_false;
 	} /* end if */
 
 	printf ("Test 43: checking IPv6 listener rejects an IPv4 address..\n");
-	listener = nopoll_listener_new6 (ctx, "0.0.0.0", "1251");
+	listener = nopoll_listener_new6 (ctx, "0.0.0.0", regtest_port (1251));
 	if (listener != NULL) {
 		printf ("ERROR: expected to fail creating an IPv6 listener over 0.0.0.0, but a listener was reported..\n");
 		return nopoll_false;
@@ -3366,9 +3366,9 @@ nopoll_bool test_43 (void) {
 	/* and after all those failures, a normal listener must keep on
 	 * working (that is, nothing was left in a broken state) */
 	printf ("Test 43: checking a regular listener still works after the failures..\n");
-	listener = nopoll_listener_new (ctx, "0.0.0.0", "1251");
+	listener = nopoll_listener_new (ctx, "0.0.0.0", regtest_port (1251));
 	if (! nopoll_conn_is_ok (listener)) {
-		printf ("ERROR: expected to create a proper listener at 0.0.0.0:1251..\n");
+		printf ("ERROR: expected to create a proper listener at 0.0.0.0:%s..\n", regtest_port (1251));
 		return nopoll_false;
 	} /* end if */
 
@@ -3383,15 +3383,15 @@ nopoll_bool test_43 (void) {
 	 * over IPv6: reading it into a sockaddr_in truncated the
 	 * address, so every IPv6 connection was reporting 0.0.0.0 */
 	printf ("Test 43: checking remote host reported for an IPv6 accepted connection..\n");
-	listener = nopoll_listener_new6 (ctx, "::1", "1253");
+	listener = nopoll_listener_new6 (ctx, "::1", regtest_port (1253));
 	if (! nopoll_conn_is_ok (listener)) {
-		printf ("ERROR: expected to create a proper IPv6 listener at ::1:1253..\n");
+		printf ("ERROR: expected to create a proper IPv6 listener at ::1:%s..\n", regtest_port (1253));
 		return nopoll_false;
 	} /* end if */
 
-	conn = nopoll_conn_new6 (ctx, "::1", "1253", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new6 (ctx, "::1", regtest_port (1253), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
-		printf ("ERROR: expected to connect to the IPv6 listener at ::1:1253..\n");
+		printf ("ERROR: expected to connect to the IPv6 listener at ::1:%s..\n", regtest_port (1253));
 		return nopoll_false;
 	} /* end if */
 
@@ -3450,9 +3450,9 @@ nopoll_bool test_44 (void) {
 	nopoll_conn_opts_set_reuse (opts, nopoll_true);
 	nopoll_conn_opts_set_cookie (opts, "session=test-44");
 
-	listener = nopoll_listener_new_opts (ctx, opts, "0.0.0.0", "1254");
+	listener = nopoll_listener_new_opts (ctx, opts, "0.0.0.0", regtest_port (1254));
 	if (! nopoll_conn_is_ok (listener)) {
-		printf ("ERROR: expected to create a listener at 0.0.0.0:1254..\n");
+		printf ("ERROR: expected to create a listener at 0.0.0.0:%s..\n", regtest_port (1254));
 		return nopoll_false;
 	} /* end if */
 
@@ -3460,7 +3460,7 @@ nopoll_bool test_44 (void) {
 	 * the options object and must release it when done */
 	iterator = 0;
 	while (iterator < 3) {
-		conn = nopoll_conn_new (ctx, "127.0.0.1", "1254", NULL, NULL, NULL, NULL);
+		conn = nopoll_conn_new (ctx, "127.0.0.1", regtest_port (1254), NULL, NULL, NULL, NULL);
 		if (! nopoll_conn_is_ok (conn)) {
 			printf ("ERROR: expected to connect to the listener (iteration %d)..\n", iterator);
 			return nopoll_false;
@@ -3530,7 +3530,7 @@ nopoll_bool test_41_common_accept_key (const char * label, nopoll_bool send_vali
 	int                  reuse  = 1;
 	nopoll_bool          result = nopoll_false;
 
-	printf ("Test %s: creating raw listener at 127.0.0.1:1250..\n", label);
+	printf ("Test %s: creating raw listener at 127.0.0.1:%s..\n", label, regtest_port (1250));
 
 	/* create the raw listener */
 	listener_sock = socket (AF_INET, SOCK_STREAM, 0);
@@ -3544,17 +3544,17 @@ nopoll_bool test_41_common_accept_key (const char * label, nopoll_bool send_vali
 	memset (&addr, 0, sizeof (addr));
 	addr.sin_family      = AF_INET;
 	addr.sin_addr.s_addr = inet_addr ("127.0.0.1");
-	addr.sin_port        = htons (1250);
+	addr.sin_port        = htons ((unsigned short) regtest_port_int (1250));
 
 	if (bind (listener_sock, (struct sockaddr *) &addr, sizeof (addr)) != 0 || listen (listener_sock, 1) != 0) {
-		printf ("ERROR: unable to bind/listen at 127.0.0.1:1250, errno=%d..\n", errno);
+		printf ("ERROR: unable to bind/listen at 127.0.0.1:%s, errno=%d..\n", regtest_port (1250), errno);
 		nopoll_close_socket (listener_sock);
 		return nopoll_false;
 	} /* end if */
 
 	/* init context and connect to our raw listener */
 	ctx  = create_ctx ();
-	conn = nopoll_conn_new (ctx, "127.0.0.1", "1250", NULL, NULL, NULL, NULL);
+	conn = nopoll_conn_new (ctx, "127.0.0.1", regtest_port (1250), NULL, NULL, NULL, NULL);
 	if (! nopoll_conn_is_ok (conn)) {
 		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
 		nopoll_close_socket (listener_sock);
@@ -3661,6 +3661,251 @@ nopoll_bool test_41 (void) {
 	return test_41_common_accept_key ("41", nopoll_false);
 }
 
+/**
+ * @internal Handler used by test_45 that closes the very connection it
+ * is being notified about, which is the supported pattern that
+ * triggered a use after free.
+ */
+void test_45_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr user_data)
+{
+	int * closed = (int *) user_data;
+
+	/* close the connection that received the message */
+	nopoll_conn_close (conn);
+
+	(*closed)++;
+
+	return;
+}
+
+/**
+ * @internal Handler used by test_45 to configure accepted connections
+ * the same way the regression listener does.
+ *
+ * Accepted connections are created in blocking mode: the built-in loop
+ * assumes they are not, so without this the loop blocks inside recv ()
+ * waiting for a websocket header that is not there yet.
+ */
+nopoll_bool test_45_on_open (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	if (! nopoll_conn_set_sock_block (nopoll_conn_socket (conn), nopoll_false)) {
+		printf ("ERROR: failed to configure non-blocking state to the accepted connection..\n");
+		return nopoll_false;
+	} /* end if */
+
+	return nopoll_true;
+}
+
+/**
+ * @internal Checks that closing a connection from inside a
+ * notification handler does not release the connection while the
+ * library is still using it.
+ *
+ * nopoll_ctx_foreach_conn () acquires a reference over every
+ * connection before notifying it, and nopoll_conn_close () used the
+ * reference counting to find out whether the caller had a reference of
+ * its own to release. As a result, closing an accepted connection from
+ * the on-message handler dropped the reference held by the iterator,
+ * destroying the connection before the iterator dropped it: the
+ * regression listener died with SIGSEGV in the middle of the test run.
+ *
+ * NOTE: run this test under ASan or Valgrind to get a diagnostic. On a
+ * plain build the failure shows up as a crash (or, worse, as nothing
+ * at all).
+ */
+nopoll_bool test_45 (void) {
+	noPollCtx  * ctx;
+	noPollConn * listener;
+	noPollConn * conn;
+	int          closed = 0;
+	int          tries;
+	int          conns;
+
+	printf ("Test 45: checking connection close from inside a notification handler..\n");
+
+	ctx = create_ctx ();
+	if (ctx == NULL) {
+		printf ("ERROR: expected to create a context..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* create the listener that will receive the message */
+	listener = nopoll_listener_new (ctx, "0.0.0.0", regtest_port (1255));
+	if (! nopoll_conn_is_ok (listener)) {
+		printf ("ERROR: expected to create a listener at 0.0.0.0:%s..\n", regtest_port (1255));
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* configure accepted connections to be non-blocking */
+	nopoll_ctx_set_on_open (ctx, test_45_on_open, NULL);
+
+	/* close every connection that receives a message */
+	nopoll_ctx_set_on_msg (ctx, test_45_on_message, &closed);
+
+	/* connect to it */
+	conn = nopoll_conn_new (ctx, "127.0.0.1", regtest_port (1255), NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR: expected to connect to the listener at 127.0.0.1:%s..\n", regtest_port (1255));
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* let the loop accept the connection and complete the
+	 * handshake: both connections live in the same context */
+	tries = 100; /* 100 x 100ms = 10 seconds */
+	while (tries > 0 && ! nopoll_conn_is_ready (conn)) {
+		nopoll_loop_wait (ctx, 100000);
+		tries--;
+	} /* end while */
+
+	if (! nopoll_conn_is_ready (conn)) {
+		printf ("ERROR: timeout reached while waiting for the connection to be ready..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* at this point the context holds the listener, the client
+	 * connection and the connection accepted by the listener */
+	conns = nopoll_ctx_conns (ctx);
+	if (conns != 3) {
+		printf ("ERROR: expected 3 connections registered before the close, but found %d..\n", conns);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* send the message that makes the listener side close the
+	 * connection from inside the handler */
+	if (nopoll_conn_send_text (conn, "close me", 8) != 8) {
+		printf ("ERROR: expected to send the content that triggers the close..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* run the loop so the message is notified: this is where the
+	 * connection used to be released too early */
+	tries = 50; /* 50 x 100ms = 5 seconds */
+	while (tries > 0 && closed == 0) {
+		nopoll_loop_wait (ctx, 100000);
+		tries--;
+	} /* end while */
+
+	if (closed != 1) {
+		printf ("ERROR: expected the handler to be called once, but it was called %d time(s)..\n", closed);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* the accepted connection must be gone: the client connection
+	 * may be gone too (it is unregistered as soon as the loop
+	 * processes the close frame it received), so only the drop is
+	 * checked here */
+	conns = nopoll_ctx_conns (ctx);
+	if (conns >= 3) {
+		printf ("ERROR: expected the accepted connection to be unregistered after the close, but %d connections are still registered..\n", conns);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* release everything */
+	nopoll_conn_close (conn);
+	nopoll_conn_close (listener);
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
+/**
+ * @internal Checks the ownership contract of noPollConnOpts on the
+ * listener creation path when it fails.
+ *
+ * With the reuse flag disabled the API takes over the options object,
+ * so a failed listener creation must release it: it used to return
+ * NULL leaving the object (and the strings it holds) allocated. With
+ * the reuse flag enabled the caller keeps the ownership and the
+ * reference count must be left untouched.
+ *
+ * NOTE: the missing release is a memory leak, so run this test under
+ * ASan or Valgrind to catch that half of it. The reference count check
+ * below fails on any build.
+ */
+nopoll_bool test_46 (void) {
+	noPollCtx      * ctx;
+	noPollConn     * listener;
+	noPollConn     * listener2;
+	noPollConnOpts * opts;
+	noPollConnOpts * opts_reuse;
+
+	printf ("Test 46: checking connection options release on listener creation failure..\n");
+
+	ctx = create_ctx ();
+	if (ctx == NULL) {
+		printf ("ERROR: expected to create a context..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* take the port so the creations below fail */
+	listener = nopoll_listener_new (ctx, "0.0.0.0", regtest_port (1256));
+	if (! nopoll_conn_is_ok (listener)) {
+		printf ("ERROR: expected to create a listener at 0.0.0.0:%s..\n", regtest_port (1256));
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* a failed creation must consume the options object when it is
+	 * not flagged for reuse */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_cookie (opts, "session=test-46");
+
+	listener2 = nopoll_listener_new_opts (ctx, opts, "0.0.0.0", regtest_port (1256));
+	if (listener2 != NULL) {
+		printf ("ERROR: expected to fail creating a second listener over a port already in use..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* same failure but keeping the ownership: the object must
+	 * survive with its reference count untouched */
+	opts_reuse = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_reuse (opts_reuse, nopoll_true);
+	nopoll_conn_opts_set_cookie (opts_reuse, "session=test-46");
+
+	listener2 = nopoll_listener_new_opts (ctx, opts_reuse, "0.0.0.0", regtest_port (1256));
+	if (listener2 != NULL) {
+		printf ("ERROR: expected to fail creating a second listener over a port already in use (reuse)..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	if (opts_reuse->refs != 1) {
+		printf ("ERROR: expected 1 reference over the reused options object after a failed listener creation, but found %d..\n",
+			opts_reuse->refs);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* a listener creation rejected before touching the network
+	 * must release the object too */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_set_cookie (opts, "session=test-46");
+
+	listener2 = nopoll_listener_new_opts (ctx, opts, NULL, regtest_port (1256));
+	if (listener2 != NULL) {
+		printf ("ERROR: expected to fail creating a listener without host..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* release everything: only the object flagged for reuse is
+	 * owned by this function, the others were consumed by the
+	 * failed creations */
+	nopoll_conn_opts_free (opts_reuse);
+	nopoll_conn_close (listener);
+	nopoll_ctx_unref (ctx);
+
+	return nopoll_true;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -3670,13 +3915,22 @@ int main (int argc, char ** argv)
 	printf ("** NoPoll regression tests: version=%s\n**\n",
 		VERSION);
 	printf ("** To gather information about time performance you can use:\n**\n");
-	printf ("**     >> time ./nopoll-regression-client [--debug,--show-critical-only]\n**\n");
+	printf ("**     >> time ./nopoll-regression-client [--debug,--show-critical-only,--offset-port <value>]\n**\n");
+	printf ("** Use --offset-port to add the value provided to every port used by the test,\n");
+	printf ("** so a complete run (listener and client) can be started without colliding with\n");
+	printf ("** another run already in progress. The same value must be provided to\n");
+	printf ("** ./nopoll-regression-listener\n**\n");
 	printf ("** To gather information about memory consumed (and leaks) use:\n**\n");
 	printf ("**     >> libtool --mode=execute valgrind --leak-check=yes --error-limit=no ./nopoll-regression-client\n**\n");
 	printf ("**\n");
 	printf ("** Report bugs to:\n**\n");
 	printf ("**     <nopoll@lists.aspl.es> noPoll mailing list\n**\n");
 	printf ("**     <info@aspl.es> ASPL's contact \n**\n");
+
+	/* configure port offset before anything else: every port used
+	 * by the tests is derived from it */
+	if (! regtest_configure_port_offset (argc, argv))
+		return -1;
 
 	iterator = 1;
 	while (iterator < argc) {
@@ -4106,6 +4360,20 @@ int main (int argc, char ** argv)
 		printf ("Test 44: check conn opts reference lifecycle (reuse)  [   OK    ]\n");
 	} else {
 		printf ("Test 44: check conn opts reference lifecycle (reuse)  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_45 ()) {
+		printf ("Test 45: check connection close from a notification handler  [   OK    ]\n");
+	} else {
+		printf ("Test 45: check connection close from a notification handler  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_46 ()) {
+		printf ("Test 46: check conn opts release on listener creation failure  [   OK    ]\n");
+	} else {
+		printf ("Test 46: check conn opts release on listener creation failure  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

@@ -1575,6 +1575,85 @@ int            nopoll_conn_ref_count (noPollConn * conn)
 	return conn->refs;
 }
 
+/**
+ * @internal Acquires a transient reference to the connection
+ * provided, that is, a reference taken by the library itself to keep
+ * the object alive while it is being used (see \ref
+ * nopoll_ctx_foreach_conn) and that does not represent ownership by
+ * the API user.
+ *
+ * They are tracked apart because \ref nopoll_conn_close_ext uses the
+ * reference counting to find out whether the caller holds a reference
+ * of its own that must be released. Counting a transient reference
+ * there makes that function drop a reference it does not own,
+ * releasing the connection while the library is still using it.
+ *
+ * @param conn The connection to be referenced.
+ *
+ * @return nopoll_true if the reference was acquired.
+ */
+nopoll_bool    __nopoll_conn_transient_ref (noPollConn * conn)
+{
+	if (conn == NULL)
+		return nopoll_false;
+
+	/* lock the mutex */
+	nopoll_mutex_lock (conn->ref_mutex);
+	conn->refs++;
+	conn->transient_refs++;
+	nopoll_mutex_unlock (conn->ref_mutex);
+
+	return nopoll_true;
+}
+
+/**
+ * @internal Drops a reference acquired by \ref
+ * __nopoll_conn_transient_ref, releasing the connection when it was
+ * the last one.
+ *
+ * @param conn The connection whose transient reference is dropped.
+ */
+void           __nopoll_conn_transient_unref (noPollConn * conn)
+{
+	if (conn == NULL)
+		return;
+
+	/* update the transient counter before dropping the reference:
+	 * the connection may be released by the unref below */
+	nopoll_mutex_lock (conn->ref_mutex);
+	conn->transient_refs--;
+	nopoll_mutex_unlock (conn->ref_mutex);
+
+	nopoll_conn_unref (conn);
+
+	return;
+}
+
+/**
+ * @internal Reports how many references over the connection provided
+ * represent ownership, that is, every reference but the transient
+ * ones acquired by \ref __nopoll_conn_transient_ref.
+ *
+ * @param conn The connection queried.
+ *
+ * @return The number of references owned by API users or -1 if it fails.
+ */
+int            __nopoll_conn_owner_ref_count (noPollConn * conn)
+{
+	int result;
+
+	if (! conn)
+		return -1;
+
+	/* both counters must be read together to report a consistent
+	 * value */
+	nopoll_mutex_lock (conn->ref_mutex);
+	result = conn->refs - conn->transient_refs;
+	nopoll_mutex_unlock (conn->ref_mutex);
+
+	return result;
+}
+
 /** 
  * @brief Allows to check if the provided connection is in connected
  * state (just to the connection). This is different to be ready to send and receive content
@@ -2064,12 +2143,21 @@ void          nopoll_conn_close_ext  (noPollConn  * conn, int status, const char
 		nopoll_conn_shutdown (conn);
 	} /* end if */
 
-	/* unregister connection from context */
-	refs = nopoll_conn_ref_count (conn);
+	/* unregister connection from context
+	 *
+	 * NOTE: only the references that represent ownership are
+	 * counted here. The transient references the library acquires
+	 * while using the connection (see nopoll_ctx_foreach_conn) are
+	 * not: counting them made this function release a reference it
+	 * does not own when the connection is closed from a
+	 * notification handler, destroying the object while the
+	 * library was still using it */
+	refs = __nopoll_conn_owner_ref_count (conn);
 	nopoll_ctx_unregister_conn (conn->ctx, conn);
 
 	/* avoid calling next unref in the case not enough references
-	 * are found */
+	 * are found: the connection was only held by the context
+	 * registry, whose reference was already released above */
 	if (refs <= 1)
 		return;
 
@@ -4246,13 +4334,46 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
  *
  * @param conn The connection where the operation takes place
  *
+ * Note the octets reported may be retained at two different levels,
+ * and both are accounted for here:
+ *
+ * - Inside a \ref noPollMsg already received but only partially
+ *   consumed by the caller (conn->pending_diff).
+ *
+ * - Inside the TLS engine, when the session is running under TLS
+ *   (SSL_pending). OpenSSL decrypts a whole TLS record at once, so a
+ *   record carrying two websocket frames leaves the second one held
+ *   there after the first has been returned. Those octets have already
+ *   left the kernel, so select()/poll()/epoll() will never report them
+ *   again and, without this, the caller waits for a socket event that
+ *   cannot arrive until the peer happens to send something else.
+ *
+ * conn->pending_buf_bytes is deliberately *not* reported: it holds an
+ * incomplete websocket header whose remaining octets are still on the
+ * socket, so it cannot be completed without a socket event. Reporting
+ * it would send the caller into a read loop that makes no progress.
+ *
+ * @param conn The connection where the operation takes place
+ *
  * @return The amount of bytes pendings to be read (and a confirmation
- * that bytes are pending to be read) or 0 if nothing is pending. 
+ * that bytes are pending to be read) or 0 if nothing is pending.
  */
 int nopoll_conn_read_pending (noPollConn * conn) {
-        if (conn == NULL || conn->pending_msg == NULL)
+	int pending = 0;
+
+        if (conn == NULL)
 	        return 0;
-	return conn->pending_diff;
+
+	if (conn->pending_msg)
+		pending = conn->pending_diff;
+
+	/* add whatever the TLS engine decrypted and is still holding:
+	   only once the session is established, because during the
+	   handshake conn->ssl is not ready to be queried this way */
+	if (conn->tls_on && conn->ssl && ! conn->pending_ssl_accept && ! conn->pending_ssl_connect)
+		pending += SSL_pending (conn->ssl);
+
+	return pending;
 }
 
 /** 

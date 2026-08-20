@@ -875,8 +875,17 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
 			/* acquire a reference before releasing the
 			 * mutex: otherwise another thread may
 			 * unregister and destroy this connection while
-			 * the handler below is using it */
-			nopoll_conn_ref (result);
+			 * the handler below is using it
+			 *
+			 * NOTE: it must be a transient reference. The
+			 * handler is allowed to close the connection it
+			 * is notified about and nopoll_conn_close ()
+			 * uses the reference counting to decide whether
+			 * the caller holds a reference to release: a
+			 * plain nopoll_conn_ref () here makes it release
+			 * this one, destroying the connection before the
+			 * unref below */
+			__nopoll_conn_transient_ref (result);
 
 			/* release the mutex before calling user code:
 			 * the handler may call back into the API */
@@ -888,12 +897,12 @@ noPollConn   * nopoll_ctx_foreach_conn (noPollCtx          * ctx,
 				/* selected: drop our own reference and
 				 * report it to the caller (the mutex is
 				 * already released here) */
-				nopoll_conn_unref (result);
+				__nopoll_conn_transient_unref (result);
 				return result;
 			} /* end if */
 
 			/* not selected: drop our own reference */
-			nopoll_conn_unref (result);
+			__nopoll_conn_transient_unref (result);
 
 			/* acquire the mutex again to continue walking
 			 * the connection list */

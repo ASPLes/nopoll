@@ -258,10 +258,18 @@ struct _noPollConn {
 	/* reference to a buffer with pending content */
 	char * pending_line;
 
-	/** 
+	/**
 	 * @internal connection reference counting.
 	 */
 	int    refs;
+
+	/**
+	 * @internal How many of the references counted at refs were
+	 * acquired by the library itself to keep the connection alive
+	 * while using it (see __nopoll_conn_transient_ref), instead of
+	 * being owned by the API user. See nopoll_conn_close_ext.
+	 */
+	int    transient_refs;
 
 	/** 
 	 * @internal References to pending content to be read 

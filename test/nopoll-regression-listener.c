@@ -357,7 +357,7 @@ noPollPtr ssl_context_creator (noPollCtx * ctx, noPollConn * conn, noPollConnOpt
 	/* get a reference to the listener */
 	listener = nopoll_conn_get_listener (conn);
 
-	if (nopoll_cmp ("1239", nopoll_conn_port (listener))) {
+	if (nopoll_cmp (regtest_port (1239), nopoll_conn_port (listener))) {
 		printf ("ACCEPTED ssl connection on port: %s (for conn %p)\n", nopoll_conn_port (listener), conn);
 
 		/* ok, especiall case where we require a certain
@@ -401,6 +401,12 @@ int main (int argc, char ** argv)
 
 	signal (SIGTERM,  __terminate_listener);
 
+	/* configure port offset before creating any listener: every
+	 * port used is derived from it. The same value must be
+	 * provided to ./nopoll-regression-client */
+	if (! regtest_configure_port_offset (argc, argv))
+		return -1;
+
 #if defined(__NOPOLL_PTHREAD_SUPPORT__)	
 	printf ("INFO: install default threading functions to check noPoll locking code..\n");
 	nopoll_thread_handlers (__nopoll_regtest_mutex_create,
@@ -429,7 +435,7 @@ int main (int argc, char ** argv)
 	} 
 
 	/* call to create a listener */
-	listener = nopoll_listener_new (ctx, "0.0.0.0", "1234");
+	listener = nopoll_listener_new (ctx, "0.0.0.0", regtest_port (1234));
 	if (! nopoll_conn_is_ok (listener)) {
 		printf ("ERROR: Expected to find proper listener connection status, but found..\n");
 		return -1;
@@ -438,7 +444,7 @@ int main (int argc, char ** argv)
 	printf ("noPoll listener started at: %s:%s (refs: %d)..\n", nopoll_conn_host (listener), nopoll_conn_port (listener), nopoll_conn_ref_count (listener));
 
 	/* call to create a listener */
-	listener_6 = nopoll_listener_new6 (ctx, "::1", "2234");
+	listener_6 = nopoll_listener_new6 (ctx, "::1", regtest_port (2234));
 	if (! nopoll_conn_is_ok (listener_6)) {
 		printf ("ERROR: Expected to find proper listener connection status, but found (IPv6 -- .1.1)..\n");
 		return -1;
@@ -447,8 +453,8 @@ int main (int argc, char ** argv)
 	printf ("noPoll listener started at (IPv6): %s:%s (refs: %d)..\n", nopoll_conn_host (listener_6), nopoll_conn_port (listener_6), nopoll_conn_ref_count (listener_6));
 
 	/* now start a TLS version */
-	printf ("Test: starting listener with TLS (TLSv1) at :1235\n");
-	listener2 = nopoll_listener_tls_new (ctx, "0.0.0.0", "1235");
+	printf ("Test: starting listener with TLS (TLSv1) at :%s\n", regtest_port (1235));
+	listener2 = nopoll_listener_tls_new (ctx, "0.0.0.0", regtest_port (1235));
 	if (! nopoll_conn_is_ok (listener2)) {
 		printf ("ERROR: Expected to find proper listener TLS connection status, but found..\n");
 		return -1;
@@ -467,8 +473,8 @@ int main (int argc, char ** argv)
 	}
 
 	/* now start a TLS version */
-	printf ("Test: starting listener with TLS IPv6 (TLSv1) at :2235\n");
-	listener_62 = nopoll_listener_tls_new6 (ctx, "::1", "2235");
+	printf ("Test: starting listener with TLS IPv6 (TLSv1) at :%s\n", regtest_port (2235));
+	listener_62 = nopoll_listener_tls_new6 (ctx, "::1", regtest_port (2235));
 	if (! nopoll_conn_is_ok (listener_62)) {
 		printf ("ERROR: Expected to find proper listener TLS connection status, but found..\n");
 		return -1;
@@ -488,55 +494,55 @@ int main (int argc, char ** argv)
 
 #if defined(NOPOLL_HAVE_SSLv23_ENABLED)	
 	/* start listener with sslv23 */
-	printf ("Test: starting listener with TLS (SSLv23) at :1236 (all methods)\n");
+	printf ("Test: starting listener with TLS (SSLv23) at :%s (all methods)\n", regtest_port (1236));
 	opts     = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_SSLV23);
-	listener3 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1236");
+	listener3 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", regtest_port (1236));
 	if (! nopoll_conn_is_ok (listener3)) {
-		printf ("ERROR: Expected to find proper listener TLS connection status (:1236, SSLv23), but found..\n");
+		printf ("ERROR: Expected to find proper listener TLS connection status (:%s, SSLv23), but found..\n", regtest_port (1236));
 		return -1;
 	} /* end if */
 #endif
 
 #if defined(NOPOLL_HAVE_SSLv3_ENABLED)	
-	printf ("Test: starting listener with TLS (SSLv3) at :1237\n");
+	printf ("Test: starting listener with TLS (SSLv3) at :%s\n", regtest_port (1237));
 	opts     = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_SSLV3);
-	listener4 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1237");
+	listener4 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", regtest_port (1237));
 	if (! nopoll_conn_is_ok (listener4)) {
-		printf ("ERROR: Expected to find proper listener TLS connection status (:1237, SSLv3), but found..\n");
+		printf ("ERROR: Expected to find proper listener TLS connection status (:%s, SSLv3), but found..\n", regtest_port (1237));
 		return -1;
 	} /* end if */
 #endif	
 
 #if defined(NOPOLL_HAVE_TLSv11_ENABLED)
-	printf ("Test: starting listener with TLS (TLSv1.1) at :1238\n");
+	printf ("Test: starting listener with TLS (TLSv1.1) at :%s\n", regtest_port (1238));
 	opts     = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_1);
-	listener5 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1238");
+	listener5 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", regtest_port (1238));
 	if (! nopoll_conn_is_ok (listener5)) {
-		printf ("ERROR: Expected to find proper listener TLS connection status (:1238, TLSv1.1), but found..\n");
+		printf ("ERROR: Expected to find proper listener TLS connection status (:%s, TLSv1.1), but found..\n", regtest_port (1238));
 		return -1;
 	} /* end if */
 
-	printf ("Test: starting listener with TLS (TLSv1.1) (IPv6) at :2238\n");
+	printf ("Test: starting listener with TLS (TLSv1.1) (IPv6) at :%s\n", regtest_port (2238));
 	opts     = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_1);
-	listener_65 = nopoll_listener_tls_new_opts6 (ctx, opts, "::1", "2238");
+	listener_65 = nopoll_listener_tls_new_opts6 (ctx, opts, "::1", regtest_port (2238));
 	if (! nopoll_conn_is_ok (listener_65)) {
-		printf ("ERROR: Expected to find proper listener TLS connection status (::1:2238, TLSv1.1, IPv6), but found..\n");
+		printf ("ERROR: Expected to find proper listener TLS connection status (::1:%s, TLSv1.1, IPv6), but found..\n", regtest_port (2238));
 		return -1;
 	} /* end if */
 	
 #endif
 
 #if defined(NOPOLL_HAVE_TLSv12_ENABLED)
-	printf ("Test: starting listener with TLS (TLSv1.2) at :1240\n");
+	printf ("Test: starting listener with TLS (TLSv1.2) at :%s\n", regtest_port (1240));
 	opts     = nopoll_conn_opts_new ();
 	nopoll_conn_opts_set_ssl_protocol (opts, NOPOLL_METHOD_TLSV1_2);
-	listener7 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1240");
+	listener7 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", regtest_port (1240));
 	if (! nopoll_conn_is_ok (listener7)) {
-		printf ("ERROR: Expected to find proper listener TLS connection status (:1240, TLSv1.2), but found..\n");
+		printf ("ERROR: Expected to find proper listener TLS connection status (:%s, TLSv1.2), but found..\n", regtest_port (1240));
 		return -1;
 	} /* end if */
 #endif
@@ -557,9 +563,9 @@ int main (int argc, char ** argv)
 	/* configure peer verification */
 	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_true);
 	    
-	listener6 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", "1239");
+	listener6 = nopoll_listener_tls_new_opts (ctx, opts, "0.0.0.0", regtest_port (1239));
 	if (! nopoll_conn_is_ok (listener6)) {
-		printf ("ERROR: Expected to find proper listener TLS connection status (:1236, SSLv23), but found..\n");
+		printf ("ERROR: Expected to find proper listener TLS connection status (:%s, SSLv23), but found..\n", regtest_port (1236));
 		return -1;
 	} /* end if */
 

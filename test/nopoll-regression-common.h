@@ -49,4 +49,17 @@ void __nopoll_regtest_mutex_lock (noPollPtr _mutex);
 void __nopoll_regtest_mutex_unlock (noPollPtr _mutex);
 #endif
 
+/* port offset support: every port used by the regression tests
+ * (client and listener) is derived from its base value plus this
+ * offset, so a complete and isolated test run can be started with
+ * --offset-port without colliding with another run already in
+ * progress. See regtest_configure_port_offset () */
+extern int regtest_port_offset;
+
+nopoll_bool  regtest_configure_port_offset (int argc, char ** argv);
+
+int          regtest_port_int (int base_port);
+
+const char * regtest_port     (int base_port);
+
 #include <nopoll_private.h>

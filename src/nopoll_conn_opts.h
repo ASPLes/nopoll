@@ -46,8 +46,8 @@ noPollConnOpts * nopoll_conn_opts_new (void);
 
 void nopoll_conn_opts_set_ssl_protocol (noPollConnOpts * opts, noPollSslProtocol ssl_protocol);
 
-nopoll_bool  nopoll_conn_opts_set_ssl_certs    (noPollConnOpts * opts, 
-						const char     * client_certificate,
+nopoll_bool  nopoll_conn_opts_set_ssl_certs    (noPollConnOpts * opts,
+						const char     * certificate,
 						const char     * private_key,
 						const char     * chain_certificate,
 						const char     * ca_certificate);

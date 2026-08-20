@@ -141,7 +141,16 @@ nopoll_bool        nopoll_conn_opts_set_ssl_certs    (noPollConnOpts * opts,
 	opts->chain_certificate = NULL;
 	opts->ca_certificate    = NULL;
 
-	/* store certificate settings */
+	/* store certificate settings
+	 *
+	 * NOTE: a file that cannot be read makes the function to report
+	 * a failure, but the values stored so far are kept: the caller
+	 * is expected to discard the options object (or to call again
+	 * with reachable files) instead of connecting with it.
+	 *
+	 * The file that failed cannot be reported from here: this
+	 * object holds no \ref noPollCtx reference and nopoll_log ()
+	 * discards everything logged without one */
 	opts->certificate        = nopoll_strdup (certificate);
 	if (opts->certificate)
 		if (access (opts->certificate, R_OK) != 0)
@@ -319,7 +328,7 @@ void        nopoll_conn_opts_add_origin_header (noPollConnOpts * opts, nopoll_bo
  * @brief Allows to increase a reference to the connection options
  * provided. 
  *
- * @param opts The connection option reference over which a connection
+ * @param opts The connection options object over which a new
  * reference is needed.
  *
  * @return nopoll_true in the case the operation went ok, otherwise
@@ -467,6 +476,14 @@ void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
 
 	opts->refs--;
 	if (opts->refs != 0) {
+		/* NOTE: a negative value here means the object was
+		 * released more times than it was referenced. The
+		 * object is deliberately not released in that case
+		 * (doing so would be a double free), which turns the
+		 * mistake into a leak that cannot be reported: this
+		 * object holds no \ref noPollCtx reference and
+		 * nopoll_log () discards everything logged without one */
+
 		/* release here the mutex */
 		nopoll_mutex_unlock (opts->mutex);
 		return;
@@ -494,14 +511,16 @@ void __nopoll_conn_opts_free_common  (noPollConnOpts * opts)
 	return;
 }
 
-/** 
- * @brief Allows to release a connection object reported by \ref nopoll_conn_opts_new
+/**
+ * @brief Allows to release a connection options object reported by \ref nopoll_conn_opts_new
  *
  * IMPORTANT NOTE: do not use this function over a \ref noPollConnOpts if it is not flagged with \ref nopoll_conn_opts_set_reuse (opts, nopoll_true).
  *
  * Default behaviour provided by the API implies that every connection
  * options object created by \ref nopoll_conn_opts_new is
  * automatically released by the API consuming that object.
+ *
+ * @param opts The connection options object to release.
  */
 void nopoll_conn_opts_free (noPollConnOpts * opts)
 {
@@ -517,7 +536,7 @@ void __nopoll_conn_opts_release_if_needed (noPollConnOpts * options)
 {
 	if (! options)
 		return;
-	if (options && options->reuse)
+	if (options->reuse)
 		return;
 	__nopoll_conn_opts_free_common (options);
 	return;

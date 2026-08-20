@@ -289,8 +289,14 @@ NOPOLL_SOCKET     __nopoll_listener_sock_listen_internal      (noPollCtx        
 	return fd;
 }
 
-/** 
+/**
  * @internal Function to create a WebSocket listener
+ *
+ * NOTE about the options object: unless it is flagged for reuse (see
+ * \ref nopoll_conn_opts_set_reuse), the caller hands over the object
+ * to this function, so every exit path must release it. On success the
+ * object is kept at listener->opts and released when the listener is
+ * destroyed.
  */
 noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
 						       noPollTransport  transport,
@@ -301,7 +307,13 @@ noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
 	NOPOLL_SOCKET   session;
 	noPollConn    * listener;
 
-	nopoll_return_val_if_fail (ctx, ctx && host, NULL);
+	if (ctx == NULL || host == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received NULL ctx or host reference, unable to create listener");
+
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (opts);
+		return NULL;
+	} /* end if */
 
 	/* call to create the socket
 	 *
@@ -313,6 +325,9 @@ noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
 	session = __nopoll_listener_sock_listen_internal (ctx, transport, host, port);
 	if (! nopoll_socket_is_valid (session)) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to start listener error was: errno=%d", errno);
+
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (opts);
 		return NULL;
 	} /* end if */
 
@@ -321,6 +336,9 @@ noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
 	if (listener == NULL) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory for the listener, closing socket %d", session);
 		nopoll_close_socket (session);
+
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (opts);
 		return NULL;
 	} /* end if */
 	listener->refs     = 1;
@@ -349,6 +367,9 @@ noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
 		nopoll_mutex_destroy (listener->ref_mutex);
 		nopoll_free (listener);
 		nopoll_close_socket (session);
+
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (opts);
 		return NULL;
 	} /* end if */
 

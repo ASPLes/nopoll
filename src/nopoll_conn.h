@@ -120,6 +120,14 @@ nopoll_bool    nopoll_conn_ref (noPollConn * conn);
 
 int            nopoll_conn_ref_count (noPollConn * conn);
 
+/** internal API: do not use it. It may change at any time without any
+ * previous indication **/
+nopoll_bool    __nopoll_conn_transient_ref (noPollConn * conn);
+
+void           __nopoll_conn_transient_unref (noPollConn * conn);
+
+int            __nopoll_conn_owner_ref_count (noPollConn * conn);
+
 void           nopoll_conn_unref (noPollConn * conn);
 
 nopoll_bool    nopoll_conn_is_ok (noPollConn * conn);
