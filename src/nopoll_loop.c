@@ -62,9 +62,9 @@ nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 		return nopoll_false; /* keep foreach, don't stop */
 	}
 
-        /* Do not listen on sockets that are doing SSL/TLS handshake */
-        if (conn->pending_ssl_connect)
-                return nopoll_false;
+	/* Do not listen on sockets that are doing SSL/TLS handshake */
+	if (conn->pending_ssl_connect)
+		return nopoll_false; /* keep foreach, don't stop */
 
 	/* register the connection socket */
 	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding socket id: %d", conn->session);*/
@@ -80,8 +80,9 @@ nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 }
 
 /** 
- * @internal Function used to handle incoming data from from the
- * connection and to notify this data on the connection.
+ * @internal Function used to handle incoming data from the connection
+ * and to notify this data to the handler configured (connection
+ * handler first, context handler otherwise).
  */
 void nopoll_loop_process_data (noPollCtx * ctx, noPollConn * conn)
 {
@@ -104,13 +105,21 @@ void nopoll_loop_process_data (noPollCtx * ctx, noPollConn * conn)
 }
 
 /** 
- * @internal Function used to detected which connections has something
+ * @internal Function used to detect which connections have something
  * interesting to be notified.
  *
  */
 nopoll_bool nopoll_loop_process (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
 {
 	int        * conn_changed = (int *) user_data;
+
+	/* do not check connections that are no longer working: the
+	 * handler notified for a previous connection is allowed to
+	 * close this one, leaving conn->session as
+	 * NOPOLL_INVALID_SOCKET, and reporting that descriptor to the
+	 * io engine just makes it complain about a non valid socket */
+	if (! nopoll_conn_is_ok (conn))
+		return nopoll_false; /* keep foreach, don't stop */
 
 	/* check if the connection have something to notify */
 	if (ctx->io_engine->is_set (ctx, conn->session, ctx->io_engine->io_object)) {
@@ -135,8 +144,13 @@ nopoll_bool nopoll_loop_process (noPollCtx * ctx, noPollConn * conn, noPollPtr u
 		/* reduce connection changed */
 		(*conn_changed)--;
 	} /* end if */
-	
-	return (*conn_changed) == 0;
+
+	/* stop the foreach as soon as every change reported by the io
+	 * wait engine was processed: the check is <= 0 and not == 0
+	 * because a connection accepted by this same foreach may reuse
+	 * a descriptor already flagged in the wait set, making the
+	 * counter go below zero */
+	return (*conn_changed) <= 0;
 }
 
 /** 
@@ -146,12 +160,12 @@ nopoll_bool nopoll_loop_process (noPollCtx * ctx, noPollConn * conn, noPollPtr u
  *
  * @param ctx The noPoll context to be initialized if it wasn't
  *
- * In general this function is only used internally by noPoll to
- * create io wait engine. In the case you are using \ref
- * nopoll_loop_wait, and it returns -4 (io wait engine failed) then
- * the I/O wait engine is released. In such condition, if you want to
- * recover, you can use this function to restart io wait engine and
- * call again nopoll_loop_wait.
+ * This function is only used internally by noPoll to create the io
+ * wait engine: it is not declared by any public header. In the case
+ * you are using \ref nopoll_loop_wait and it returns -4 (io wait
+ * engine failed) then the I/O wait engine is released. To recover
+ * from that condition just call \ref nopoll_loop_wait again: it
+ * calls this function to create a new io wait engine.
  *
  */
 void nopoll_loop_init (noPollCtx * ctx) 
@@ -159,15 +173,13 @@ void nopoll_loop_init (noPollCtx * ctx)
 	if (ctx == NULL)
 		return;
 
-	/* grab the mutex for the following check */
 	if (ctx->io_engine == NULL) {
 		ctx->io_engine = nopoll_io_get_engine (ctx, NOPOLL_IO_ENGINE_DEFAULT);
 		if (ctx->io_engine == NULL) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to create IO wait engine, unable to implement wait call");
 			return;
-		} 
+		}
 	} /* end if */
-	/* release the mutex */
 
 	return;
 }
@@ -185,13 +197,13 @@ void nopoll_loop_stop (noPollCtx * ctx)
 		return;
 	ctx->keep_looping = nopoll_false;
 	return;
-} /* end if */
+}
 
 /** 
  * @brief Allows to implement a wait over all connections registered
  * under the provided context during the provided timeout until
  * something is detected meaningful to the user, calling to the action
- * handler defined, optionally receving the user data pointer.
+ * handler defined, optionally receiving the user data pointer.
  *
  * @param ctx The context object where the wait will be implemented.
  *
@@ -202,8 +214,9 @@ void nopoll_loop_stop (noPollCtx * ctx)
  *
  * @return The function returns 0 when finished without error or -2 in
  * the case ctx is NULL or timeout is negative. Function returns -3 if
- * timeout was reached. Function returns -4 in the case
- * ctx->io_engine->wait failed to implement wait or it reported error.
+ * timeout was reached. Function returns -4 in the case the io wait
+ * engine could not be created or ctx->io_engine->wait failed to
+ * implement wait or it reported error.
  *
  *
  * <b>Recovering from IO Wait failure (return code -4)</b>
@@ -227,6 +240,7 @@ void nopoll_loop_stop (noPollCtx * ctx)
  *          // try to limit recoveries to avoid infinite loop
  *          continue;
  *     }
+ * }
  * \endcode
  *
  */
@@ -245,6 +259,12 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 	/* call to init io engine */
 	nopoll_loop_init (ctx);
 
+	/* check the io engine was really created: nopoll_loop_init ()
+	 * reports the failure through the log but leaves ctx->io_engine
+	 * as NULL, so the wait loop below cannot be entered */
+	if (ctx->io_engine == NULL)
+		return -4; /* io wait engine failure */
+
 	/* get as reference current time */
 	if (timeout > 0)
 #if defined(NOPOLL_OS_WIN32)
@@ -253,7 +273,7 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 		gettimeofday (&start, NULL);
 #endif
 	
-	/* set to keep looping everything this function is called */
+	/* set to keep looping every time this function is called */
 	ctx->keep_looping = nopoll_true;
 
 	while (ctx->keep_looping) {
