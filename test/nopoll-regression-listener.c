@@ -120,7 +120,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 	const char * content = (const char *) nopoll_msg_get_payload (msg);
 	FILE       * file = NULL;
 	char         buffer[1024];
-	int          bytes;
+	long int     bytes;
 	int          sent;
 	char         example[100];
 	int          shown;
@@ -191,13 +191,13 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 
 	/* get initial bytes */
 	bytes = nopoll_msg_get_payload_size (msg);
-	shown = bytes > 100 ? 99 : bytes;
+	shown = bytes > 100 ? 99 : (int) bytes;
 
 	memset (example, 0, 100);
 	/*	if (! nopoll_msg_is_fragment (msg)) */
 		memcpy (example, (const char *) nopoll_msg_get_payload (msg), shown);
 
-	printf ("Listener received (size: %d, ctx refs: %d): (first %d bytes, fragment: %d) '%s'\n", 
+	printf ("Listener received (size: %ld, ctx refs: %d): (first %d bytes, fragment: %d) '%s'\n",
 		nopoll_msg_get_payload_size (msg),
 		nopoll_ctx_ref_count (ctx), shown, nopoll_msg_is_fragment (msg), example);
 
@@ -245,7 +245,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 							/* printf ("   ..retrying..sending message with %d bytes..\n", bytes); */
 							continue;
 						} /* end if */
-						printf ("ERROR: expected to send %d bytes but sent different content size (%d bytes), errno=%d (%d)..\n", 
+						printf ("ERROR: expected to send %ld bytes but sent different content size (%d bytes), errno=%d (%d)..\n",
 							bytes, sent, errno, NOPOLL_EWOULDBLOCK);
 					} /* end if */
 					break;
@@ -269,6 +269,10 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 		aux          = previous_msg;
 		previous_msg = nopoll_msg_join (previous_msg, msg);
 		nopoll_msg_unref (aux);
+		if (previous_msg == NULL) {
+			printf ("ERROR: failed to join received fragment, unable to reply..\n");
+			return;
+		} /* end if */
 		if (! nopoll_msg_is_final (msg)) {
 			printf ("Found fragment that is not final..\n");
 			printf ("Not replying because frame fragment received..\n");
@@ -290,7 +294,7 @@ void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, n
 	}
 
 	/* send reply as received */
-	printf ("Sending reply... (same message size: %d)\n", nopoll_msg_get_payload_size (msg));
+	printf ("Sending reply... (same message size: %ld)\n", nopoll_msg_get_payload_size (msg));
 	nopoll_conn_send_text (conn, (const char *) nopoll_msg_get_payload (msg), 
 			       nopoll_msg_get_payload_size (msg));
 	return;

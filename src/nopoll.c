@@ -1247,7 +1247,7 @@ void nopoll_cleanup_library (void)
  * \code
  * void listener_on_message (noPollCtx * ctx, noPollConn * conn, noPollMsg * msg, noPollPtr  user_data) {
  *         // print the message (for debugging purposes) and reply
- *         printf ("Listener received (size: %d, ctx refs: %d, fragment: %d): '%s'\n",
+ *         printf ("Listener received (size: %ld, ctx refs: %d, fragment: %d): '%s'\n",
  *                 nopoll_msg_get_payload_size (msg),
  *                 nopoll_ctx_ref_count (ctx),
  *                 nopoll_msg_is_fragment (msg),

@@ -37,6 +37,7 @@
  */
 #include <nopoll-regression-common.h>
 #include <nopoll.h>
+#include <limits.h>
 
 nopoll_bool debug = nopoll_false;
 nopoll_bool show_critical_only = nopoll_false;
@@ -3906,6 +3907,127 @@ nopoll_bool test_46 (void) {
 	return nopoll_true;
 }
 
+nopoll_bool test_47 (void) {
+	noPollMsg * msg;
+	noPollMsg * msg2;
+	noPollMsg * joined;
+	long int    huge_size;
+
+	printf ("Test 47: checking nopoll_msg_join () joining and allocation failure handling..\n");
+
+	msg  = nopoll_msg_new ();
+	msg2 = nopoll_msg_new ();
+	if (msg == NULL || msg2 == NULL) {
+		printf ("ERROR: expected to create both message holders..\n");
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	/* first message: fragment with FIN = 0 */
+	msg->op_code      = NOPOLL_TEXT_FRAME;
+	msg->payload_size = 5;
+	msg->payload      = nopoll_new (char, 6);
+	memcpy (msg->payload, "hello", 5);
+
+	/* second message: final continuation fragment */
+	msg2->has_fin      = nopoll_true;
+	msg2->op_code      = NOPOLL_CONTINUATION_FRAME;
+	msg2->payload_size = 6;
+	msg2->payload      = nopoll_new (char, 7);
+	memcpy (msg2->payload, "-world", 6);
+
+	if (msg->payload == NULL || msg2->payload == NULL) {
+		printf ("ERROR: expected to allocate payload for both messages..\n");
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	/* check the join produces the complete content */
+	joined = nopoll_msg_join (msg, msg2);
+	if (joined == NULL) {
+		printf ("ERROR: expected to join both messages..\n");
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	if (nopoll_msg_get_payload_size (joined) != 11 ||
+	    memcmp (nopoll_msg_get_payload (joined), "hello-world", 12) != 0) {
+		printf ("ERROR: expected to find 'hello-world' (11 bytes) after joining but found '%s' (%ld bytes)..\n",
+			(const char *) nopoll_msg_get_payload (joined), nopoll_msg_get_payload_size (joined));
+		nopoll_msg_unref (joined);
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	/* the function must not consume the references received */
+	if (nopoll_msg_ref_count (msg) != 1 || nopoll_msg_ref_count (msg2) != 1 || nopoll_msg_ref_count (joined) != 1) {
+		printf ("ERROR: expected 1 reference on every message after joining but found %d, %d and %d..\n",
+			nopoll_msg_ref_count (msg), nopoll_msg_ref_count (msg2), nopoll_msg_ref_count (joined));
+		nopoll_msg_unref (joined);
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_msg_unref (joined);
+
+	/* check reference handling for the single argument cases */
+	if (nopoll_msg_join (NULL, NULL) != NULL) {
+		printf ("ERROR: expected NULL when joining two NULL references..\n");
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	if (nopoll_msg_join (msg, NULL) != msg || nopoll_msg_ref_count (msg) != 2) {
+		printf ("ERROR: expected same reference with 2 references when joining with NULL..\n");
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+	nopoll_msg_unref (msg);
+
+	if (nopoll_msg_join (NULL, msg2) != msg2 || nopoll_msg_ref_count (msg2) != 2) {
+		printf ("ERROR: expected same reference with 2 references when joining from NULL..\n");
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+	nopoll_msg_unref (msg2);
+
+	/* now force the payload allocation done by nopoll_msg_join to
+	 * fail by reporting a payload size that cannot be allocated:
+	 * the function must report failure without dereferencing the
+	 * failed allocation and without leaking the internal holder
+	 * (run this test under valgrind to check the leak) */
+	if (sizeof (long int) >= 8)
+		huge_size = ((long int) 1) << 60;
+	else
+		huge_size = LONG_MAX - 16;
+	msg->payload_size = huge_size;
+
+	joined = nopoll_msg_join (msg, msg2);
+	if (joined != NULL) {
+		printf ("ERROR: expected to fail joining a message reporting a payload size of %ld bytes..\n", huge_size);
+		nopoll_msg_unref (joined);
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	/* restore the real payload size so the message is released fine */
+	msg->payload_size = 5;
+
+	nopoll_msg_unref (msg);
+	nopoll_msg_unref (msg2);
+
+	return nopoll_true;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -4374,6 +4496,13 @@ int main (int argc, char ** argv)
 		printf ("Test 46: check conn opts release on listener creation failure  [   OK    ]\n");
 	} else {
 		printf ("Test 46: check conn opts release on listener creation failure  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_47 ()) {
+		printf ("Test 47: check nopoll_msg_join () allocation failure handling  [   OK    ]\n");
+	} else {
+		printf ("Test 47: check nopoll_msg_join () allocation failure handling  [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

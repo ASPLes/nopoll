@@ -86,8 +86,14 @@ const unsigned char * nopoll_msg_get_payload (noPollMsg * msg)
  * @param msg The websocket message to get the payload from.
  *
  * @return The payload size or -1 if it fails (only when msg is NULL).
+ *
+ * NOTE: this function returned an <b>int</b> up to noPoll 1.2.x. It
+ * now returns a <b>long int</b> to be able to report payload sizes
+ * bigger than 2GB without truncating them (the value stored inside
+ * the message was already a long int). Callers storing the result
+ * into an int must be updated.
  */
-int          nopoll_msg_get_payload_size (noPollMsg * msg)
+long int     nopoll_msg_get_payload_size (noPollMsg * msg)
 {
 	if (msg == NULL)
 		return -1;
@@ -105,7 +111,7 @@ int          nopoll_msg_get_payload_size (noPollMsg * msg)
  */
 nopoll_bool  nopoll_msg_ref (noPollMsg * msg)
 {
-	/* check recieved reference */
+	/* check received reference */
 	if (msg == NULL)
 		return nopoll_false;
 
@@ -134,7 +140,7 @@ int          nopoll_msg_ref_count (noPollMsg * msg)
 {
 	int result;
 
-	/* check recieved reference */
+	/* check received reference */
 	if (msg == NULL)
 		return -1;
 
@@ -242,6 +248,21 @@ noPollOpCode nopoll_msg_opcode (noPollMsg * msg)
  * msgC (1) = nopoll_msg_join (msgA (1), msgB (1));
  * NULL     = nopoll_msg_join (NULL, NULL);
  *
+ * Note the function never consumes the references received: the
+ * caller still owns <b>msg</b> and <b>msg2</b> and must call to \ref
+ * nopoll_msg_unref on them when they are no longer needed.
+ *
+ * CAVEAT about the resulting message flags: as stated before, the
+ * headers used for the resulting message are taken from the first
+ * argument (<b>msg</b>). Because a fragmented message carries FIN = 0
+ * on every fragment but the last one, the message returned by this
+ * function will report \ref nopoll_msg_is_final == nopoll_false and
+ * \ref nopoll_msg_is_fragment == nopoll_true even when it already
+ * holds the complete content. Do not use those functions over the
+ * joined message to detect completion: track it over the messages
+ * received from \ref nopoll_conn_get_msg (the last fragment received
+ * is the one flagging FIN = 1) as the regression listener does.
+ *
  * @return The function returns the newly allocated or reused
  * reference with increased reference counting or NULL if it fails.
  */
@@ -255,7 +276,7 @@ noPollMsg  * nopoll_msg_join (noPollMsg * msg, noPollMsg * msg2)
 	if (msg == NULL && msg2) {
 		nopoll_msg_ref (msg2);
 		return msg2;
-	} /* ned if */
+	} /* end if */
 	if (msg && msg2 == NULL) {
 		nopoll_msg_ref (msg);
 		return msg;
@@ -263,6 +284,8 @@ noPollMsg  * nopoll_msg_join (noPollMsg * msg, noPollMsg * msg2)
 	
 	/* now, join content */
 	result            = nopoll_msg_new ();
+	if (result == NULL)
+		return NULL;
 	result->has_fin   = msg->has_fin;
 	result->op_code   = msg->op_code;
 	result->is_masked = msg->is_masked;
@@ -272,6 +295,11 @@ noPollMsg  * nopoll_msg_join (noPollMsg * msg, noPollMsg * msg2)
 	/* copy payload size and content */
 	result->payload_size = msg->payload_size + msg2->payload_size;
 	result->payload = nopoll_new (char, result->payload_size + 1);
+	if (result->payload == NULL) {
+		/* release the holder created to avoid leaking it */
+		nopoll_msg_unref (result);
+		return NULL;
+	} /* end if */
 
 	/* copy content from first message */
 	memcpy (result->payload, msg->payload, msg->payload_size);
@@ -311,7 +339,6 @@ void         nopoll_msg_unref (noPollMsg * msg)
 	nopoll_free (msg->payload);
 	nopoll_free (msg);
 
-	/* release mutex here */
 	return;
 }
 

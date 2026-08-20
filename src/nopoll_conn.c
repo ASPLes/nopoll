@@ -4148,7 +4148,11 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 	struct  timeval    diff;
 	long               ellapsed   = 0;
 	int                desp       = 0;
-	int                amount;
+	/* amount is long int to hold, without truncating it, the
+	 * payload size reported by nopoll_msg_get_payload_size and the
+	 * pending difference tracked at conn->pending_diff: it is
+	 * always clamped below to the bytes requested by the caller */
+	long int           amount;
 	int                total_read = 0;
 	int                total_pending = 0;
 
@@ -4254,7 +4258,7 @@ int           nopoll_conn_read (noPollConn * conn, char * buffer, int bytes, nop
 			/* get the amount of bytes we can read */
 			amount = nopoll_msg_get_payload_size (msg);
 			total_pending = bytes - total_read;
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "(New Frame) bytes received %d (requested %d, read %d, total_pending %d bytes, desp: %d)",
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "(New Frame) bytes received %ld (requested %d, read %d, total_pending %d bytes, desp: %d)",
 				    amount, bytes, total_read, total_pending, desp);
 			if (amount > total_pending) {
 				/* save here the difference between
