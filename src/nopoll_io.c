@@ -49,11 +49,19 @@ typedef struct _noPollSelect {
  * @internal nopoll implementation to create a compatible "select" IO
  * call fd set reference.
  *
- * @return A newly allocated fd_set reference.
+ * @param ctx The context the fd set created will be associated to.
+ *
+ * @return A newly allocated \ref noPollSelect reference (which holds
+ * the fd set) or NULL if it fails.
  */
 noPollPtr nopoll_io_wait_select_create (noPollCtx * ctx) 
 {
 	noPollSelect * select = nopoll_new (noPollSelect, 1);
+
+	if (select == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to allocate select fd set, unable to create io wait object");
+		return NULL;
+	} /* end if */
 
 	/* set default behaviour expected for the set */
 	select->ctx           = ctx;
@@ -67,16 +75,18 @@ noPollPtr nopoll_io_wait_select_create (noPollCtx * ctx)
 /** 
  * @internal noPoll implementation to destroy the "select" IO call
  * created by the default create.
- * 
+ *
+ * @param ctx The context where the operation takes place.
+ *
  * @param fd_group The fd group to be deallocated.
  */
 void    nopoll_io_wait_select_destroy (noPollCtx * ctx, noPollPtr fd_group)
 {
-	fd_set * __fd_set = (fd_set *) fd_group;
+	noPollSelect * select = (noPollSelect *) fd_group;
 
 	/* release memory allocated */
-	nopoll_free (__fd_set);
-	
+	nopoll_free (select);
+
 	/* nothing more to do */
 	return;
 }
@@ -84,15 +94,22 @@ void    nopoll_io_wait_select_destroy (noPollCtx * ctx, noPollPtr fd_group)
 /** 
  * @internal noPoll implementation to clear the "select" IO call
  * created by the default create.
- * 
- * @param fd_group The fd group to be deallocated.
+ *
+ * @param ctx The context where the operation takes place.
+ *
+ * @param __fd_group The fd group to be cleared, so it can be reused
+ * by the next wait operation.
  */
 void    nopoll_io_wait_select_clear (noPollCtx * ctx, noPollPtr __fd_group)
 {
 	noPollSelect * select = (noPollSelect *) __fd_group;
 
-	/* clear the fd set */
-	select->length = 0;
+	/* clear the fd set: max_fds must be reset too because it is
+	 * recalculated by nopoll_io_wait_select_add_to () every time
+	 * the connection set is registered again, otherwise select ()
+	 * would be called with an nfds value that only grows */
+	select->length  = 0;
+	select->max_fds = 0;
 	FD_ZERO (&(select->set));
 
 	/* nothing more to do */
@@ -104,10 +121,13 @@ void    nopoll_io_wait_select_clear (noPollCtx * ctx, noPollPtr __fd_group)
  * change its status at least one socket description inside the fd set
  * provided.
  * 
+ * @param ctx The context where the operation takes place.
+ *
  * @param __fd_group The fd set having all sockets to be watched.
- * @param wait_to The operation requested.
- * 
- * @return Number of connections that changed or -1 if something wailed
+ *
+ * @return Number of connections that changed, 0 if the wait finished
+ * without changes (timeout reached or the call was interrupted by a
+ * signal) or -1 if it failed.
  */
 int nopoll_io_wait_select_wait (noPollCtx * ctx, noPollPtr __fd_group)
 {
@@ -120,10 +140,12 @@ int nopoll_io_wait_select_wait (noPollCtx * ctx, noPollPtr __fd_group)
 	tv.tv_usec   = 500000;
 	result       = select (_select->max_fds + 1, &(_select->set), NULL,   NULL, &tv);
 
-	/* check result */
+	/* check result: an interrupted wait is not a failure, just
+	 * report that nothing changed so the caller keeps waiting
+	 * instead of aborting the loop (see nopoll_loop_wait) */
 	if ((result == NOPOLL_SOCKET_ERROR) && (errno == NOPOLL_EINTR))
-		return -1;
-	
+		return 0;
+
 	return result;
 }
 
@@ -133,7 +155,14 @@ int nopoll_io_wait_select_wait (noPollCtx * ctx, noPollPtr __fd_group)
  * 
  * @param fds The socket descriptor to be added.
  *
- * @param fd_set The fd set where the socket descriptor will be added.
+ * @param ctx The context where the operation takes place.
+ *
+ * @param conn The connection owning the socket descriptor provided.
+ *
+ * @param __fd_set The fd set where the socket descriptor will be added.
+ *
+ * @return nopoll_true if the socket was added, otherwise nopoll_false
+ * is returned.
  */
 nopoll_bool  nopoll_io_wait_select_add_to (int               fds, 
 					   noPollCtx       * ctx,
@@ -147,11 +176,11 @@ nopoll_bool  nopoll_io_wait_select_add_to (int               fds,
 			    "received a non valid socket (%d), unable to add to the set", fds);
 		return nopoll_false;
 	}
-	if ((select->length - 1) > FD_SETSIZE) {
+	if (select->length >= FD_SETSIZE) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL,
 			    "Unable to add requested socket (%d), reached max FD_SETSIZE=%d (select->length=%d)", fds, FD_SETSIZE, select->length);
 		return nopoll_false;
-	} /* end if */	
+	} /* end if */
 
 	/* set the value */
 	FD_SET (fds, &(select->set));
@@ -172,10 +201,15 @@ nopoll_bool  nopoll_io_wait_select_add_to (int               fds,
  * @brief Default noPoll implementation for the "is set" on fd
  * set operation.
  * 
+ * @param ctx The context where the operation takes place.
+ *
  * @param fds The socket descriptor to be checked to be active on the
  * given fd group.
  *
- * @param fd_set The fd set where the socket descriptor will be checked.
+ * @param __fd_set The fd set where the socket descriptor will be checked.
+ *
+ * @return nopoll_true if the socket descriptor is active on the fd
+ * set, otherwise nopoll_false is returned.
  */
 nopoll_bool      nopoll_io_wait_select_is_set (noPollCtx   * ctx,
 					       int           fds, 
@@ -199,16 +233,24 @@ nopoll_bool      nopoll_io_wait_select_is_set (noPollCtx   * ctx,
  *
  * @param ctx The context where the engine will be created/associated.
  *
- * @param engine Use \ref NOPOLL_IO_ENGINE_DEFAULT or the engine you
- * want to use.
+ * @param engine_type Use \ref NOPOLL_IO_ENGINE_DEFAULT or the engine
+ * you want to use. NOTE: only \ref NOPOLL_IO_ENGINE_SELECT is
+ * implemented at this moment, so it is the mechanism returned for
+ * every value requested (a warning is reported through the log when
+ * asking for a different one).
  *
  * @return The selected IO wait mechanism or NULL if it fails.
- */ 
+ */
 noPollIoEngine * nopoll_io_get_engine (noPollCtx * ctx, noPollIoEngineType engine_type)
 {
 	noPollIoEngine * engine = nopoll_new (noPollIoEngine, 1);
 	if (engine == NULL)
 		return NULL;
+
+	/* report the caller it will not get the mechanism requested:
+	 * select is the only engine implemented so far */
+	if (engine_type != NOPOLL_IO_ENGINE_DEFAULT && engine_type != NOPOLL_IO_ENGINE_SELECT)
+		nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "Requested io wait engine %d is not implemented, using select(2) based engine", engine_type);
 
 	/* configure default implementation */
 	engine->create  = nopoll_io_wait_select_create;
@@ -221,7 +263,16 @@ noPollIoEngine * nopoll_io_get_engine (noPollCtx * ctx, noPollIoEngineType engin
 	/* call to create the object */
 	engine->ctx       = ctx;
 	engine->io_object = engine->create (ctx);
-	
+
+	/* check the io object was created: without it every operation
+	 * implemented by this engine (clear, add_to, is_set, wait)
+	 * would dereference a NULL pointer */
+	if (engine->io_object == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to create io wait object, unable to create io wait engine");
+		nopoll_free (engine);
+		return NULL;
+	} /* end if */
+
 	/* return the engine that was created */
 	return engine;
 }
