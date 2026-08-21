@@ -4100,6 +4100,131 @@ nopoll_bool test_47 (void) {
 	return nopoll_true;
 }
 
+/**
+ * @internal Builds a complete masked websocket text frame (FIN = 1)
+ * holding the content provided, writing it into the buffer received.
+ *
+ * @return The amount of bytes written into the buffer.
+ */
+int test_48_build_frame (char * buffer, const char * content)
+{
+	int          iterator;
+	int          length = (int) strlen (content);
+	unsigned char mask[4] = {0x11, 0x22, 0x33, 0x44};
+
+	/* FIN = 1, opcode = text frame */
+	buffer[0] = (char) (0x80 | NOPOLL_TEXT_FRAME);
+	/* mask = 1, payload size (always < 126 for this test) */
+	buffer[1] = (char) (0x80 | length);
+
+	memcpy (buffer + 2, mask, 4);
+
+	iterator = 0;
+	while (iterator < length) {
+		buffer[6 + iterator] = (char) (content[iterator] ^ mask[iterator % 4]);
+		iterator++;
+	} /* end while */
+
+	return 6 + length;
+}
+
+nopoll_bool test_48 (void) {
+
+	noPollCtx      * ctx;
+	noPollConn     * conn;
+	noPollConnOpts * opts;
+	noPollMsg      * msg;
+	char             buffer[128];
+	char             content[128];
+	int              size;
+	int              received = 0;
+	int              iterator;
+
+	printf ("Test 48: checking several frames received inside the same TLS record..\n");
+
+	/* reinit again */
+	ctx = create_ctx ();
+
+	/* disable verification */
+	opts = nopoll_conn_opts_new ();
+	nopoll_conn_opts_ssl_peer_verify (opts, nopoll_false);
+
+	/* call to create a connection */
+	conn = nopoll_conn_tls_new (ctx, opts, "localhost", regtest_port (1235), NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_wait_until_connection_ready (conn, 10)) {
+		printf ("ERROR: Expected to find proper client connection status, but found error..\n");
+		nopoll_conn_close (conn);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* build two complete frames and push them with a single
+	 * SSL_write () call so both travel inside the same TLS record:
+	 * the listener is driven by nopoll_loop_wait () and, after
+	 * reading the first frame, the second one is already decrypted
+	 * and held by OpenSSL, so no socket event can report it */
+	size  = test_48_build_frame (buffer, "packed-frame-1");
+	size += test_48_build_frame (buffer + size, "packed-frame-2");
+
+	if (SSL_write (conn->ssl, buffer, size) != size) {
+		printf ("ERROR: expected to write %d bytes with a single TLS record..\n", size);
+		nopoll_conn_close (conn);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* now wait for both echo replies: the listener replies with the
+	 * same content received */
+	iterator = 0;
+	while (iterator < 100 && received < 2) {
+		msg = nopoll_conn_get_msg (conn);
+		if (msg == NULL) {
+			if (! nopoll_conn_is_ok (conn)) {
+				printf ("ERROR: connection was closed while waiting for the echo replies..\n");
+				nopoll_conn_close (conn);
+				nopoll_ctx_unref (ctx);
+				return nopoll_false;
+			} /* end if */
+
+			nopoll_sleep (50000);
+			iterator++;
+			continue;
+		} /* end if */
+
+		memset (content, 0, 128);
+		memcpy (content, (const char *) nopoll_msg_get_payload (msg),
+			nopoll_msg_get_payload_size (msg) > 127 ? 127 : (int) nopoll_msg_get_payload_size (msg));
+		nopoll_msg_unref (msg);
+
+		received++;
+		printf ("Test 48: received echo reply %d: %s\n", received, content);
+
+		if (! nopoll_cmp (content, received == 1 ? "packed-frame-1" : "packed-frame-2")) {
+			printf ("ERROR: expected to receive 'packed-frame-%d' but found '%s'..\n", received, content);
+			nopoll_conn_close (conn);
+			nopoll_ctx_unref (ctx);
+			return nopoll_false;
+		} /* end if */
+	} /* end while */
+
+	if (received != 2) {
+		printf ("ERROR: expected to receive 2 echo replies but received %d: the listener did not process the frame left inside the TLS buffer..\n",
+			received);
+		nopoll_conn_close (conn);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* finish connection */
+	nopoll_conn_close (conn);
+
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	/* report finish */
+	return nopoll_true;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -4575,6 +4700,13 @@ int main (int argc, char ** argv)
 		printf ("Test 47: check nopoll_msg_join () allocation failure handling  [   OK    ]\n");
 	} else {
 		printf ("Test 47: check nopoll_msg_join () allocation failure handling  [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_48 ()) {
+		printf ("Test 48: check several frames inside the same TLS record     [   OK    ]\n");
+	} else {
+		printf ("Test 48: check several frames inside the same TLS record     [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

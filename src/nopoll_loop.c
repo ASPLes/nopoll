@@ -47,9 +47,13 @@
  * @{
  */
 
-/** 
+/**
  * @internal Function used by nopoll_loop_wait to register all
  * connections into the io waiting object.
+ *
+ * NOTE: connections that are no longer working, and connections that
+ * the io wait engine refuses to watch, are unregistered from the
+ * context by this function.
  */
 nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
 {
@@ -79,7 +83,7 @@ nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 	return nopoll_false; /* keep foreach, don't stop */
 }
 
-/** 
+/**
  * @internal Function used to handle incoming data from the connection
  * and to notify this data to the handler configured (connection
  * handler first, context handler otherwise).
@@ -88,20 +92,39 @@ void nopoll_loop_process_data (noPollCtx * ctx, noPollConn * conn)
 {
 	noPollMsg * msg;
 
-	/* call to get messages from the connection */
-	msg = nopoll_conn_get_msg (conn);
-	if (msg == NULL)
-		return;
+	while (nopoll_true) {
 
-	/* found message, notify it */
-	if (conn->on_msg) 
-		conn->on_msg (ctx, conn, msg, conn->on_msg_data);
-	else if (ctx->on_msg)
-		ctx->on_msg (ctx, conn, msg, ctx->on_msg_data);
+		/* call to get messages from the connection */
+		msg = nopoll_conn_get_msg (conn);
+		if (msg == NULL)
+			return;
 
-	/* release message */
-	nopoll_msg_unref (msg);
-	return;
+		/* found message, notify it */
+		if (conn->on_msg)
+			conn->on_msg (ctx, conn, msg, conn->on_msg_data);
+		else if (ctx->on_msg)
+			ctx->on_msg (ctx, conn, msg, ctx->on_msg_data);
+
+		/* release message */
+		nopoll_msg_unref (msg);
+
+		/* the handler just notified is allowed to close the
+		 * connection: do not touch it again in that case */
+		if (! nopoll_conn_is_ok (conn))
+			return;
+
+		/* keep on reading while the connection holds content
+		 * that was already received and decrypted, which
+		 * happens when a single TLS record carries more than
+		 * one websocket frame: those octets have already left
+		 * the kernel so the io wait engine will never report
+		 * them again and, without this, the frame is delayed
+		 * until the peer happens to send something else (see
+		 * \ref nopoll_conn_read_pending) */
+		if (nopoll_conn_read_pending (conn) <= 0)
+			return;
+
+	} /* end while */
 }
 
 /** 
@@ -207,10 +230,16 @@ void nopoll_loop_stop (noPollCtx * ctx)
  *
  * @param ctx The context object where the wait will be implemented.
  *
- * @param timeout The timeout to wait for changes (microseconds). If no changes
- * happens, the function returns. The function will block the caller
- * until a call to \ref nopoll_loop_stop is done in the case timeout
- * passed is 0. To wait 1 second, pass 1000000
+ * @param timeout The timeout to wait for changes (microseconds). Once
+ * that time is exceeded the function returns. The function will block
+ * the caller until a call to \ref nopoll_loop_stop is done in the case
+ * timeout passed is 0. To wait 1 second, pass 1000000
+ *
+ * NOTE: the timeout is checked after every internal wait operation, so
+ * it is not an exact deadline: the io wait engine may keep the caller
+ * blocked up to its own internal wait period (500ms for the select(2)
+ * based engine) before the timeout is noticed. Timeouts smaller than
+ * that period will still block the caller for that period.
  *
  * @return The function returns 0 when finished without error or -2 in
  * the case ctx is NULL or timeout is negative. Function returns -3 if
@@ -222,8 +251,10 @@ void nopoll_loop_stop (noPollCtx * ctx)
  * <b>Recovering from IO Wait failure (return code -4)</b>
  *
  * In the case I/O wait mechanism fails, this function will return
- * -4. In can catch that error code and recover (keep on waiting), log
- * the error or implement some other policy.
+ * -4. You can catch that error code and recover (keep on waiting), log
+ * the error or implement some other policy. The io wait engine is
+ * released every time this function returns (no matter the result
+ * reported), and created again by the next call.
  *
  * Here is an example:
  *
@@ -284,14 +315,6 @@ int nopoll_loop_wait (noPollCtx * ctx, long timeout)
 		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding connections to watch: %d", ctx->conn_num);  */
 		nopoll_ctx_foreach_conn (ctx, nopoll_loop_register, NULL);
 
-		/* if (errno == EBADF) { */
-			/* detected some descriptor not properly
-			 * working, try to check them */
-			/* nopoll_ctx_foreach_conn (ctx, nopoll_loop_clean_descriptors, NULL); */
-		/* nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Found some descriptor is not valid (errno==%d)", errno);
-		   continue; */ 
-		/* } */ /* end if */
-		
 		/* implement wait operation */
 		/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Waiting for changes into %d connections", ctx->conn_num); */
 		wait_status = ctx->io_engine->wait (ctx, ctx->io_engine->io_object);
