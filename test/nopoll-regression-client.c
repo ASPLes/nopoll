@@ -3808,8 +3808,30 @@ nopoll_bool test_45 (void) {
 		return nopoll_false;
 	} /* end if */
 
-	/* release everything */
+	/* release everything
+	 *
+	 * NOTE: an extra reference is acquired here to check that the
+	 * close releases the reference owned by this function. At this
+	 * point the loop already unregistered the client connection
+	 * (it is not working anymore after the close received), so the
+	 * context registry does not hold a reference of its own:
+	 * nopoll_conn_close () used to skip the release in that case,
+	 * leaking the connection */
+	nopoll_conn_ref (conn);
 	nopoll_conn_close (conn);
+
+	if (nopoll_conn_ref_count (conn) != 1) {
+		printf ("ERROR: expected 1 reference after closing the connection, but found %d (the reference owned by the caller wasn't released)..\n",
+			nopoll_conn_ref_count (conn));
+		nopoll_conn_unref (conn);
+		nopoll_conn_close (listener);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* release the extra reference acquired above */
+	nopoll_conn_unref (conn);
+
 	nopoll_conn_close (listener);
 	nopoll_ctx_unref (ctx);
 

@@ -384,7 +384,54 @@ void           nopoll_ctx_unregister_conn (noPollCtx  * ctx,
 	return;
 }
 
-/** 
+/**
+ * @internal Allows to check if the connection provided is currently
+ * registered on the context provided.
+ *
+ * It is used by \ref nopoll_conn_close_ext to find out if the
+ * reference released by \ref nopoll_ctx_unregister_conn is one of the
+ * references it counted before calling it: a connection that was
+ * already unregistered (for example, by the built-in loop after
+ * detecting it is not working anymore) does not hold that reference
+ * anymore.
+ *
+ * @param ctx The context where the connection is looked up.
+ *
+ * @param conn The connection that is checked to be registered.
+ *
+ * @return nopoll_true if the connection is registered on the context
+ * provided, otherwise nopoll_false is returned.
+ */
+nopoll_bool    __nopoll_ctx_conn_is_registered (noPollCtx  * ctx,
+						noPollConn * conn)
+{
+	int         iterator;
+	nopoll_bool result = nopoll_false;
+
+	nopoll_return_val_if_fail (ctx, ctx && conn, nopoll_false);
+
+	/* acquire mutex here */
+	nopoll_mutex_lock (ctx->ref_mutex);
+
+	iterator = 0;
+	while (iterator < ctx->conn_length) {
+
+		/* check the connection reference */
+		if (ctx->conn_list && ctx->conn_list[iterator] && ctx->conn_list[iterator]->id == conn->id) {
+			result = nopoll_true;
+			break;
+		} /* end if */
+
+		iterator++;
+	} /* end while */
+
+	/* release mutex here */
+	nopoll_mutex_unlock (ctx->ref_mutex);
+
+	return result;
+}
+
+/**
  * @brief Allows to get number of connections currently registered.
  *
  * @param ctx The context where the operation is requested.

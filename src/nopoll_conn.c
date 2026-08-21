@@ -2090,8 +2090,9 @@ void          nopoll_conn_shutdown (noPollConn * conn)
  */ 
 void          nopoll_conn_close_ext  (noPollConn  * conn, int status, const char * reason, int reason_size)
 {
-	int    refs;
-	char * content;
+	int         refs;
+	nopoll_bool registered;
+	char *      content;
 #if defined(SHOW_DEBUG_LOG)
 	const char * role = "unknown";
 #endif
@@ -2152,13 +2153,22 @@ void          nopoll_conn_close_ext  (noPollConn  * conn, int status, const char
 	 * does not own when the connection is closed from a
 	 * notification handler, destroying the object while the
 	 * library was still using it */
-	refs = __nopoll_conn_owner_ref_count (conn);
+	registered = __nopoll_ctx_conn_is_registered (conn->ctx, conn);
+	refs       = __nopoll_conn_owner_ref_count (conn);
 	nopoll_ctx_unregister_conn (conn->ctx, conn);
 
 	/* avoid calling next unref in the case not enough references
 	 * are found: the connection was only held by the context
-	 * registry, whose reference was already released above */
-	if (refs <= 1)
+	 * registry, whose reference was already released above.
+	 *
+	 * NOTE: the registry reference is only part of the count when
+	 * the connection was still registered. It is not when the
+	 * connection was already unregistered (the built-in loop does
+	 * that as soon as it finds a connection that is not working):
+	 * in that case every reference counted is owned by the caller
+	 * and the one it owns must be released here, otherwise the
+	 * connection is leaked */
+	if (refs <= (registered ? 1 : 1))
 		return;
 
 	/* call to unref connection */
