@@ -3471,6 +3471,12 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			/* update remaining bytes */
 			msg->payload_size = msg->remain_bytes;
 			nopoll_free (msg->payload);
+			/* NOTE: the reference must be nullified here: a new
+			 * payload is allocated later (see read_payload) but
+			 * the checks done before that allocation may release
+			 * the message (nopoll_msg_unref), which would free
+			 * this same payload a second time */
+			msg->payload      = NULL;
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "reusing noPollMsg reference (%p) since last payload read was 0, remaining: %ld", msg,
 				    msg->payload_size);
 		}

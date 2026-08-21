@@ -38,6 +38,8 @@
 #include <nopoll_msg.h>
 #include <nopoll_private.h>
 
+#include <limits.h>
+
 /** 
  * \defgroup nopoll_msg noPoll Message: functions for handling and using noPoll messages (websocket messages)
  */
@@ -263,8 +265,14 @@ noPollOpCode nopoll_msg_opcode (noPollMsg * msg)
  * received from \ref nopoll_conn_get_msg (the last fragment received
  * is the one flagging FIN = 1) as the regression listener does.
  *
- * @return The function returns the newly allocated or reused
- * reference with increased reference counting or NULL if it fails.
+ * @return The function returns the newly allocated message (with one
+ * reference) or, when only one of the arguments is defined, that same
+ * reference with its reference counting increased. NULL is returned
+ * if it fails, which happens when both arguments are NULL, when the
+ * memory needed for the joined content cannot be allocated or when
+ * any of the messages received reports an inconsistent payload size
+ * (negative, without payload, or big enough to make the resulting
+ * size not representable).
  */
 noPollMsg  * nopoll_msg_join (noPollMsg * msg, noPollMsg * msg2)
 {
@@ -281,7 +289,24 @@ noPollMsg  * nopoll_msg_join (noPollMsg * msg, noPollMsg * msg2)
 		nopoll_msg_ref (msg);
 		return msg;
 	} /* end if */
-	
+
+	/* check both messages report a consistent payload size before
+	 * using it: payload_size is signed, so a negative value would be
+	 * converted into a huge size_t when allocating and would make the
+	 * memcpy operations below read out of bounds */
+	if (msg->payload_size < 0 || msg2->payload_size < 0)
+		return NULL;
+	if ((msg->payload == NULL && msg->payload_size > 0) ||
+	    (msg2->payload == NULL && msg2->payload_size > 0))
+		return NULL;
+
+	/* check the resulting size can be represented: the sum is done
+	 * with signed values so an overflow here is undefined behaviour
+	 * (the extra byte reserved for the string terminator is also
+	 * taken into account) */
+	if (msg->payload_size > (LONG_MAX - 1) - msg2->payload_size)
+		return NULL;
+
 	/* now, join content */
 	result            = nopoll_msg_new ();
 	if (result == NULL)
@@ -294,18 +319,22 @@ noPollMsg  * nopoll_msg_join (noPollMsg * msg, noPollMsg * msg2)
 
 	/* copy payload size and content */
 	result->payload_size = msg->payload_size + msg2->payload_size;
-	result->payload = nopoll_new (char, result->payload_size + 1);
+	result->payload = nopoll_new (char, (size_t) (result->payload_size + 1));
 	if (result->payload == NULL) {
 		/* release the holder created to avoid leaking it */
 		nopoll_msg_unref (result);
 		return NULL;
 	} /* end if */
 
-	/* copy content from first message */
-	memcpy (result->payload, msg->payload, msg->payload_size);
+	/* copy content from first message (skipped when the message
+	 * carries no payload: passing a NULL source to memcpy is
+	 * undefined even when copying 0 bytes) */
+	if (msg->payload_size > 0)
+		memcpy (result->payload, msg->payload, (size_t) msg->payload_size);
 
 	/* copy content from second message */
-	memcpy (((unsigned char *) result->payload) + msg->payload_size , msg2->payload, msg2->payload_size);
+	if (msg2->payload_size > 0)
+		memcpy (((unsigned char *) result->payload) + msg->payload_size , msg2->payload, (size_t) msg2->payload_size);
 
 	/* return joined message */
 	return result;

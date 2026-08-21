@@ -3933,6 +3933,7 @@ nopoll_bool test_47 (void) {
 	noPollMsg * msg;
 	noPollMsg * msg2;
 	noPollMsg * joined;
+	noPollMsg * aux;
 	long int    huge_size;
 
 	printf ("Test 47: checking nopoll_msg_join () joining and allocation failure handling..\n");
@@ -4043,6 +4044,55 @@ nopoll_bool test_47 (void) {
 
 	/* restore the real payload size so the message is released fine */
 	msg->payload_size = 5;
+
+	/* check the function rejects a payload size that cannot be added
+	 * without overflowing (it used to be computed with a signed sum,
+	 * which is undefined behaviour: run this test under
+	 * -fsanitize=undefined to check it) */
+	msg->payload_size = LONG_MAX - 4;
+	if (nopoll_msg_join (msg, msg2) != NULL) {
+		printf ("ERROR: expected to fail joining messages whose sizes cannot be added..\n");
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	/* check the function rejects a message reporting a negative
+	 * payload size (it would be converted into a huge size_t) */
+	msg->payload_size = -8;
+	if (nopoll_msg_join (msg, msg2) != NULL) {
+		printf ("ERROR: expected to fail joining a message reporting a negative payload size..\n");
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	msg->payload_size = 5;
+
+	/* check joining a message holder with no payload at all: this is
+	 * what nopoll_msg_new () reports and it must not make the
+	 * function copy from a NULL reference */
+	joined = nopoll_msg_new ();
+	if (joined == NULL) {
+		printf ("ERROR: expected to create an empty message holder..\n");
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	aux = nopoll_msg_join (joined, msg);
+	if (aux == NULL || nopoll_msg_get_payload_size (aux) != 5 ||
+	    memcmp (nopoll_msg_get_payload (aux), "hello", 6) != 0) {
+		printf ("ERROR: expected to join an empty message holder with 'hello' (5 bytes)..\n");
+		nopoll_msg_unref (aux);
+		nopoll_msg_unref (joined);
+		nopoll_msg_unref (msg);
+		nopoll_msg_unref (msg2);
+		return nopoll_false;
+	} /* end if */
+
+	nopoll_msg_unref (aux);
+	nopoll_msg_unref (joined);
 
 	nopoll_msg_unref (msg);
 	nopoll_msg_unref (msg2);
