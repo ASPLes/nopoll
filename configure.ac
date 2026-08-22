@@ -68,6 +68,14 @@ dnl get site dinamic library extension
 SHARED_EXTENSION=$shrext_cmds
 AC_SUBST(SHARED_EXTENSION)
 
+dnl NOTE: noPoll only implements the select(2) based I/O wait engine (see
+dnl nopoll_io.c: nopoll_io_get_engine () wires it for every engine type
+dnl requested). The poll/epoll detection below decides nothing at this
+dnl moment: none of the conditionals it defines is used by any Makefile.am,
+dnl and no source file consumes default_platform. It is kept as groundwork
+dnl for the engines declared in noPollIoEngineType, so do not report it to
+dnl the user as if it were in use -- see the settings summary at the end.
+
 dnl check for poll support
 AC_CHECK_HEADER(sys/poll.h, enable_poll=yes, enable_poll=no)
 AM_CONDITIONAL(ENABLE_POLL_SUPPORT, test "x$enable_poll" = "xyes")
@@ -362,6 +370,34 @@ _______EOF
 	fi
 ],[
 
+# Bake into config.status the values this command needs from configure.
+#
+# This third argument (init-cmds) is written into config.status through an
+# unquoted here-document, so every $variable below is expanded NOW, while
+# configure is writing config.status, and the resulting literal is what
+# config.status carries. The command above (second argument) is written
+# through a QUOTED here-document instead, so any $variable there is only
+# expanded when config.status runs.
+#
+# That is why these assignments are needed. config.status is a separate
+# script and does not inherit configure's environment, so exporting the
+# variables from configure is not enough: whenever config.status regenerated
+# nopoll_config.h on its own -- the run make triggers when configure is newer
+# than config.status, for instance -- every $ssl_*_header expanded to the
+# empty string and the resulting header silently lost all the
+# NOPOLL_HAVE_*TLS* defines, breaking the build at nopoll_decl.h with an
+# empty noPollSslProtocol enum.
+#
+# The rest of the values used by the command ($host, $have_vasprintf and the
+# $ac_cv_sizeof_* ones) already get baked in because they are referenced from
+# this same init-cmds block below.
+ssl_sslv3_header="$ssl_sslv3_header"
+ssl_sslv23_header="$ssl_sslv23_header"
+ssl_tlsv1_header="$ssl_tlsv1_header"
+ssl_tlsv11_header="$ssl_tlsv11_header"
+ssl_tlsv12_header="$ssl_tlsv12_header"
+ssl_tls_flexible_header="$ssl_tls_flexible_header"
+
 # Check size of void pointer against the size of a single
 # integer. This will allow us to know if we can cast directly a
 # integer to pointer and viceversa.
@@ -443,9 +479,9 @@ echo "------------------------------------------"
 echo "--       LibNoPoll (${NOPOLL_VERSION}) LIBRARY SETTINGS     --"
 echo "------------------------------------------"
 echo "   Installation prefix:            [$prefix]"
-echo "      select(2) support:           [yes]"
-echo "      poll(2) support:             [$enable_poll]"
-echo "      epoll(2) support:            [$enable_cv_epoll]"
+echo "   I/O wait engine:                [select(2)]"
+echo "      poll(2) available:           [$enable_poll (detected, not implemented yet)]"
+echo "      epoll(2) available:          [$enable_cv_epoll (detected, not implemented yet)]"
 echo "   OpenSSL TLS protocol versions detected:"
 echo "      SSLv3:   $ssl_sslv3_supported"
 echo "      SSLv23:  $ssl_sslv23_supported"
