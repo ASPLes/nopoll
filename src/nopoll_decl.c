@@ -42,39 +42,53 @@
  * @{
  */
 
-/** 
- * @brief Calloc helper for nopoll library.
+/**
+ * @brief Calloc helper for nopoll library. The memory returned is
+ * initialized to zero.
  *
  * @param count How many items to allocate.
  * @param size Size of one item.
- * 
- * @return A newly allocated pointer.
+ *
+ * @return A newly allocated pointer that must be released with \ref
+ * nopoll_free, or NULL if the allocation failed (no memory
+ * available). The caller must check the value returned before using
+ * it: this function never aborts the process on allocation failure.
+ *
  * @see nopoll_free
  */
-noPollPtr nopoll_calloc(size_t count, size_t size)
+noPollPtr nopoll_calloc (size_t count, size_t size)
 {
-   return calloc (count, size);
+	return calloc (count, size);
 }
 
-/** 
+/**
  * @brief Realloc helper for nopoll library.
  *
- * @param ref the reference to reallocate.
+ * @param ref the reference to reallocate. It can be NULL, in that
+ * case the call behaves like a plain allocation of <i>size</i> bytes.
+ *
  * @param size Size of the new reference.
- * 
- * @return A newly allocated pointer.
+ *
+ * @return The reference holding the resized memory, which may be
+ * different from <i>ref</i>, or NULL if the reallocation failed. In
+ * that failure case <b>the memory referenced by <i>ref</i> is still
+ * valid and must still be released</b>, so the caller must not
+ * overwrite its only pointer to it with the value returned (doing
+ * <i>ref = nopoll_realloc (ref, size)</i> leaks the previous block on
+ * error). Use a temporary variable and check it before assigning.
+ *
  * @see nopoll_free
  */
-noPollPtr nopoll_realloc(noPollPtr ref, size_t size)
+noPollPtr nopoll_realloc (noPollPtr ref, size_t size)
 {
-   return realloc (ref, size);
+	return realloc (ref, size);
 }
 
-/** 
- * @brief Allows to deallocate memory referenced by <i>ref</i> but
- * checking before that the reference is different from null.
- * 
- * @param ref The reference to clear.
+/**
+ * @brief Allows to deallocate memory referenced by <i>ref</i>.
+ *
+ * @param ref The reference to clear. It can be NULL, in that case the
+ * function does nothing.
  */
 void nopoll_free (noPollPtr ref)
 {
