@@ -42,24 +42,35 @@
 
 #if defined(NOPOLL_OS_WIN32)
 
-nopoll_bool __nopoll_win32_was_init = nopoll_false;
+static nopoll_bool __nopoll_win32_was_init = nopoll_false;
 
 int  nopoll_win32_init (noPollCtx * ctx)
 {
-	WORD wVersionRequested; 
-	WSADATA wsaData; 
-	int error; 
+	WORD wVersionRequested;
+	WSADATA wsaData;
+	int error;
 
 	if (__nopoll_win32_was_init)
 		return nopoll_true;
-	
-	wVersionRequested = MAKEWORD( 2, 2 ); 
-	
-	error = WSAStartup( wVersionRequested, &wsaData ); 
+
+	wVersionRequested = MAKEWORD( 2, 2 );
+
+	error = WSAStartup( wVersionRequested, &wsaData );
 	if (error != NO_ERROR) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to init winsock api, exiting..");
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to init winsock api, WSAStartup failed with error %d", error);
 		return nopoll_false;
 	}
+
+	/* WSAStartup may report success having negotiated a version
+	 * lower than the one requested, taking the winsock reference
+	 * anyway: check it and release that reference before failing */
+	if (LOBYTE (wsaData.wVersion) != 2 || HIBYTE (wsaData.wVersion) != 2) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to init winsock api, requested version 2.2 but got %d.%d",
+			    LOBYTE (wsaData.wVersion), HIBYTE (wsaData.wVersion));
+		WSACleanup ();
+		return nopoll_false;
+	} /* end if */
+
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "winsock initialization ok");
 	/* flag the library as initialized */
 	__nopoll_win32_was_init = nopoll_true;
@@ -70,41 +81,38 @@ BOOL APIENTRY DllMain (HINSTANCE hInst,
                        DWORD reason,
                        LPVOID reserved)
 {
- 
-    /* always returns true because nopoll init is done through
-     * nopoll_init */
-    return nopoll_true;
+
+	/* always returns true because winsock init is done through
+	 * nopoll_win32_init, called by nopoll_ctx_new */
+	return nopoll_true;
 }
 
-int      __nopoll_win32_blocking_socket_set (NOPOLL_SOCKET socket,
-                                             int           status) 
+static int __nopoll_win32_blocking_socket_set (NOPOLL_SOCKET socket,
+					       int           status)
 {
-        unsigned long enable = status;
+	unsigned long enable = status;
 
 	return (ioctlsocket (socket, FIONBIO, &enable) == 0);
 }
 
 int      nopoll_win32_nonblocking_enable (NOPOLL_SOCKET socket)
 {
-        return __nopoll_win32_blocking_socket_set (socket, 1);
+	return __nopoll_win32_blocking_socket_set (socket, 1);
 }
 
 int      nopoll_win32_blocking_enable (NOPOLL_SOCKET socket)
 {
-        return __nopoll_win32_blocking_socket_set (socket, 0);
+	return __nopoll_win32_blocking_socket_set (socket, 0);
 }
 
-#if ! defined(HAVE_GETTIMEOFDAY)
-
-
-/** 
+/**
  * @brief The function obtains the current time, expressed as seconds
  * and microseconds since the Epoch, and store it in the timeval
- * structure pointed to by tv. As posix says gettimeoday should return
+ * structure pointed to by tv. As posix says gettimeofday should return
  * zero and should not reserve any value for error, this function
  * returns zero.
  *
- * The timeval struct have the following members:
+ * The timeval struct has the following members:
  *
  * \code
  * struct timeval {
@@ -114,11 +122,12 @@ int      nopoll_win32_blocking_enable (NOPOLL_SOCKET socket)
  * \endcode
  * 
  * @param tv Timeval struct.
- * @param notUsed Not defined.
- * 
- * @return The function allways return 0.
+ * @param notUsed Not used. Kept to match the gettimeofday(2)
+ * signature. Pass NULL.
+ *
+ * @return The function always returns 0.
  */
-int nopoll_win32_gettimeofday(struct timeval *tv, noPollPtr notUsed)
+int nopoll_win32_gettimeofday (struct timeval *tv, noPollPtr notUsed)
 {
 	union {
 		long long ns100;
@@ -130,6 +139,5 @@ int nopoll_win32_gettimeofday(struct timeval *tv, noPollPtr notUsed)
 	tv->tv_sec = (long) ((now.ns100 - 116444736000000000LL) / 10000000LL);
 	return (0);
 } /* end gettimeofday */
-#endif /* end ! defined(HAVE_GETTIMEOFDAY) */
 
-#endif 
+#endif /* end defined(NOPOLL_OS_WIN32) */
