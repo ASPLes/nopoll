@@ -4225,6 +4225,95 @@ nopoll_bool test_48 (void) {
 	return nopoll_true;
 }
 
+/* record of the logs received by __test_49_log_handler */
+int          test_49_criticals = 0;
+const char * test_49_last_msg  = NULL;
+
+void __test_49_log_handler (noPollCtx * ctx, noPollDebugLevel level, const char * log_msg, noPollPtr user_data)
+{
+	int * counter = (int *) user_data;
+
+	if (level != NOPOLL_LEVEL_CRITICAL)
+		return;
+
+	/* record the critical received */
+	test_49_criticals++;
+	test_49_last_msg = log_msg;
+
+	if (counter)
+		(*counter)++;
+
+	return;
+}
+
+nopoll_bool test_49 (void)
+{
+	noPollCtx * ctx;
+	int         user_data_counter = 0;
+
+	ctx = nopoll_ctx_new ();
+	if (ctx == NULL) {
+		printf ("ERROR (1): expected to find proper context creation..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* disable console log on purpose: the handler configured must
+	 * receive the log no matter this setting */
+	nopoll_log_enable (ctx, nopoll_false);
+	nopoll_log_color_enable (ctx, nopoll_false);
+
+	test_49_criticals = 0;
+	test_49_last_msg  = NULL;
+	nopoll_log_set_handler (ctx, __test_49_log_handler, &user_data_counter);
+
+	/* trigger a precondition failure with a valid context: it is
+	 * reported through nopoll_return_val_if_fail (), which calls
+	 * __nopoll_log () directly, without going through the
+	 * nopoll_log () macro */
+	if (nopoll_ctx_foreach_conn (ctx, NULL, NULL) != NULL) {
+		printf ("ERROR (2): expected NULL return from nopoll_ctx_foreach_conn () with a NULL handler..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	if (test_49_criticals == 0) {
+		printf ("ERROR (3): expected to receive the critical reported by the precondition check at the configured log handler..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	if (user_data_counter != test_49_criticals) {
+		printf ("ERROR (4): expected to receive the user data pointer configured at nopoll_log_set_handler ()..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 49: received %d critical (s) at the configured log handler..\n", test_49_criticals);
+
+	/* now remove the handler and check no additional critical is
+	 * notified */
+	nopoll_log_set_handler (ctx, NULL, NULL);
+	test_49_criticals = 0;
+
+	if (nopoll_ctx_foreach_conn (ctx, NULL, NULL) != NULL) {
+		printf ("ERROR (5): expected NULL return from nopoll_ctx_foreach_conn () with a NULL handler..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	if (test_49_criticals != 0) {
+		printf ("ERROR (6): expected to not receive any critical after removing the log handler..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* finish */
+	nopoll_ctx_unref (ctx);
+
+	/* report finish */
+	return nopoll_true;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -4707,6 +4796,13 @@ int main (int argc, char ** argv)
 		printf ("Test 48: check several frames inside the same TLS record     [   OK    ]\n");
 	} else {
 		printf ("Test 48: check several frames inside the same TLS record     [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_49 ()) {
+		printf ("Test 49: check log handler notification for critical logs    [   OK    ]\n");
+	} else {
+		printf ("Test 49: check log handler notification for critical logs    [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

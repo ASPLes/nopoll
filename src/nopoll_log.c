@@ -51,6 +51,8 @@
  * @brief Allows to check if the log reporting inside the system is
  * enabled.
  *
+ * @param ctx The context where the operation will take place.
+ *
  * @return nopoll_true if the log is enabled or nopoll_false
  */
 nopoll_bool      nopoll_log_is_enabled (noPollCtx * ctx) 
@@ -65,7 +67,9 @@ nopoll_bool      nopoll_log_is_enabled (noPollCtx * ctx)
 /** 
  *
  * @brief Allows to get current log configuration, to use colors.
- * 
+ *
+ * @param ctx The context where the operation will take place.
+ *
  * @return nopoll_true if the color log is enabled or nopoll_false
  */
 nopoll_bool    nopoll_log_color_is_enabled (noPollCtx * ctx)
@@ -83,9 +87,9 @@ nopoll_bool    nopoll_log_color_is_enabled (noPollCtx * ctx)
  * console from the nopoll core library.
  *
  * @param ctx The context where the operation will take place.
- * 
- * @param value nopoll_true to enable log to console, otherwise nopoll_false is
- * returned.
+ *
+ * @param value nopoll_true to enable log to console, otherwise
+ * nopoll_false to disable it.
  */
 void     nopoll_log_enable (noPollCtx * ctx, nopoll_bool value)
 {
@@ -98,13 +102,13 @@ void     nopoll_log_enable (noPollCtx * ctx, nopoll_bool value)
 }
 
 /** 
- * @brief Allows to control how to activate the colog log reporting to
+ * @brief Allows to control how to activate the color log reporting to
  * the console from the nopoll core library.
  *
  * @param ctx The context where the operation will take place.
- * 
- * @param value nopoll_true to enable log to console, otherwise nopoll_false is
- * returned.
+ *
+ * @param value nopoll_true to enable color log to console, otherwise
+ * nopoll_false to disable it.
  */
 void     nopoll_log_color_enable (noPollCtx * ctx, nopoll_bool value)
 {
@@ -118,13 +122,16 @@ void     nopoll_log_color_enable (noPollCtx * ctx, nopoll_bool value)
 
 /** 
  * @brief Allows to define a log handler that will receive all logs
- * produced under the provided content.
+ * produced under the provided context.
  *
  * @param ctx The context that is going to be configured.
  *
  * @param handler The handler to be called for each log to be
  * notified. Passing in NULL is allowed to remove any previously
- * configured handler.
+ * configured handler. The handler is called no matter the value
+ * configured by \ref nopoll_log_enable (which only governs the log
+ * reported to the console) and no matter if the library was compiled
+ * with or without --enable-nopoll-log.
  *
  * @param user_data User defined pointer to be passed in into the
  * handler configured along with the log notified.
@@ -156,35 +163,63 @@ void            nopoll_log_set_handler (noPollCtx * ctx, noPollLogHandler handle
  * \endcode
  *
  *
- * @param ctx The context where the operation will take place.
+ * @param ctx The context where the operation will take place. It is
+ * allowed to receive a NULL reference (no log is then notified to any
+ * handler and the console log is skipped).
  *
- * @param level The level that this message is classificed. 
- * 
+ * @param function_name The name of the function reporting the log.
+ *
+ * @param file The file where the log was reported.
+ *
+ * @param line The line, inside the file, where the log was reported.
+ *
+ * @param level The level that this message is classified.
+ *
  * @param message The message to report. The message to report must be
  * not NULL.
  */
 void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * file, int line, noPollDebugLevel level, const char * message, ...)
 {
-
-#ifdef SHOW_DEBUG_LOG
 	va_list      args;
 	char       * log_msg;
 	char       * log_msg2;
 
+	/* not used for now: the function name is still received to
+	 * allow reporting it in the future without changing the
+	 * signature used by every nopoll_log () call site */
+	(void) function_name;
+
+	/* check if the application configured a log handler: in that
+	 * case notify the log to it. This is done before the
+	 * SHOW_DEBUG_LOG guard on purpose because __nopoll_log () is
+	 * also called, unconditionally, by the
+	 * nopoll_return_if_fail () macros: otherwise, a library
+	 * compiled with --disable-nopoll-log would silently drop
+	 * every critical condition reported by them */
 	if (ctx && ctx->log_handler) {
 		/* print the message */
 		va_start (args, message);
 		log_msg = nopoll_strdup_printfv (message, args);
 		va_end (args);
 
+		/* check the message was properly built before using
+		 * it as a %s argument */
+		if (log_msg == NULL)
+			return;
+
 		log_msg2 = log_msg;
 		log_msg = nopoll_strdup_printf ("%s:%d %s ", file, line, log_msg);
 		nopoll_free (log_msg2);
 
+		if (log_msg == NULL)
+			return;
+
 		ctx->log_handler (ctx, level, log_msg, ctx->log_user_data);
 		nopoll_free (log_msg);
 		return;
-	}
+	} /* end if */
+
+#ifdef SHOW_DEBUG_LOG
 
 	/* check if the log is enabled */
 	if (! nopoll_log_is_enabled (ctx))
@@ -192,7 +227,7 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 
 	/* printout the process pid */
 	if (nopoll_log_color_is_enabled (ctx)) 
-		printf ("\e[1;36m(proc %d)\e[0m: ", getpid ());
+		printf ("\x1b[1;36m(proc %d)\x1b[0m: ", getpid ());
 	else
 		printf ("(proc %d): ", getpid ());
 
@@ -200,22 +235,22 @@ void __nopoll_log (noPollCtx * ctx, const char * function_name, const char * fil
 	if (nopoll_log_color_is_enabled (ctx)) {
 		switch (level) {
 		case NOPOLL_LEVEL_DEBUG:
-			printf ("(\e[1;32mdebug\e[0m) ");
+			printf ("(\x1b[1;32mdebug\x1b[0m) ");
 			break;
 		case NOPOLL_LEVEL_WARNING:
-			printf ("(\e[1;33mwarning\e[0m) ");
+			printf ("(\x1b[1;33mwarning\x1b[0m) ");
 			break;
 		case NOPOLL_LEVEL_CRITICAL:
-			printf ("(\e[1;31mcritical\e[0m) ");
+			printf ("(\x1b[1;31mcritical\x1b[0m) ");
 			break;
 		}
 	} else {
 		switch (level) {
 		case NOPOLL_LEVEL_DEBUG:
-			printf ("(debug)");
+			printf ("(debug) ");
 			break;
 		case NOPOLL_LEVEL_WARNING:
-			printf ("(warning)");
+			printf ("(warning) ");
 			break;
 		case NOPOLL_LEVEL_CRITICAL:
 			printf ("(critical) ");
