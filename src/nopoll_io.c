@@ -116,18 +116,25 @@ void    nopoll_io_wait_select_clear (noPollCtx * ctx, noPollPtr __fd_group)
 	return;
 }
 
-/** 
- * @internal Default internal implementation for the wait operation to
- * change its status at least one socket description inside the fd set
- * provided.
- * 
+/**
+ * @internal Default internal implementation for the wait operation:
+ * blocks until at least one socket descriptor inside the fd set
+ * provided changes its status, or until the internal wait period
+ * (500ms) is exhausted.
+ *
  * @param ctx The context where the operation takes place.
  *
  * @param __fd_group The fd set having all sockets to be watched.
  *
- * @return Number of connections that changed, 0 if the wait finished
- * without changes (timeout reached or the call was interrupted by a
- * signal) or -1 if it failed.
+ * @return Number of socket descriptors that changed, 0 if the wait
+ * finished without changes (wait period exhausted or the call was
+ * interrupted by a signal) or -1 if it failed.
+ *
+ * NOTE: on return, the fd set received is modified in place to hold
+ * only the descriptors that changed, which is what \ref
+ * nopoll_io_wait_select_is_set reports afterwards. That is only
+ * meaningful when this function returns a value greater than 0: for
+ * any other result the content of the set must not be trusted.
  */
 int nopoll_io_wait_select_wait (noPollCtx * ctx, noPollPtr __fd_group)
 {
@@ -249,8 +256,9 @@ noPollIoEngine * nopoll_io_get_engine (noPollCtx * ctx, noPollIoEngineType engin
 
 	/* report the caller it will not get the mechanism requested:
 	 * select is the only engine implemented so far */
-	if (engine_type != NOPOLL_IO_ENGINE_DEFAULT && engine_type != NOPOLL_IO_ENGINE_SELECT)
+	if (engine_type != NOPOLL_IO_ENGINE_DEFAULT && engine_type != NOPOLL_IO_ENGINE_SELECT) {
 		nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "Requested io wait engine %d is not implemented, using select(2) based engine", engine_type);
+	} /* end if */
 
 	/* configure default implementation */
 	engine->create  = nopoll_io_wait_select_create;
