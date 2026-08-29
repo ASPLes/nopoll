@@ -4314,6 +4314,113 @@ nopoll_bool test_49 (void)
 	return nopoll_true;
 }
 
+/* number of simultaneous connections opened by test_50: the context
+ * connection list grows 10 by 10, so this value forces the
+ * reallocation path inside nopoll_ctx_register_conn () to run several
+ * times */
+#define TEST_50_CONNECTIONS (25)
+
+nopoll_bool test_50 (void)
+{
+	noPollCtx  * ctx;
+	noPollConn * conns[TEST_50_CONNECTIONS];
+	noPollMsg  * msg;
+	int          iterator;
+	int          iter;
+	nopoll_bool  result = nopoll_false;
+
+	printf ("Test 50: checking context connection list growth with %d simultaneous connections..\n", TEST_50_CONNECTIONS);
+
+	/* create context */
+	ctx = create_ctx ();
+	if (ctx == NULL) {
+		printf ("ERROR (1): expected to find proper context creation..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* clear the array so the cleanup code below is always safe */
+	for (iterator = 0; iterator < TEST_50_CONNECTIONS; iterator++)
+		conns[iterator] = NULL;
+
+	/* open all the connections before closing any of them, so every
+	 * one of them takes a different position of the list */
+	for (iterator = 0; iterator < TEST_50_CONNECTIONS; iterator++) {
+		conns[iterator] = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
+		if (! nopoll_conn_is_ok (conns[iterator])) {
+			printf ("ERROR (2): expected to find proper connection status at connection %d..\n", iterator);
+			goto finish;
+		} /* end if */
+
+		if (! nopoll_conn_wait_until_connection_ready (conns[iterator], 5)) {
+			printf ("ERROR (3): expected to find proper connection ready at connection %d..\n", iterator);
+			goto finish;
+		} /* end if */
+	} /* end for */
+
+	/* check all of them are registered */
+	if (nopoll_ctx_conns (ctx) != TEST_50_CONNECTIONS) {
+		printf ("ERROR (4): expected to find %d registered connections but found: %d\n",
+			TEST_50_CONNECTIONS, nopoll_ctx_conns (ctx));
+		goto finish;
+	} /* end if */
+
+	/* check every connection still works: a wrong handling of the
+	 * list reallocation would have lost or duplicated references */
+	for (iterator = 0; iterator < TEST_50_CONNECTIONS; iterator++) {
+		if (nopoll_conn_send_text (conns[iterator], "This is a test", 14) != 14) {
+			printf ("ERROR (5): expected to find proper send operation at connection %d..\n", iterator);
+			goto finish;
+		} /* end if */
+
+		/* wait for the reply */
+		iter = 0;
+		while ((msg = nopoll_conn_get_msg (conns[iterator])) == NULL) {
+			if (! nopoll_conn_is_ok (conns[iterator])) {
+				printf ("ERROR (6): received websocket connection close during wait reply at connection %d..\n", iterator);
+				goto finish;
+			} /* end if */
+
+			nopoll_sleep (10000);
+
+			if (iter > 10)
+				break;
+			iter++;
+		} /* end while */
+
+		if (msg == NULL || ! nopoll_cmp ((char *) nopoll_msg_get_payload (msg), "This is a test")) {
+			printf ("ERROR (7): expected to find echo reply at connection %d but found: '%s'..\n",
+				iterator, msg ? (const char *) nopoll_msg_get_payload (msg) : "<null>");
+			nopoll_msg_unref (msg);
+			goto finish;
+		} /* end if */
+
+		nopoll_msg_unref (msg);
+	} /* end for */
+
+	/* check the accepted protocol is replaced (and not leaked) when
+	 * it is configured twice on the same connection */
+	nopoll_conn_set_accepted_protocol (conns[0], "protocol-1");
+	nopoll_conn_set_accepted_protocol (conns[0], "protocol-2");
+
+	result = nopoll_true;
+
+finish:
+	/* close all the connections opened */
+	for (iterator = 0; iterator < TEST_50_CONNECTIONS; iterator++)
+		nopoll_conn_close (conns[iterator]);
+
+	/* check the context is left with no connection registered */
+	if (result && nopoll_ctx_conns (ctx) != 0) {
+		printf ("ERROR (8): expected to find 0 registered connections after closing them but found: %d\n",
+			nopoll_ctx_conns (ctx));
+		result = nopoll_false;
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+
+	return result;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -4803,6 +4910,13 @@ int main (int argc, char ** argv)
 		printf ("Test 49: check log handler notification for critical logs    [   OK    ]\n");
 	} else {
 		printf ("Test 49: check log handler notification for critical logs    [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_50 ()) {
+		printf ("Test 50: check context connection list growth               [   OK    ]\n");
+	} else {
+		printf ("Test 50: check context connection list growth               [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

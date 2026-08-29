@@ -262,10 +262,12 @@ int            nopoll_ctx_ref_count (noPollCtx * ctx)
  * @return nopoll_true if the connection was registered, otherwise
  * nopoll_false is returned.
  */
-nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx, 
+nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 						noPollConn * conn)
 {
-	int iterator;
+	int           iterator;
+	int           length;
+	noPollConn ** conn_list;
 
 	nopoll_return_val_if_fail (ctx, ctx && conn, nopoll_false);
 
@@ -307,24 +309,37 @@ nopoll_bool           nopoll_ctx_register_conn (noPollCtx  * ctx,
 	} /* end while */
 
 	/* if reached this place it means no more buckets are
-	 * available, acquire more memory (increase 10 by 10) */
-	ctx->conn_length += 10;
-	ctx->conn_list = (noPollConn**) nopoll_realloc (ctx->conn_list, sizeof (noPollConn *) * (ctx->conn_length));
-	if (ctx->conn_list == NULL) {
+	 * available, acquire more memory (increase 10 by 10)
+	 *
+	 * NOTE: the result of the reallocation is received in a local
+	 * variable and the context is only updated after checking it:
+	 * assigning it directly to ctx->conn_list overwrote the only
+	 * reference to the previous list when the reallocation failed
+	 * (leaking it along with every connection registered on it) and
+	 * left the context with a NULL list but a length already
+	 * increased, so the next registration or foreach dereferenced
+	 * NULL */
+	length    = ctx->conn_length + 10;
+	conn_list = (noPollConn**) nopoll_realloc (ctx->conn_list, sizeof (noPollConn *) * length);
+	if (conn_list == NULL) {
 		/* release mutex */
 		nopoll_mutex_unlock (ctx->ref_mutex);
 
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "General connection registration error, memory acquisition failed..");
 		return nopoll_false;
 	} /* end if */
-	
+
 	/* clear new positions */
-	iterator = (ctx->conn_length - 10);
-	while (iterator < ctx->conn_length) {
-		ctx->conn_list[iterator] = 0;
+	iterator = ctx->conn_length;
+	while (iterator < length) {
+		conn_list[iterator] = 0;
 		/* next position */
 		iterator++;
 	} /* end while */
+
+	/* publish the new list into the context */
+	ctx->conn_list   = conn_list;
+	ctx->conn_length = length;
 
 	/* release mutex here */
 	nopoll_mutex_unlock (ctx->ref_mutex);
@@ -606,9 +621,10 @@ nopoll_bool           nopoll_ctx_set_certificate (noPollCtx  * ctx,
 						  const char * privateKey, 
 						  const char * optionalChainFile)
 {
-	int length;
+	int                 length;
 	noPollCertificate * cert;
 	noPollCertificate * certificates;
+	noPollCertificate   new_cert;
 
 	/* check values before proceed */
 	nopoll_return_val_if_fail (ctx, ctx && certificateFile && privateKey, nopoll_false);
@@ -648,27 +664,48 @@ nopoll_bool           nopoll_ctx_set_certificate (noPollCtx  * ctx,
 		return nopoll_false;
 	} /* end if */
 
-	ctx->certificates        = certificates;
+	/* store the reallocated array right away: the previous one was
+	 * already released by the reallocation, so ctx->certificates
+	 * cannot be left pointing to it. The entry count is the commit
+	 * point and is only updated at the end */
+	ctx->certificates = certificates;
+
+	/* build the certificate entry into a local structure instead of
+	 * writing it in place: a failed duplication would otherwise
+	 * publish a half initialized entry (nopoll_ctx_find_certificate
+	 * would report a certificate with NULL file names, and further
+	 * attempts to install the same serverName would be reported as
+	 * already installed, making the failure permanent) */
+	new_cert.serverName        = nopoll_strdup (serverName);
+	new_cert.certificateFile   = nopoll_strdup (certificateFile);
+	new_cert.privateKey        = nopoll_strdup (privateKey);
+	new_cert.optionalChainFile = nopoll_strdup (optionalChainFile);
+
+	/* check every duplication: nopoll_strdup returns NULL both for a
+	 * NULL input and on memory failure, so only those values that
+	 * were provided are checked (certificateFile and privateKey are
+	 * ensured to be defined by the check at the function start) */
+	if (new_cert.certificateFile == NULL || new_cert.privateKey == NULL ||
+	    (serverName        && new_cert.serverName        == NULL) ||
+	    (optionalChainFile && new_cert.optionalChainFile == NULL)) {
+
+		/* release what was duplicated and leave the store
+		 * untouched (the entry is not published) */
+		nopoll_free (new_cert.serverName);
+		nopoll_free (new_cert.certificateFile);
+		nopoll_free (new_cert.privateKey);
+		nopoll_free (new_cert.optionalChainFile);
+
+		nopoll_mutex_unlock (ctx->ref_mutex);
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store the certificate provided");
+		return nopoll_false;
+	} /* end if */
+
+	/* publish the certificate */
+	cert  = &(ctx->certificates[length - 1]);
+	(*cert) = new_cert;
+
 	ctx->certificates_length = length;
-
-	/* hold certificate */
-	cert = &(ctx->certificates[length - 1]);
-
-	cert->serverName = NULL;
-	if (serverName)
-		cert->serverName         = nopoll_strdup (serverName);
-
-	cert->certificateFile = NULL;
-	if (certificateFile)
-		cert->certificateFile    = nopoll_strdup (certificateFile);
-
-	cert->privateKey = NULL;
-	if (privateKey)
-		cert->privateKey         = nopoll_strdup (privateKey);
-
-	cert->optionalChainFile = NULL;
-	if (optionalChainFile)
-		cert->optionalChainFile  = nopoll_strdup (optionalChainFile);
 
 	/* release the mutex */
 	nopoll_mutex_unlock (ctx->ref_mutex);

@@ -396,9 +396,22 @@ char * __nopoll_conn_get_client_init (noPollConn * conn, noPollConnOpts * opts)
 	
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Created Sec-WebSocket-Key nonce: %s", key);
 
-	/* create accept and store */
+	/* create accept and store
+	 *
+	 * NOTE: both allocations must be checked before using them:
+	 * writing expected_accept into the handshake object right after
+	 * the allocation dereferenced NULL when memory was exhausted */
 	conn->handshake = nopoll_new (noPollHandShake, 1);
+	if (conn->handshake == NULL) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store handshake status, unable to produce client init");
+		return NULL;
+	} /* end if */
+
 	conn->handshake->expected_accept = nopoll_strdup (key);
+	if (conn->handshake->expected_accept == NULL) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store expected Sec-WebSocket-Accept, unable to produce client init");
+		return NULL;
+	} /* end if */
 
 	/* send initial handshake */
 	return nopoll_strdup_printf ("GET %s HTTP/1.1"
@@ -901,6 +914,25 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 	/* protocols */
 	if (protocols != NULL)
 		conn->protocols = nopoll_strdup (protocols);
+
+	/* check every duplication done above before using these values:
+	 * they are the material used to build the client init request
+	 * (Host:, Origin:, GET url). Letting a failed duplication pass
+	 * makes the request be built with "(null)" inside those headers
+	 * (or crash on libcs that do not accept NULL for %s), that is,
+	 * sending an invented request instead of reporting the memory
+	 * failure */
+	if (conn->host == NULL || conn->port == NULL || conn->host_name == NULL ||
+	    conn->origin == NULL || conn->get_url == NULL ||
+	    (protocols != NULL && conn->protocols == NULL)) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store connection values, unable to connect");
+		nopoll_conn_shutdown (conn);
+
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (options);
+
+		return NULL;
+	} /* end if */
 
 	/* default to no close frame received */
 	conn->peer_close_status = 1006;
@@ -1951,8 +1983,16 @@ void          nopoll_conn_set_accepted_protocol (noPollConn * conn, const char *
 	if (conn == NULL || protocol == NULL)
 		return;
 
-	/* set accepted protocol */
+	/* set accepted protocol
+	 *
+	 * NOTE: the previous value is released first: calling this
+	 * function twice on the same connection leaked the protocol
+	 * configured by the first call */
+	nopoll_free (conn->accepted_protocol);
 	conn->accepted_protocol = nopoll_strdup (protocol);
+	if (conn->accepted_protocol == NULL)
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store accepted protocol, conn-id=%d", conn->id);
+
 	return;
 }
 
@@ -2125,15 +2165,25 @@ void          nopoll_conn_close_ext  (noPollConn  * conn, int status, const char
 			if (content) {
 				nopoll_set_16bit (status, content);
 				memcpy (content + 2, reason, reason_size);
+			} else {
+				/* memory failure: degrade to a close
+				 * frame without reason instead of
+				 * announcing reason_size + 2 bytes of
+				 * payload with a NULL pointer, which
+				 * made the frame serialization read
+				 * from NULL */
+				nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL,
+					    "Unable to acquire memory to report close reason, sending close frame without it, conn-id=%d", conn->id);
+				reason_size = 0;
 			} /* end if */
 		} /* end if */
 
 		/* send close frame (with reason when it was provided) */
-		nopoll_conn_send_frame (conn, nopoll_true /* has_fin */, 
+		nopoll_conn_send_frame (conn, nopoll_true /* has_fin */,
 					/* masked */
-					conn->role == NOPOLL_ROLE_CLIENT, NOPOLL_CLOSE_FRAME, 
+					conn->role == NOPOLL_ROLE_CLIENT, NOPOLL_CLOSE_FRAME,
 					/* content size and content */
-					reason_size > 0 ? reason_size + 2 : 0, content, 
+					reason_size > 0 ? reason_size + 2 : 0, content,
 					/* sleep in header */
 					0);
 
@@ -2461,6 +2511,10 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 					if ((n + desp - 1) > 0) {
 						buffer[n+desp - 1] = 0;
 						conn->pending_line = nopoll_strdup (buffer);
+						if (conn->pending_line == NULL)
+							nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL,
+								    "Unable to acquire memory to store partially read line, %d bytes already read are lost, conn-id=%d",
+								    n + desp - 1, conn->id);
 					} /* end if */
 				} /* end if */
 				return -2;
@@ -2662,6 +2716,11 @@ nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, in
 	} /* end if */
 	
 	(*url) = nopoll_new (char, iterator2 - iterator + 1);
+	if ((*url) == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store the request url received, closing session");
+		nopoll_conn_shutdown (conn);
+		return nopoll_false;
+	} /* end if */
 	memcpy (*url, buffer + iterator, iterator2 - iterator);
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Found url method: '%s'", *url);
 
@@ -2711,6 +2770,11 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 
 	/* copy the header value */
 	(*header) = nopoll_new (char, iterator + 1);
+	if ((*header) == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store the mime header received");
+		(*value) = NULL;
+		return nopoll_false;
+	} /* end if */
 	memcpy (*header, buffer, iterator);
 	
 	/* now get the mime header value */
@@ -2730,6 +2794,12 @@ nopoll_bool nopoll_conn_get_mime_header (noPollCtx * ctx, noPollConn * conn, con
 
 	/* copy the value */
 	(*value) = nopoll_new (char, (iterator2 - iterator) + 1);
+	if ((*value) == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store the mime header value received");
+		nopoll_free (*header);
+		(*header) = NULL;
+		return nopoll_false;
+	} /* end if */
 	memcpy (*value, buffer + iterator + 1, iterator2 - iterator);
 
 	/* trim content */
@@ -2786,6 +2856,10 @@ char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_k
 
 	accept_key_size = key_length + 36 + 1;
 	accept_key      = nopoll_new (char, accept_key_size);
+	if (accept_key == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to produce Sec-WebSocket-Accept value");
+		return NULL;
+	} /* end if */
 
 	memcpy (accept_key, websocket_key, key_length);
 	memcpy (accept_key + key_length, static_guid, 36);
@@ -2800,6 +2874,11 @@ char * nopoll_conn_produce_accept_key (noPollCtx * ctx, const char * websocket_k
 	EVP_DigestFinal (&mdctx, buffer, &md_len);
 #else
 	mdctx = EVP_MD_CTX_create();
+	if (mdctx == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory for the digest context, failed to produce Sec-WebSocket-Accept value");
+		nopoll_free (accept_key);
+		return NULL;
+	} /* end if */
 	EVP_DigestInit (mdctx, md);
 	EVP_DigestUpdate (mdctx, accept_key, strlen (accept_key));
 	EVP_DigestFinal (mdctx, buffer, &md_len);
@@ -3207,9 +3286,18 @@ void nopoll_conn_complete_handshake (noPollConn * conn)
 
 	nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Checking to complete conn-id=%d WebSocket handshake, role %d", conn->id, conn->role);
 
-	/* ensure handshake object is created */
-	if (conn->handshake == NULL)
+	/* ensure handshake object is created
+	 *
+	 * NOTE: the allocation must be checked here: every step of the
+	 * handshake below dereferences conn->handshake */
+	if (conn->handshake == NULL) {
 		conn->handshake = nopoll_new (noPollHandShake, 1);
+		if (conn->handshake == NULL) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store handshake status, closing connection id=%d", conn->id);
+			nopoll_conn_shutdown (conn);
+			return;
+		} /* end if */
+	} /* end if */
 
 	/* get lines and complete the handshake data */
 	while (nopoll_true) {
