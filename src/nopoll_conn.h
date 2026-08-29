@@ -110,6 +110,8 @@ noPollConn   * nopoll_conn_accept (noPollCtx * ctx, noPollConn * listener);
 
 noPollConn   * nopoll_conn_accept_socket (noPollCtx * ctx, noPollConn * listener, NOPOLL_SOCKET session);
 
+void nopoll_conn_set_on_ping_msg (noPollConn * conn, noPollOnMessageHandler on_ping_msg, noPollPtr user_data);
+
 nopoll_bool    nopoll_conn_accept_complete (noPollCtx      * ctx, 
 					    noPollConn     * listener, 
 					    noPollConn     * conn, 
