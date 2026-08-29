@@ -168,6 +168,17 @@ nopoll_bool        nopoll_conn_opts_set_ssl_certs    (noPollConnOpts * opts,
 		if (access (opts->ca_certificate, R_OK) != 0)
 			return nopoll_false;
 
+	/* report a failure when a value that was provided could not be
+	 * stored: nopoll_strdup () returns NULL both for a NULL input
+	 * and on memory failure, so without this check a failed
+	 * duplication was reported as a successful configuration and the
+	 * connection was later created without that certificate */
+	if ((certificate       && opts->certificate       == NULL) ||
+	    (private_key       && opts->private_key       == NULL) ||
+	    (chain_certificate && opts->chain_certificate == NULL) ||
+	    (ca_certificate    && opts->ca_certificate    == NULL))
+		return nopoll_false;
+
 	return nopoll_true;
 }
 

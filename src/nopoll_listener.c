@@ -98,7 +98,18 @@ static nopoll_bool __nopoll_listener_get_host_port (struct sockaddr_storage  * a
 	(*host) = nopoll_strdup (buffer);
 	(*port) = nopoll_strdup_printf ("%d", _port);
 
-	return (*host) != NULL && (*port) != NULL;
+	/* on failure release what was allocated and report both values
+	 * as undefined: reporting nopoll_false while leaving one of them
+	 * allocated leaked it at the callers that do not release them */
+	if ((*host) == NULL || (*port) == NULL) {
+		nopoll_free (*host);
+		nopoll_free (*port);
+		(*host) = NULL;
+		(*port) = NULL;
+		return nopoll_false;
+	} /* end if */
+
+	return nopoll_true;
 }
 
 /**
@@ -352,6 +363,22 @@ noPollConn      * __nopoll_listener_new_opts_internal (noPollCtx      * ctx,
 	/* record host and port */
 	listener->host      = nopoll_strdup (host);
 	listener->port      = nopoll_strdup (port);
+	if (listener->host == NULL || listener->port == NULL) {
+		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store listener host and port, unable to create listener");
+
+		/* release what was acquired so far: the connection is
+		 * not registered yet, so no context reference was taken */
+		nopoll_free (listener->host);
+		nopoll_free (listener->port);
+		nopoll_mutex_destroy (listener->handshake_mutex);
+		nopoll_mutex_destroy (listener->ref_mutex);
+		nopoll_free (listener);
+		nopoll_close_socket (session);
+
+		/* release connection options */
+		__nopoll_conn_opts_release_if_needed (opts);
+		return NULL;
+	} /* end if */
 
 	/* register connection into context */
 	if (! nopoll_ctx_register_conn (ctx, listener)) {
@@ -679,7 +706,18 @@ nopoll_bool           nopoll_listener_set_certificate (noPollConn * listener,
 		nopoll_free (listener->chain_certificate);
 		listener->chain_certificate = nopoll_strdup (chain_file);
 	} /* end if */
-	    
+
+	/* check the duplications before reporting success: the previous
+	 * values were already released above, so a memory failure here
+	 * left the listener without the certificate it had configured
+	 * while still reporting the new one was installed */
+	if (listener->certificate == NULL || listener->private_key == NULL ||
+	    (chain_file && listener->chain_certificate == NULL)) {
+		nopoll_log (listener->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store the certificates provided, conn id: %d", listener->id);
+		return nopoll_false;
+	} /* end if */
+
+
 	nopoll_log (listener->ctx, NOPOLL_LEVEL_DEBUG, "Configured certificate: %s, key: %s, for conn id: %d",
 		    listener->certificate, listener->private_key, listener->id);
 

@@ -588,10 +588,21 @@ nopoll_bool nopoll_base64_encode (const char  * content,
 	/* create bio */
 	b64  = BIO_new (BIO_f_base64());
 	bmem = BIO_new (BIO_s_mem());
-	
+
+	/* check both BIOs were created before pushing them: BIO_push ()
+	 * returns the second BIO when the first one is NULL, so a failed
+	 * base64 filter made the chain be just the memory BIO and the
+	 * function reported success having copied the content WITHOUT
+	 * encoding it (a Sec-WebSocket-Key that is not base64) */
+	if (b64 == NULL || bmem == NULL) {
+		BIO_free_all (b64);
+		BIO_free_all (bmem);
+		return nopoll_false;
+	} /* end if */
+
 	/* push */
 	b64  = BIO_push(b64, bmem);
-	
+
 	if (BIO_write (b64, content, length) != length) {
 		BIO_free_all (b64);
 		return nopoll_false;
@@ -655,8 +666,20 @@ nopoll_bool nopoll_base64_decode (const char * content,
 	/* create bio */
 	bmem = BIO_new_mem_buf ((void *) content, length);
 	b64  = BIO_new (BIO_f_base64());
+
+	/* check both BIOs were created before using them: BIO_set_flags
+	 * () writes into the reference received without checking it, and
+	 * BIO_push () returns the second BIO when the first one is NULL,
+	 * which made the function report success returning the content
+	 * still encoded (it was never decoded) */
+	if (b64 == NULL || bmem == NULL) {
+		BIO_free_all (b64);
+		BIO_free_all (bmem);
+		return nopoll_false;
+	} /* end if */
+
 	BIO_set_flags (b64, BIO_FLAGS_BASE64_NO_NL);
-	
+
 	/* push */
 	bmem  = BIO_push(b64, bmem);
 
