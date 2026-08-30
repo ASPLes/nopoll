@@ -3724,8 +3724,21 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			
 		msg->payload_size = nopoll_get_16bit (buffer + 2);
 
+		/* check the length was encoded with the minimal number of
+		 * bytes, as required by RFC 6455 section 5.2: a value
+		 * that fits in the 7 bit field must not be announced
+		 * through the 16 bit extension */
+		if (msg->payload_size < 126) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL,
+				    "Received websocket frame announcing a payload size (%ld) that is not minimally encoded (16 bits used for a value that fits in 7), closing session id: %d",
+				    msg->payload_size, conn->id);
+			nopoll_msg_unref (msg);
+			nopoll_conn_shutdown (conn);
+			return NULL;
+		} /* end if */
+
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received (%d) bytes in header (size %d) for payload size indication, which finally is: %d", bytes, header_size,(int) msg->payload_size);
-		
+
 	} else if (msg->payload_size == 127) {
 		/* read more content (next 8 bytes)
 		 *
@@ -3783,6 +3796,19 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL,
 				    "Received websocket frame announcing a payload size (%lu) bigger than the maximum frame size accepted (%ld), closing session id: %d",
 				    payload_size_aux, max_frame_size, conn->id);
+			nopoll_msg_unref (msg);
+			nopoll_conn_shutdown (conn);
+			return NULL;
+		} /* end if */
+
+		/* check the length was encoded with the minimal number of
+		 * bytes, as required by RFC 6455 section 5.2: a value
+		 * that fits in the 16 bit extension must not be
+		 * announced through the 64 bit one */
+		if (payload_size_aux <= 65535) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL,
+				    "Received websocket frame announcing a payload size (%lu) that is not minimally encoded (64 bits used for a value that fits in 16), closing session id: %d",
+				    payload_size_aux, conn->id);
 			nopoll_msg_unref (msg);
 			nopoll_conn_shutdown (conn);
 			return NULL;

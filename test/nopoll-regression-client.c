@@ -4421,10 +4421,34 @@ finish:
 	return result;
 }
 
-/* content sent by test_51: it is short on purpose, but the frame
- * announces its length using the 64 bit extended representation
- * (payload len = 127), which is what forces the 10 byte header path */
-#define TEST_51_CONTENT "split-extended-header"
+nopoll_bool test_52 (void) {
+
+	/* masked binary frame announcing a payload size of 10 through
+	 * the 16 bit extension: the value fits in the 7 bit field, so
+	 * this is not the minimal representation required by RFC 6455
+	 * section 5.2 and the frame must be rejected */
+	const char frame_16bits[] = {(char) 0x82, (char) 0xFE,
+				     (char) 0x00, (char) 0x0A,
+				     (char) 0x00, (char) 0x00, (char) 0x00, (char) 0x00};
+
+	/* same thing announcing a payload size of 100 through the 64
+	 * bit extension: it fits in the 16 bit one */
+	const char frame_64bits[] = {(char) 0x82, (char) 0xFF,
+				     (char) 0x00, (char) 0x00, (char) 0x00, (char) 0x00,
+				     (char) 0x00, (char) 0x00, (char) 0x00, (char) 0x64,
+				     (char) 0x00, (char) 0x00, (char) 0x00, (char) 0x00};
+
+	if (! test_37_common_crafted_frame ("52", frame_16bits, 8))
+		return nopoll_false;
+
+	return test_37_common_crafted_frame ("52", frame_64bits, 14);
+}
+
+/* payload size used by test_51: it must be over 65535 so the 64 bit
+ * extended length (payload len = 127, that is, a 10 byte header) is the
+ * minimal representation for it, which is what RFC 6455 section 5.2
+ * requires and what nopoll_conn_get_msg () now enforces */
+#define TEST_51_LENGTH (70000)
 
 nopoll_bool test_51 (void)
 {
@@ -4436,9 +4460,13 @@ nopoll_bool test_51 (void)
 	NOPOLL_SOCKET   _socket;
 	char            header[10];
 	char            mask[4];
-	char            payload[64];
+	char          * payload  = NULL;
+	char          * rebuilt  = NULL;
 	char            buffer[64];
-	int             length;
+	int             length   = TEST_51_LENGTH;
+	int             received = 0;
+	int             written;
+	int             desp;
 	int             iterator;
 	nopoll_bool     result   = nopoll_false;
 
@@ -4491,13 +4519,32 @@ nopoll_bool test_51 (void)
 		goto finish;
 	} /* end if */
 
-	/* build the 10 byte header: FIN + text frame, masked, with the
-	 * length announced through the 64 bit extended field */
-	length = (int) strlen (TEST_51_CONTENT);
+	/* build the content to be sent and the buffer where it is
+	 * rebuilt from what the listener reports */
+	payload = nopoll_new (char, length + 1);
+	rebuilt = nopoll_new (char, length + 1);
+	if (payload == NULL || rebuilt == NULL) {
+		printf ("ERROR (6.1): expected to allocate the test buffers..\n");
+		goto finish;
+	} /* end if */
+
+	iterator = 0;
+	while (iterator < length) {
+		payload[iterator] = (char) ('A' + (iterator % 26));
+		iterator++;
+	} /* end while */
+	memcpy (rebuilt, payload, length);   /* keep the expected content */
+
+	/* build the 10 byte header: FIN + binary frame, masked, with
+	 * the length announced through the 64 bit extended field (the
+	 * minimal representation for a value over 65535) */
 	memset (header, 0, 10);
-	header[0] = (char) 0x81;  /* FIN = 1, op_code = text */
+	header[0] = (char) 0x82;  /* FIN = 1, op_code = binary */
 	header[1] = (char) 0xFF;  /* MASK = 1, payload len = 127 */
-	header[9] = (char) length;
+	header[6] = (char) ((length >> 24) & 0x000000FF);
+	header[7] = (char) ((length >> 16) & 0x000000FF);
+	header[8] = (char) ((length >> 8)  & 0x000000FF);
+	header[9] = (char) (length         & 0x000000FF);
 
 	_socket = nopoll_conn_socket (conn);
 
@@ -4531,26 +4578,35 @@ nopoll_bool test_51 (void)
 	} /* end while */
 
 	/* now send the mask and the masked payload */
-	printf ("Test 51: sending the mask and the payload..\n");
+	printf ("Test 51: sending the mask and the %d bytes of payload..\n", length);
 	mask[0] = 11;
 	mask[1] = 12;
 	mask[2] = 13;
 	mask[3] = 14;
 
-	memset (payload, 0, 64);
-	memcpy (payload, TEST_51_CONTENT, length);
 	nopoll_conn_mask_content (ctx, payload, length, mask, 0);
 
-	if (send (_socket, mask, 4, 0) != 4 || send (_socket, payload, length, 0) != length) {
-		printf ("ERROR (10): expected to send the mask and the payload..\n");
+	if (send (_socket, mask, 4, 0) != 4) {
+		printf ("ERROR (10): expected to send the frame mask..\n");
 		goto finish;
 	} /* end if */
 
-	/* the listener must now complete the frame it had partially
-	 * read and report the original content */
+	/* send the payload in whatever chunks the socket accepts while
+	 * draining the listener: the content does not fit in the socket
+	 * buffers, so nobody would make progress if only one side ran.
+	 * The listener reports the frame in as many fragments as reads
+	 * it takes to complete it, and all of them are appended back
+	 * into the original content */
+	desp     = 0;
 	iterator = 0;
-	msg      = NULL;
-	while (iterator < 100 && msg == NULL) {
+	while (received < length && iterator < 10000) {
+
+		if (desp < length) {
+			written = send (_socket, payload + desp, length - desp, 0);
+			if (written > 0)
+				desp += written;
+		} /* end if */
+
 		msg = nopoll_conn_get_msg (listener);
 		if (msg == NULL) {
 			if (! nopoll_conn_is_ok (listener)) {
@@ -4558,31 +4614,44 @@ nopoll_bool test_51 (void)
 				goto finish;
 			} /* end if */
 
-			nopoll_sleep (10000);
+			nopoll_sleep (1000);
 			iterator++;
+			continue;
 		} /* end if */
+
+		if ((received + (int) nopoll_msg_get_payload_size (msg)) > length) {
+			printf ("ERROR (12): the listener reported more content (%d) than the frame announced (%d)..\n",
+				received + (int) nopoll_msg_get_payload_size (msg), length);
+			nopoll_msg_unref (msg);
+			goto finish;
+		} /* end if */
+
+		memcpy (rebuilt + received, nopoll_msg_get_payload (msg), (size_t) nopoll_msg_get_payload_size (msg));
+		received += (int) nopoll_msg_get_payload_size (msg);
+		nopoll_msg_unref (msg);
 	} /* end while */
 
-	if (msg == NULL) {
-		printf ("ERROR (12): expected to receive the frame sent with its header split from the mask..\n");
+	if (received != length) {
+		printf ("ERROR (13): expected to rebuild %d bytes from the frame sent with its header split from the mask but got %d..\n",
+			length, received);
 		goto finish;
 	} /* end if */
 
-	if (nopoll_msg_get_payload_size (msg) != length ||
-	    ! nopoll_cmp ((const char *) nopoll_msg_get_payload (msg), TEST_51_CONTENT)) {
-		printf ("ERROR (13): expected to receive '%s' (%d bytes) but found '%s' (%ld bytes)..\n",
-			TEST_51_CONTENT, length, (const char *) nopoll_msg_get_payload (msg),
-			nopoll_msg_get_payload_size (msg));
-		nopoll_msg_unref (msg);
+	/* undo the masking done above over the expected content to
+	 * compare it with what the listener reported */
+	nopoll_conn_mask_content (ctx, payload, length, mask, 0);
+	if (memcmp (rebuilt, payload, (size_t) length) != 0) {
+		printf ("ERROR (14): the content rebuilt from the frame does not match the content sent..\n");
 		goto finish;
 	} /* end if */
 
-	printf ("Test 51: received '%s' after resuming the split header..\n", (const char *) nopoll_msg_get_payload (msg));
-	nopoll_msg_unref (msg);
+	printf ("Test 51: rebuilt %d bytes after resuming the split header..\n", received);
 
 	result = nopoll_true;
 
 finish:
+	nopoll_free (payload);
+	nopoll_free (rebuilt);
 	nopoll_conn_close (conn);
 	nopoll_conn_close (listener);
 	nopoll_conn_close (master);
@@ -5094,6 +5163,13 @@ int main (int argc, char ** argv)
 		printf ("Test 51: check frame header split from its mask             [   OK    ]\n");
 	} else {
 		printf ("Test 51: check frame header split from its mask             [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_52 ()) {
+		printf ("Test 52: check rejection of non minimal length encoding     [   OK    ]\n");
+	} else {
+		printf ("Test 52: check rejection of non minimal length encoding     [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 
