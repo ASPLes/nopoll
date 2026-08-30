@@ -4660,6 +4660,148 @@ finish:
 	return result;
 }
 
+nopoll_bool test_53 (void)
+{
+	noPollCtx     * ctx;
+	noPollConn    * conn      = NULL;   /* client side */
+	noPollConn    * nopoll_listener = NULL; /* the legacy listening socket wrapped */
+	noPollConn    * accepted  = NULL;   /* the accepted socket wrapped */
+	noPollMsg     * msg;
+	NOPOLL_SOCKET   listener_socket;
+	NOPOLL_SOCKET   session;
+	int             iterator;
+	nopoll_bool     result    = nopoll_false;
+
+	printf ("Test 53: checking port sharing path (wrapping a listening socket)..\n");
+
+	ctx = create_ctx ();
+	if (ctx == NULL) {
+		printf ("ERROR (1): expected to find proper context creation..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* create the listening socket the way an application owning the
+	 * accept loop does: noPoll does not drive it */
+	listener_socket = nopoll_listener_sock_listen (ctx, "0.0.0.0", regtest_port (1256));
+	if (! nopoll_socket_is_valid (listener_socket)) {
+		printf ("ERROR (2): expected to create a listening socket at 0.0.0.0:%s..\n", regtest_port (1256));
+		goto finish;
+	} /* end if */
+
+	/* present that listening socket to noPoll: it has no remote
+	 * peer, so this is the call that used to report NULL */
+	nopoll_listener = nopoll_listener_from_socket (ctx, listener_socket);
+	if (nopoll_listener == NULL) {
+		printf ("ERROR (3): expected to wrap the listening socket, but NULL was reported..\n");
+		goto finish;
+	} /* end if */
+
+	/* a wrapped listening socket has no peer to report */
+	if (nopoll_conn_host (nopoll_listener) != NULL || nopoll_conn_port (nopoll_listener) != NULL) {
+		printf ("ERROR (4): expected no host/port reported for a wrapped listening socket but found %s:%s..\n",
+			nopoll_conn_host (nopoll_listener), nopoll_conn_port (nopoll_listener));
+		goto finish;
+	} /* end if */
+
+	/* a NULL listener must be reported, not dereferenced */
+	if (nopoll_conn_accept_complete (ctx, NULL, NULL, listener_socket, nopoll_false)) {
+		printf ("ERROR (5): expected failure from nopoll_conn_accept_complete () with NULL references..\n");
+		goto finish;
+	} /* end if */
+
+	/* now connect a client and accept it by hand */
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1256), NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR (6): expected to find proper client connection status..\n");
+		goto finish;
+	} /* end if */
+
+	session = nopoll_listener_accept (listener_socket);
+	if (! nopoll_socket_is_valid (session)) {
+		printf ("ERROR (7): expected to accept the incoming connection..\n");
+		goto finish;
+	} /* end if */
+
+	/* wrap the accepted socket and complete the websocket accept,
+	 * which is what a port sharing implementation does */
+	accepted = nopoll_listener_from_socket (ctx, session);
+	if (! nopoll_conn_is_ok (accepted)) {
+		printf ("ERROR (8): expected to wrap the accepted socket..\n");
+		goto finish;
+	} /* end if */
+
+	if (! nopoll_conn_accept_complete (ctx, nopoll_listener, accepted, session, nopoll_false)) {
+		printf ("ERROR (9): expected to complete the websocket accept over the accepted socket..\n");
+		goto finish;
+	} /* end if */
+
+	/* drive both sides until the handshake is finished */
+	iterator = 0;
+	while (iterator < 100 && ! (nopoll_conn_is_ready (accepted) && nopoll_conn_is_ready (conn))) {
+		msg = nopoll_conn_get_msg (accepted);
+		if (msg)
+			nopoll_msg_unref (msg);
+		msg = nopoll_conn_get_msg (conn);
+		if (msg)
+			nopoll_msg_unref (msg);
+
+		if (! nopoll_conn_is_ok (accepted) || ! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR (10): connection lost while completing the handshake..\n");
+			goto finish;
+		} /* end if */
+
+		nopoll_sleep (10000);
+		iterator++;
+	} /* end while */
+
+	if (! nopoll_conn_is_ready (accepted) || ! nopoll_conn_is_ready (conn)) {
+		printf ("ERROR (11): expected both sides to be ready after the accept..\n");
+		goto finish;
+	} /* end if */
+
+	/* check content flows over the connection built this way */
+	if (nopoll_conn_send_text (conn, "port-sharing", 12) != 12) {
+		printf ("ERROR (12): expected to send content over the connection accepted..\n");
+		goto finish;
+	} /* end if */
+
+	iterator = 0;
+	msg      = NULL;
+	while (iterator < 100 && msg == NULL) {
+		msg = nopoll_conn_get_msg (accepted);
+		if (msg == NULL) {
+			if (! nopoll_conn_is_ok (accepted)) {
+				printf ("ERROR (13): connection closed while waiting for the content..\n");
+				goto finish;
+			} /* end if */
+
+			nopoll_sleep (10000);
+			iterator++;
+		} /* end if */
+	} /* end while */
+
+	if (msg == NULL || ! nopoll_cmp ((const char *) nopoll_msg_get_payload (msg), "port-sharing")) {
+		printf ("ERROR (14): expected to receive 'port-sharing' but found '%s'..\n",
+			msg ? (const char *) nopoll_msg_get_payload (msg) : "<null>");
+		nopoll_msg_unref (msg);
+		goto finish;
+	} /* end if */
+
+	printf ("Test 53: received '%s' over the connection accepted through the shared port..\n",
+		(const char *) nopoll_msg_get_payload (msg));
+	nopoll_msg_unref (msg);
+
+	result = nopoll_true;
+
+finish:
+	nopoll_conn_close (conn);
+	nopoll_conn_close (accepted);
+	nopoll_conn_close (nopoll_listener);
+	nopoll_ctx_unref (ctx);
+
+	return result;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -5170,6 +5312,13 @@ int main (int argc, char ** argv)
 		printf ("Test 52: check rejection of non minimal length encoding     [   OK    ]\n");
 	} else {
 		printf ("Test 52: check rejection of non minimal length encoding     [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_53 ()) {
+		printf ("Test 53: check port sharing over a wrapped listening socket [   OK    ]\n");
+	} else {
+		printf ("Test 53: check port sharing over a wrapped listening socket [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

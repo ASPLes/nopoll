@@ -739,10 +739,16 @@ nopoll_bool           nopoll_listener_set_certificate (noPollConn * listener,
  * socket is accepted by the application and then handed over to
  * noPoll (see \ref nopoll_conn_accept_complete).
  *
+ * The function also accepts a socket in LISTEN state, which is how the
+ * legacy listener that received the connection is presented to \ref
+ * nopoll_conn_accept_complete. Such a socket has no remote peer, so in
+ * that case \ref nopoll_conn_host and \ref nopoll_conn_port report NULL
+ * on the object returned.
+ *
  * @param ctx The context where the connection will be associated.
  *
  * @param session The already accepted socket to associate to the
- * connection.
+ * connection, or the listening socket it was accepted from.
  *
  * @return A reference to the connection object created or NULL if it
  * fails.
@@ -756,16 +762,19 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 	 * address is truncated, so every IPv6 connection accepted was
 	 * recording 0.0.0.0 as remote host */
 	struct sockaddr_storage sin;
+	int                  is_listening = 0;
 #if defined(NOPOLL_OS_WIN32)
 	/* windows flavors */
 	int                  sin_size = sizeof (sin);
+	int                  opt_size = sizeof (is_listening);
 #else
 	/* unix flavors */
 	socklen_t            sin_size = sizeof (sin);
+	socklen_t            opt_size = sizeof (is_listening);
 #endif
 
 	nopoll_return_val_if_fail (ctx, ctx && session > 0, NULL);
-	
+
 	/* create the noPollConn object */
 	listener            = nopoll_new (noPollConn, 1);
 	if (listener == NULL) {
@@ -780,27 +789,53 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 	listener->ctx       = ctx;
 	listener->role      = NOPOLL_ROLE_LISTENER;
 
+	/* check whether the socket received is a listening one: this
+	 * function serves both uses documented at \ref
+	 * nopoll_listener_from_socket (wrapping the legacy listening
+	 * socket and wrapping an already accepted socket), and a socket
+	 * in LISTEN state has no remote peer, so getpeername () fails on
+	 * it by definition (ENOTCONN), not because anything went wrong */
+#if defined(SO_ACCEPTCONN)
+#    if defined(NOPOLL_OS_WIN32)
+	if (getsockopt (session, SOL_SOCKET, SO_ACCEPTCONN, (char *) &is_listening, &opt_size) < 0)
+		is_listening = 0;
+#    else
+	if (getsockopt (session, SOL_SOCKET, SO_ACCEPTCONN, &is_listening, &opt_size) < 0)
+		is_listening = 0;
+#    endif
+#endif
+
 	/* get peer value
 	 *
 	 * NOTE: the check used to be (< -1), which is never true
 	 * because getpeername () reports -1 on failure, so a failure
 	 * went unnoticed and the connection was created recording
-	 * 0.0.0.0:0 as the remote peer */
+	 * 0.0.0.0:0 as the remote peer. Correcting it into (< 0) is
+	 * right for an accepted socket but it also started rejecting
+	 * the listening one, which is why the failure is only fatal
+	 * when the socket is not listening */
 	memset (&sin, 0, sizeof (sin));
 	if (getpeername (session, (struct sockaddr *) &sin, &sin_size) < 0) {
-		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to get remote hostname and port (errno=%d : %s)", errno, strerror (errno));
 
-		/* release what was acquired so far (the connection is
-		 * not registered yet, so no context reference was
-		 * taken) */
-		nopoll_mutex_destroy (listener->handshake_mutex);
-		nopoll_mutex_destroy (listener->ref_mutex);
-		nopoll_free (listener);
-		return NULL;
-	} /* end if */
+		if (! is_listening) {
+			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to get remote hostname and port (errno=%d : %s)", errno, strerror (errno));
 
-	/* record host and port */
-	if (! __nopoll_listener_get_host_port (&sin, &(listener->host), &(listener->port))) {
+			/* release what was acquired so far (the
+			 * connection is not registered yet, so no
+			 * context reference was taken) */
+			nopoll_mutex_destroy (listener->handshake_mutex);
+			nopoll_mutex_destroy (listener->ref_mutex);
+			nopoll_free (listener);
+			return NULL;
+		} /* end if */
+
+		/* a listening socket has no peer to report: leave host
+		 * and port undefined (NULL) and continue */
+		nopoll_log (ctx, NOPOLL_LEVEL_DEBUG,
+			    "Received a listening socket (%d): it has no remote peer, leaving host and port undefined",
+			    session);
+
+	} else if (! __nopoll_listener_get_host_port (&sin, &(listener->host), &(listener->port))) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to format remote hostname and port for the connection received");
 
 		/* release what was acquired so far (the connection is
@@ -836,7 +871,12 @@ noPollConn   * nopoll_listener_from_socket (noPollCtx      * ctx,
 		return NULL;
 	} /* end if */
 
-	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Listener created, started: %s:%s (socket: %d)", listener->host, listener->port, listener->session);
+	/* NOTE: host and port are undefined when a listening socket was
+	 * wrapped, so they are not passed directly as %s arguments */
+	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Listener created, started: %s:%s (socket: %d)",
+		    listener->host ? listener->host : "<not defined>",
+		    listener->port ? listener->port : "<not defined>",
+		    listener->session);
 
 	/* reduce reference counting here because ctx_register_conn
 	 * already acquired a reference */

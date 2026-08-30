@@ -5494,6 +5494,13 @@ nopoll_bool __nopoll_conn_accept_complete_common (noPollCtx * ctx, noPollConnOpt
  */
 nopoll_bool nopoll_conn_accept_complete (noPollCtx * ctx, noPollConn * listener, noPollConn * conn, NOPOLL_SOCKET session, nopoll_bool tls_on) {
 
+	/* check references received before using them: this is a public
+	 * entry point reached from applications implementing port
+	 * sharing, and dereferencing listener here turned a failed
+	 * creation at the caller into a crash instead of a reported
+	 * error */
+	nopoll_return_val_if_fail (ctx, ctx && listener && conn, nopoll_false);
+
 	if (listener->opts) {
 		if (! nopoll_conn_opts_ref (listener->opts)) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire a reference to the connection option at nopoll_conn_accept_complete() function nopoll_conn_opts_ref () failed..");
