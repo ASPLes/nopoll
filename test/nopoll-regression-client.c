@@ -4802,6 +4802,233 @@ finish:
 	return result;
 }
 
+/* flag set by the on ready handler installed by test_54: a connection
+ * whose handshake was refused must never reach it */
+nopoll_bool test_54_on_ready_called = nopoll_false;
+
+nopoll_bool __test_54_on_ready (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	/* avoid compiler warnings */
+	(void) ctx;
+	(void) conn;
+	(void) user_data;
+
+	test_54_on_ready_called = nopoll_true;
+	return nopoll_true;
+}
+
+/* A server that refuses the upgrade (no 101) but replies headers that
+ * would pass every other check, including a valid Sec-WebSocket-Accept.
+ * The client must honour the refusal instead of parsing those headers
+ * as if they belonged to a websocket handshake. */
+nopoll_bool test_54_denied_upgrade (const char * label)
+{
+	noPollCtx          * ctx;
+	noPollConn         * conn;
+	NOPOLL_SOCKET        listener_sock;
+	NOPOLL_SOCKET        session;
+	struct sockaddr_in   addr;
+	char                 buffer[4096];
+	char                 key[128];
+	char               * accept_key = NULL;
+	char               * reply      = NULL;
+	char               * key_start;
+	int                  bytes;
+	int                  iterator;
+	int                  tries;
+	int                  reuse  = 1;
+	nopoll_bool          result = nopoll_false;
+
+	printf ("Test %s: creating raw listener at 127.0.0.1:%s (it will deny the upgrade)..\n", label, regtest_port (1257));
+
+	listener_sock = socket (AF_INET, SOCK_STREAM, 0);
+	if (listener_sock == NOPOLL_INVALID_SOCKET) {
+		printf ("ERROR (1): unable to create raw listener socket..\n");
+		return nopoll_false;
+	} /* end if */
+
+	setsockopt (listener_sock, SOL_SOCKET, SO_REUSEADDR, (char *) &reuse, sizeof (reuse));
+
+	memset (&addr, 0, sizeof (addr));
+	addr.sin_family      = AF_INET;
+	addr.sin_addr.s_addr = inet_addr ("127.0.0.1");
+	addr.sin_port        = htons ((unsigned short) regtest_port_int (1257));
+
+	if (bind (listener_sock, (struct sockaddr *) &addr, sizeof (addr)) != 0 || listen (listener_sock, 1) != 0) {
+		printf ("ERROR (2): unable to bind/listen at 127.0.0.1:%s, errno=%d..\n", regtest_port (1257), errno);
+		nopoll_close_socket (listener_sock);
+		return nopoll_false;
+	} /* end if */
+
+	ctx  = create_ctx ();
+
+	/* install an on ready handler: it must not be called for a
+	 * connection the server refused */
+	test_54_on_ready_called = nopoll_false;
+	nopoll_ctx_set_on_ready (ctx, __test_54_on_ready, NULL);
+
+	conn = nopoll_conn_new (ctx, "127.0.0.1", regtest_port (1257), NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR (3): expected to find proper client connection status..\n");
+		nopoll_close_socket (listener_sock);
+		return nopoll_false;
+	} /* end if */
+
+	session = accept (listener_sock, NULL, NULL);
+	if (session == NOPOLL_INVALID_SOCKET) {
+		printf ("ERROR (4): unable to accept the incoming connection, errno=%d..\n", errno);
+		nopoll_close_socket (listener_sock);
+		return nopoll_false;
+	} /* end if */
+
+	bytes = recv (session, buffer, sizeof (buffer) - 1, 0);
+	if (bytes <= 0) {
+		printf ("ERROR (5): expected to receive the client handshake but found %d bytes..\n", bytes);
+		goto finish;
+	} /* end if */
+	buffer[bytes] = 0;
+
+	key_start = strstr (buffer, "Sec-WebSocket-Key: ");
+	if (key_start == NULL) {
+		printf ("ERROR (6): unable to find Sec-WebSocket-Key inside the client handshake..\n");
+		goto finish;
+	} /* end if */
+
+	key_start += 19; /* strlen ("Sec-WebSocket-Key: ") */
+	iterator   = 0;
+	while (iterator < ((int) sizeof (key) - 1) && key_start[iterator] && key_start[iterator] != '\r' && key_start[iterator] != '\n') {
+		key[iterator] = key_start[iterator];
+		iterator++;
+	} /* end while */
+	key[iterator] = 0;
+
+	/* the accept value is the right one: what makes this reply
+	 * invalid is the status line, nothing else */
+	accept_key = nopoll_conn_produce_accept_key (ctx, key);
+	if (accept_key == NULL) {
+		printf ("ERROR (7): unable to produce the Sec-WebSocket-Accept value for the reply..\n");
+		goto finish;
+	} /* end if */
+
+	printf ("Test %s: replying '401 Unauthorized' with an otherwise complete handshake..\n", label);
+	reply = nopoll_strdup_printf ("HTTP/1.1 401 Unauthorized\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n",
+				      accept_key);
+	send (session, reply, strlen (reply), 0);
+
+	/* let the client process the reply */
+	tries = 50;
+	while (tries > 0) {
+		if (nopoll_conn_is_ready (conn) || ! nopoll_conn_is_ok (conn))
+			break;
+		nopoll_sleep (100000);
+		tries--;
+	} /* end while */
+
+	if (nopoll_conn_is_ready (conn)) {
+		printf ("ERROR (8): the connection was reported ready although the server denied the upgrade (401)..\n");
+		goto finish;
+	} /* end if */
+
+	if (nopoll_conn_is_ok (conn)) {
+		printf ("ERROR (9): expected the connection to be closed after the server denied the upgrade..\n");
+		goto finish;
+	} /* end if */
+
+	if (test_54_on_ready_called) {
+		printf ("ERROR (10): the on ready handler was called for a connection the server denied..\n");
+		goto finish;
+	} /* end if */
+
+	printf ("Test %s: the refusal was honoured and the connection was closed..\n", label);
+	result = nopoll_true;
+
+finish:
+	nopoll_free (reply);
+	nopoll_free (accept_key);
+	nopoll_conn_close (conn);
+	nopoll_ctx_unref (ctx);
+	nopoll_close_socket (session);
+	nopoll_close_socket (listener_sock);
+
+	return result;
+}
+
+/* A request line announcing an HTTP version noPoll does not support
+ * must close the session instead of being reported and ignored. */
+nopoll_bool test_54_wrong_http_version (const char * label)
+{
+	NOPOLL_SOCKET        _socket;
+	struct sockaddr_in   addr;
+	const char         * request =
+		"GET / HTTP/9.9\r\n"
+		"Host: localhost\r\n"
+		"Upgrade: websocket\r\n"
+		"Connection: Upgrade\r\n"
+		"Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+		"Sec-WebSocket-Version: 13\r\n"
+		"\r\n";
+	char                 buffer[128];
+	int                  bytes;
+	int                  tries;
+
+	printf ("Test %s: sending a request line with a wrong HTTP version to the listener..\n", label);
+
+	_socket = socket (AF_INET, SOCK_STREAM, 0);
+	if (_socket == NOPOLL_INVALID_SOCKET) {
+		printf ("ERROR (11): unable to create the client socket..\n");
+		return nopoll_false;
+	} /* end if */
+
+	memset (&addr, 0, sizeof (addr));
+	addr.sin_family      = AF_INET;
+	addr.sin_addr.s_addr = inet_addr ("127.0.0.1");
+	addr.sin_port        = htons ((unsigned short) regtest_port_int (1234));
+
+	if (connect (_socket, (struct sockaddr *) &addr, sizeof (addr)) != 0) {
+		printf ("ERROR (12): unable to connect to the regression listener, errno=%d..\n", errno);
+		nopoll_close_socket (_socket);
+		return nopoll_false;
+	} /* end if */
+
+	if (send (_socket, request, strlen (request), 0) != (int) strlen (request)) {
+		printf ("ERROR (13): unable to send the crafted request..\n");
+		nopoll_close_socket (_socket);
+		return nopoll_false;
+	} /* end if */
+
+	/* the listener must close the session: recv reports 0 */
+	tries = 20;
+	while (tries > 0) {
+		bytes = recv (_socket, buffer, sizeof (buffer), 0);
+		if (bytes == 0)
+			break;
+		if (bytes < 0 && errno != NOPOLL_EWOULDBLOCK && errno != NOPOLL_EAGAIN)
+			break;
+		nopoll_sleep (100000);
+		tries--;
+	} /* end while */
+
+	nopoll_close_socket (_socket);
+
+	if (tries == 0) {
+		printf ("ERROR (14): expected the listener to close the session after a request with a wrong HTTP version..\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test %s: the listener closed the session as expected..\n", label);
+	return nopoll_true;
+}
+
+nopoll_bool test_54 (void)
+{
+	printf ("Test 54: checking handshake failures stop the handshake processing..\n");
+
+	if (! test_54_denied_upgrade ("54"))
+		return nopoll_false;
+
+	return test_54_wrong_http_version ("54");
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -5319,6 +5546,13 @@ int main (int argc, char ** argv)
 		printf ("Test 53: check port sharing over a wrapped listening socket [   OK    ]\n");
 	} else {
 		printf ("Test 53: check port sharing over a wrapped listening socket [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_54 ()) {
+		printf ("Test 54: check handshake failures stop handshake processing [   OK    ]\n");
+	} else {
+		printf ("Test 54: check handshake failures stop handshake processing [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

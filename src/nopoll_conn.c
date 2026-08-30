@@ -2735,7 +2735,16 @@ nopoll_bool nopoll_conn_get_http_url (noPollConn * conn, const char * buffer, in
 	} /* end if */
 
 	/* now check trailing content */
-	return nopoll_cmp (buffer + iterator, "HTTP/1.1\r\n") || nopoll_cmp (buffer + iterator, "HTTP/1.1\n");
+	if (nopoll_cmp (buffer + iterator, "HTTP/1.1\r\n") || nopoll_cmp (buffer + iterator, "HTTP/1.1\n"))
+		return nopoll_true;
+
+	/* close the connection here too: this was the only failure
+	 * reported by this function without shutting the connection
+	 * down, so a request line with a wrong HTTP version was
+	 * reported and then ignored, and the handshake carried on */
+	nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Received a %s method with a wrong trailing HTTP version indication, closing session", method);
+	nopoll_conn_shutdown (conn);
+	return nopoll_false;
 }
 
 /** 
@@ -3078,6 +3087,12 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 	nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Finished Sec-Websocket-Accept check, nopoll_conn_complete_handshake_check_client (%p, %p)=%d",
 		    ctx, conn, result);
 
+	/* stop here when the check failed: the connection was already
+	 * shut down above, so reporting it as ready to the application
+	 * level notified a connection that had just been rejected */
+	if (! result)
+		return nopoll_false;
+
 	/* now call the user app level to accept the websocket
 	   connection */
 	if (! __nopoll_conn_call_on_ready_if_defined (ctx, conn))
@@ -3219,6 +3234,13 @@ int nopoll_conn_complete_handshake_client (noPollCtx * ctx, noPollConn * conn, c
 			iterator++;
 		if (! nopoll_ncmp (buffer + iterator, "101", 3)) {
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "websocket server denied connection with: %s", buffer + iterator);
+
+			/* the server refused the upgrade: close the
+			 * connection instead of leaving it open, which
+			 * made the handshake keep parsing the headers of
+			 * the error reply as if they belonged to a
+			 * websocket handshake */
+			nopoll_conn_shutdown (conn);
 			return 0; /* do not continue */
 		} /* end if */
 
@@ -3330,14 +3352,24 @@ void nopoll_conn_complete_handshake (noPollConn * conn)
 			return;
 		}
 
+		/* NOTE: both handlers report 0 to signal the caller to
+		 * stop processing (every one of those cases is an error
+		 * that already shut the connection down). That value was
+		 * being ignored: because this block is the last statement
+		 * of the loop, not taking the "continue" branch fell
+		 * through to the next iteration all the same, so the
+		 * handshake kept reading and parsing lines over a
+		 * connection that had already been rejected */
 		if (conn->role == NOPOLL_ROLE_LISTENER) {
 			/* call to complete listener handshake */
 			if (nopoll_conn_complete_handshake_listener (ctx, conn, buffer, buffer_size) == 1)
 				continue;
+			return;
 		} else if (conn->role == NOPOLL_ROLE_CLIENT) {
 			/* call to complete listener handshake */
 			if (nopoll_conn_complete_handshake_client (ctx, conn, buffer, buffer_size) == 1)
 				continue;
+			return;
 		} else {
 			nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Called to handle connection handshake on a connection with an unexpected role: %d, closing session",
 				    conn->role);
