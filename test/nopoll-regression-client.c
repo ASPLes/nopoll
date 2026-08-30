@@ -4421,6 +4421,176 @@ finish:
 	return result;
 }
 
+/* content sent by test_51: it is short on purpose, but the frame
+ * announces its length using the 64 bit extended representation
+ * (payload len = 127), which is what forces the 10 byte header path */
+#define TEST_51_CONTENT "split-extended-header"
+
+nopoll_bool test_51 (void)
+{
+	noPollCtx     * ctx;
+	noPollConn    * master   = NULL;
+	noPollConn    * conn     = NULL;
+	noPollConn    * listener = NULL;
+	noPollMsg     * msg;
+	NOPOLL_SOCKET   _socket;
+	char            header[10];
+	char            mask[4];
+	char            payload[64];
+	char            buffer[64];
+	int             length;
+	int             iterator;
+	nopoll_bool     result   = nopoll_false;
+
+	printf ("Test 51: checking a frame whose 10 byte header arrives split from its mask..\n");
+
+	ctx = create_ctx ();
+	if (ctx == NULL) {
+		printf ("ERROR (1): expected to find proper context creation..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* create a listener and a connection to it, so both peers are
+	 * driven from this same process */
+	master = nopoll_listener_new (ctx, "0.0.0.0", regtest_port (1255));
+	if (! nopoll_conn_is_ok (master)) {
+		printf ("ERROR (2): expected to create a listener at 0.0.0.0:%s..\n", regtest_port (1255));
+		goto finish;
+	} /* end if */
+
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1255), NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR (3): expected to find proper client connection status..\n");
+		goto finish;
+	} /* end if */
+
+	listener = nopoll_conn_accept (ctx, master);
+	if (! nopoll_conn_is_ok (listener)) {
+		printf ("ERROR (4): expected to accept the incoming connection..\n");
+		goto finish;
+	} /* end if */
+
+	/* make the accepted connection non blocking: the test sends an
+	 * incomplete frame on purpose, so the listener must report "no
+	 * content available" instead of blocking waiting for the mask */
+	if (! nopoll_conn_set_sock_block (nopoll_conn_socket (listener), nopoll_false)) {
+		printf ("ERROR (4.1): expected to configure the accepted connection as non blocking..\n");
+		goto finish;
+	} /* end if */
+
+	/* exchange a regular message first, so the handshake is
+	 * completed on both sides before sending content by hand */
+	if (nopoll_conn_send_text (conn, "sync", 4) != 4) {
+		printf ("ERROR (5): expected to send the initial sync message..\n");
+		goto finish;
+	} /* end if */
+
+	memset (buffer, 0, 64);
+	if (nopoll_conn_read (listener, buffer, 4, nopoll_true, 0) != 4) {
+		printf ("ERROR (6): expected to read the initial sync message at the listener..\n");
+		goto finish;
+	} /* end if */
+
+	/* build the 10 byte header: FIN + text frame, masked, with the
+	 * length announced through the 64 bit extended field */
+	length = (int) strlen (TEST_51_CONTENT);
+	memset (header, 0, 10);
+	header[0] = (char) 0x81;  /* FIN = 1, op_code = text */
+	header[1] = (char) 0xFF;  /* MASK = 1, payload len = 127 */
+	header[9] = (char) length;
+
+	_socket = nopoll_conn_socket (conn);
+
+	printf ("Test 51: sending the 10 byte header alone..\n");
+	if (send (_socket, header, 10, 0) != 10) {
+		printf ("ERROR (7): expected to send the frame header..\n");
+		goto finish;
+	} /* end if */
+
+	/* let the listener consume the header and find no mask behind
+	 * it: at this point it must save what was read and report no
+	 * message, keeping the connection open */
+	nopoll_sleep (200000);
+
+	iterator = 0;
+	while (iterator < 5) {
+		msg = nopoll_conn_get_msg (listener);
+		if (msg != NULL) {
+			printf ("ERROR (8): expected no message while only the header was sent..\n");
+			nopoll_msg_unref (msg);
+			goto finish;
+		} /* end if */
+
+		if (! nopoll_conn_is_ok (listener)) {
+			printf ("ERROR (9): the listener closed the connection after receiving the header alone: the header saved to be resumed was wrong..\n");
+			goto finish;
+		} /* end if */
+
+		nopoll_sleep (10000);
+		iterator++;
+	} /* end while */
+
+	/* now send the mask and the masked payload */
+	printf ("Test 51: sending the mask and the payload..\n");
+	mask[0] = 11;
+	mask[1] = 12;
+	mask[2] = 13;
+	mask[3] = 14;
+
+	memset (payload, 0, 64);
+	memcpy (payload, TEST_51_CONTENT, length);
+	nopoll_conn_mask_content (ctx, payload, length, mask, 0);
+
+	if (send (_socket, mask, 4, 0) != 4 || send (_socket, payload, length, 0) != length) {
+		printf ("ERROR (10): expected to send the mask and the payload..\n");
+		goto finish;
+	} /* end if */
+
+	/* the listener must now complete the frame it had partially
+	 * read and report the original content */
+	iterator = 0;
+	msg      = NULL;
+	while (iterator < 100 && msg == NULL) {
+		msg = nopoll_conn_get_msg (listener);
+		if (msg == NULL) {
+			if (! nopoll_conn_is_ok (listener)) {
+				printf ("ERROR (11): the listener closed the connection while completing the frame..\n");
+				goto finish;
+			} /* end if */
+
+			nopoll_sleep (10000);
+			iterator++;
+		} /* end if */
+	} /* end while */
+
+	if (msg == NULL) {
+		printf ("ERROR (12): expected to receive the frame sent with its header split from the mask..\n");
+		goto finish;
+	} /* end if */
+
+	if (nopoll_msg_get_payload_size (msg) != length ||
+	    ! nopoll_cmp ((const char *) nopoll_msg_get_payload (msg), TEST_51_CONTENT)) {
+		printf ("ERROR (13): expected to receive '%s' (%d bytes) but found '%s' (%ld bytes)..\n",
+			TEST_51_CONTENT, length, (const char *) nopoll_msg_get_payload (msg),
+			nopoll_msg_get_payload_size (msg));
+		nopoll_msg_unref (msg);
+		goto finish;
+	} /* end if */
+
+	printf ("Test 51: received '%s' after resuming the split header..\n", (const char *) nopoll_msg_get_payload (msg));
+	nopoll_msg_unref (msg);
+
+	result = nopoll_true;
+
+finish:
+	nopoll_conn_close (conn);
+	nopoll_conn_close (listener);
+	nopoll_conn_close (master);
+	nopoll_ctx_unref (ctx);
+
+	return result;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -4917,6 +5087,13 @@ int main (int argc, char ** argv)
 		printf ("Test 50: check context connection list growth               [   OK    ]\n");
 	} else {
 		printf ("Test 50: check context connection list growth               [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_51 ()) {
+		printf ("Test 51: check frame header split from its mask             [   OK    ]\n");
+	} else {
+		printf ("Test 51: check frame header split from its mask             [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

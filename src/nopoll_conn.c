@@ -3355,8 +3355,15 @@ void nopoll_conn_mask_content (noPollCtx * ctx, char * payload, int payload_size
 	int mask_index = 0;
 
 	while (iter < payload_size) {
-		/* rotate mask and apply it */
+		/* rotate mask and apply it
+		 *
+		 * NOTE: the remainder is normalized into 0..3 because a
+		 * negative desp produces a negative remainder in C,
+		 * which would index the mask array before its first
+		 * position */
 		mask_index = (iter + desp) % 4;
+		if (mask_index < 0)
+			mask_index += 4;
 		payload[iter] ^= mask[mask_index];
 		iter++;
 	} /* end while */
@@ -3514,6 +3521,17 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 			msg                       = conn->previous_msg;
 			conn->previous_msg        = NULL;
 			conn->read_pending_header = nopoll_false;
+
+			/* rebuild the two header bytes that were already
+			 * consumed by the previous call: buffer is a
+			 * local array, so without this it holds
+			 * uninitialized stack content that ends up
+			 * copied into conn->pending_buf when the mask
+			 * cannot be read below, and reinjected as if it
+			 * were the header of the next frame */
+			buffer[0] = (char) (((msg->has_fin ? 1 : 0) << 7) | (msg->op_code & 0x0F));
+			buffer[1] = (char) (((msg->is_masked ? 1 : 0) << 7) | (msg->payload_size & 0x7F));
+
 			goto read_pending_header;
 		} /* end if */
 		
@@ -3646,7 +3664,9 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 	msg->is_masked    = nopoll_get_bit (buffer[1], 7);
 	msg->payload_size = buffer[1] & 0x7F;
 
-	/* ensure FIN = 1 in case we are listener */
+	/* ensure the mask bit is set on every frame received by a
+	 * listener, as required by RFC 6455 section 5.1 (a server must
+	 * close the connection when it receives an unmasked frame) */
 	if (conn->role == NOPOLL_ROLE_LISTENER && ! msg->is_masked) {
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Received websocket frame with mask bit set to zero, closing session id: %d", 
 			    conn->id);
@@ -3707,16 +3727,28 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Received (%d) bytes in header (size %d) for payload size indication, which finally is: %d", bytes, header_size,(int) msg->payload_size);
 		
 	} else if (msg->payload_size == 127) {
-		/* read more content (next 8 bytes) */
-		if ((bytes = __nopoll_conn_receive (conn, buffer, 8)) != 8) {
-			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, 
-				    "Expected to receive next 6 bytes for websocket frame header but found only %d bytes, closing session: %d",
+		/* read more content (next 8 bytes)
+		 *
+		 * NOTE: the extended length is read after the two header
+		 * bytes (buffer + 2) and header_size is updated, just
+		 * like the 126 case does: reading it over buffer
+		 * overwrote the header already received, so the header
+		 * recorded into conn->pending_buf when the mask cannot
+		 * be read below was the first two bytes of the length
+		 * instead of the real header */
+		if ((bytes = __nopoll_conn_receive (conn, buffer + 2, 8)) != 8) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL,
+				    "Expected to receive next 8 bytes for websocket frame header but found only %d bytes, closing session: %d",
 				    bytes, conn->id);
+			nopoll_msg_unref (msg);
 			nopoll_conn_shutdown (conn);
 			return NULL;
 		} /* end if */
 
-                len = (unsigned char*)buffer;
+		/* add to the header bytes read */
+		header_size += bytes;
+
+                len = (unsigned char*)(buffer + 2);
 
 		/* accumulate the extended payload length into an
 		 * unsigned variable: doing it directly over
@@ -3940,8 +3972,15 @@ read_payload:
 			    msg->payload_size, nopoll_get_32bit (msg->mask), msg, msg->unmask_desp);
 		nopoll_conn_mask_content (conn->ctx, (char*) msg->payload, msg->payload_size, (char*) msg->mask, msg->unmask_desp);
 
-		/* flag what was unmasked */
-		msg->unmask_desp += msg->payload_size;
+		/* flag what was unmasked
+		 *
+		 * NOTE: only the value modulo 4 matters (it selects the
+		 * mask octet the next fragment must continue with), so
+		 * it is reduced here: accumulating the raw payload size
+		 * overflowed this signed int after 2GB of continuation
+		 * frames, which is undefined behaviour and produced a
+		 * negative displacement */
+		msg->unmask_desp = (int) ((msg->unmask_desp + msg->payload_size) % 4);
 	} /* end if */
 
 	/* check here close frame with reason */
@@ -4818,6 +4857,16 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 #if defined(SHOW_DEBUG_LOG)
 	noPollDebugLevel   level;
 #endif
+
+	/* reject a negative length before using it: this function is
+	 * part of the public API, and a negative value reaches both the
+	 * header length codification (header[1] |= length, which sets
+	 * every length bit) and the memcpy () of the content below,
+	 * where it is converted into a huge size_t */
+	if (length < 0) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to send frame with a negative length (%ld)", length);
+		return -1;
+	} /* end if */
 
 	/* check for pending send operation */
 	bytes_written = nopoll_conn_complete_pending_write (conn);
