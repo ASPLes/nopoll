@@ -696,6 +696,18 @@ nopoll_bool           nopoll_ctx_set_certificate (noPollCtx  * ctx,
 		nopoll_free (new_cert.privateKey);
 		nopoll_free (new_cert.optionalChainFile);
 
+		/* when this call created the array (the store was empty)
+		 * it must be released too: keeping it with a zero entry
+		 * count leaked it, because the next install finds
+		 * certificates_length == 0 and allocates a new array over
+		 * this pointer. With entries already stored the array is
+		 * kept: it is correctly sized for them and the next
+		 * install reuses it through the reallocation above */
+		if (length == 1) {
+			nopoll_free (ctx->certificates);
+			ctx->certificates = NULL;
+		} /* end if */
+
 		nopoll_mutex_unlock (ctx->ref_mutex);
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Unable to acquire memory to store the certificate provided");
 		return nopoll_false;

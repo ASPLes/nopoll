@@ -1,4 +1,5 @@
 EXPORTS
+__nopoll_calloc
 __nopoll_conn_accept_complete_common
 __nopoll_conn_call_on_ready_if_defined
 __nopoll_conn_complete_pending_write_reduce_header
@@ -9,6 +10,7 @@ __nopoll_conn_opts_free_common
 __nopoll_conn_opts_release_if_needed
 __nopoll_conn_owner_ref_count
 __nopoll_conn_receive
+__nopoll_conn_release_registered
 __nopoll_conn_send_common
 __nopoll_conn_set_max_frame_size
 __nopoll_conn_set_ssl_client_options
@@ -20,6 +22,7 @@ __nopoll_conn_transient_ref
 __nopoll_conn_transient_unref
 __nopoll_ctx_conn_is_registered
 __nopoll_ctx_sigpipe_do_nothing
+__nopoll_free
 __nopoll_listener_new_opts_internal
 __nopoll_listener_sock_listen_internal
 __nopoll_listener_tls_new_opts_internal
@@ -30,7 +33,9 @@ __nopoll_mutex_lock
 __nopoll_mutex_unlock
 __nopoll_nonce_init
 __nopoll_pack_content
+__nopoll_realloc
 __nopoll_tls_was_init
+nopoll_allocation_handlers
 nopoll_base64_decode
 nopoll_base64_encode
 nopoll_calloc

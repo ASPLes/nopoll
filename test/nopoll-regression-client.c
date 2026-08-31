@@ -5029,6 +5029,197 @@ nopoll_bool test_54 (void)
 	return test_54_wrong_http_version ("54");
 }
 
+/* allocation failure injection used by test_55: when test_55_fail_at is
+ * greater than zero, the allocation with that ordinal fails (and only
+ * that one), so every allocation of an operation can be failed in turn
+ * to check the library degrades instead of crashing.
+ *
+ * NOTE: the handlers wrap the C library ones, so memory allocated while
+ * they are installed can still be released after uninstalling them */
+int test_55_alloc_count = 0;
+int test_55_fail_at     = 0;
+
+noPollPtr __test_55_calloc (size_t count, size_t size)
+{
+	test_55_alloc_count++;
+	if (test_55_fail_at > 0 && test_55_alloc_count == test_55_fail_at)
+		return NULL;
+	return calloc (count, size);
+}
+
+noPollPtr __test_55_realloc (noPollPtr ref, size_t size)
+{
+	test_55_alloc_count++;
+	if (test_55_fail_at > 0 && test_55_alloc_count == test_55_fail_at)
+		return NULL;
+	return realloc (ref, size);
+}
+
+void __test_55_free (noPollPtr ref)
+{
+	free (ref);
+	return;
+}
+
+/* runs a complete client cycle (context, connection, handshake, send,
+ * receive and close). It reports nothing: the point is that it must
+ * never crash, no matter which allocation failed */
+void test_55_client_cycle (void)
+{
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	noPollMsg  * msg;
+	int          iterator;
+
+	ctx = nopoll_ctx_new ();
+	if (ctx == NULL)
+		return;
+
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
+	if (conn != NULL) {
+		if (nopoll_conn_is_ok (conn)) {
+			nopoll_conn_wait_until_connection_ready (conn, 2);
+			nopoll_conn_send_text (conn, "alloc-failure", 13);
+
+			iterator = 0;
+			while (iterator < 20) {
+				msg = nopoll_conn_get_msg (conn);
+				if (msg) {
+					nopoll_msg_unref (msg);
+					break;
+				} /* end if */
+				if (! nopoll_conn_is_ok (conn))
+					break;
+				nopoll_sleep (10000);
+				iterator++;
+			} /* end while */
+		} /* end if */
+
+		nopoll_conn_close (conn);
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+	return;
+}
+
+/* checks the certificate store is left usable after an allocation
+ * failure while installing a certificate: a failed install must be
+ * reported, and it must not shadow a later successful one */
+nopoll_bool test_55_certificate_store (int fail_at)
+{
+	noPollCtx  * ctx;
+	const char * certificateFile = NULL;
+	const char * privateKey      = NULL;
+	nopoll_bool  installed;
+	nopoll_bool  result = nopoll_true;
+
+	test_55_fail_at     = 0;
+	test_55_alloc_count = 0;
+
+	ctx = nopoll_ctx_new ();
+	if (ctx == NULL)
+		return nopoll_true; /* nothing to check */
+
+	/* now fail the requested allocation while installing */
+	test_55_alloc_count = 0;
+	test_55_fail_at     = fail_at;
+
+	installed = nopoll_ctx_set_certificate (ctx, "test-55.local", "test-certificate.crt", "test-private.key", NULL);
+
+	/* memory is available again */
+	test_55_fail_at = 0;
+
+	if (! installed) {
+		/* the install failed: a later attempt with memory
+		 * available must succeed, and not be silently reported
+		 * as already installed */
+		if (! nopoll_ctx_set_certificate (ctx, "test-55.local", "test-certificate.crt", "test-private.key", NULL)) {
+			printf ("ERROR: after a failed certificate install (fail_at=%d) a later install failed too..\n", fail_at);
+			result = nopoll_false;
+		} /* end if */
+	} /* end if */
+
+	/* whatever happened, the store must report consistent values */
+	if (result && nopoll_ctx_find_certificate (ctx, "test-55.local", &certificateFile, &privateKey, NULL)) {
+		if (certificateFile == NULL || privateKey == NULL) {
+			printf ("ERROR: the certificate store reported a certificate with undefined files (fail_at=%d)..\n", fail_at);
+			result = nopoll_false;
+		} /* end if */
+	} /* end if */
+
+	nopoll_ctx_unref (ctx);
+	return result;
+}
+
+nopoll_bool test_55 (void)
+{
+	int          iterator;
+	int          total;
+	nopoll_bool  result = nopoll_false;
+
+	printf ("Test 55: checking the library survives allocation failures..\n");
+
+	/* install the failure injecting handlers */
+	nopoll_allocation_handlers (__test_55_calloc, __test_55_realloc, __test_55_free);
+
+	/* first, count how many allocations a complete cycle takes */
+	test_55_fail_at     = 0;
+	test_55_alloc_count = 0;
+	test_55_client_cycle ();
+	total = test_55_alloc_count;
+
+	printf ("Test 55: a complete client cycle takes %d allocations, failing each one in turn..\n", total);
+	if (total <= 0) {
+		printf ("ERROR: expected the client cycle to allocate memory..\n");
+		goto finish;
+	} /* end if */
+
+	/* now fail every one of them in turn: the library must degrade
+	 * the operation, never crash */
+	iterator = 1;
+	while (iterator <= total) {
+		test_55_alloc_count = 0;
+		test_55_fail_at     = iterator;
+
+		test_55_client_cycle ();
+
+		iterator++;
+	} /* end while */
+
+	printf ("Test 55: survived %d allocation failures during the client cycle..\n", total);
+
+	/* same for the certificate store, which must not be left
+	 * shadowed by a half installed entry */
+	iterator = 1;
+	while (iterator <= 12) {
+		if (! test_55_certificate_store (iterator))
+			goto finish;
+		iterator++;
+	} /* end while */
+
+	printf ("Test 55: the certificate store survived 12 allocation failures..\n");
+
+	/* memory is available again: a regular operation must work */
+	test_55_fail_at     = 0;
+	test_55_alloc_count = 0;
+	test_55_client_cycle ();
+	if (test_55_alloc_count != total) {
+		printf ("ERROR: expected the client cycle to work as before (%d allocations) but found %d..\n",
+			total, test_55_alloc_count);
+		goto finish;
+	} /* end if */
+
+	printf ("Test 55: a regular cycle works again after the failures..\n");
+	result = nopoll_true;
+
+finish:
+	/* restore the C library allocator */
+	nopoll_allocation_handlers (NULL, NULL, NULL);
+	test_55_fail_at = 0;
+
+	return result;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -5553,6 +5744,13 @@ int main (int argc, char ** argv)
 		printf ("Test 54: check handshake failures stop handshake processing [   OK    ]\n");
 	} else {
 		printf ("Test 54: check handshake failures stop handshake processing [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_55 ()) {
+		printf ("Test 55: check the library survives allocation failures     [   OK    ]\n");
+	} else {
+		printf ("Test 55: check the library survives allocation failures     [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

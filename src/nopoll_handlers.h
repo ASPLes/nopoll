@@ -244,7 +244,49 @@ typedef void (*noPollMutexLock) (noPollPtr mutex);
  */
 typedef void (*noPollMutexUnlock) (noPollPtr mutex);
 
-/** 
+/**
+ * @brief Memory allocation handler used by the library.
+ *
+ * See \ref nopoll_allocation_handlers for more information.
+ *
+ * @param count How many items to allocate.
+ *
+ * @param size Size of one item.
+ *
+ * @return A newly allocated pointer, with its content set to zero, or
+ * NULL when the allocation is not possible. The handler must never
+ * abort the process: reporting NULL is how the library is told to
+ * degrade the operation in progress.
+ */
+typedef noPollPtr (*noPollCallocHandler) (size_t count, size_t size);
+
+/**
+ * @brief Memory reallocation handler used by the library.
+ *
+ * See \ref nopoll_allocation_handlers for more information.
+ *
+ * @param ref The reference to resize. It can be NULL, in that case the
+ * handler must behave like a plain allocation.
+ *
+ * @param size Size of the new reference.
+ *
+ * @return The resized reference or NULL when it is not possible, in
+ * which case the memory referenced by <i>ref</i> must be left
+ * untouched (that is, the semantics of realloc ()).
+ */
+typedef noPollPtr (*noPollReallocHandler) (noPollPtr ref, size_t size);
+
+/**
+ * @brief Memory release handler used by the library.
+ *
+ * See \ref nopoll_allocation_handlers for more information.
+ *
+ * @param ref The reference to release. The handler must accept NULL,
+ * doing nothing in that case.
+ */
+typedef void (*noPollFreeHandler) (noPollPtr ref);
+
+/**
  * @brief Handler used by nopoll_log_set_handler to receive all log
  * notifications produced by the library on this function.
  *

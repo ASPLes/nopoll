@@ -79,6 +79,10 @@ void        nopoll_thread_handlers (noPollMutexCreate  mutex_create,
 				    noPollMutexLock    mutex_lock,
 				    noPollMutexUnlock  mutex_unlock);
 
+void        nopoll_allocation_handlers (noPollCallocHandler  calloc_handler,
+					noPollReallocHandler realloc_handler,
+					noPollFreeHandler    free_handler);
+
 noPollPtr   nopoll_mutex_create (void);
 
 void        nopoll_mutex_lock    (noPollPtr mutex);

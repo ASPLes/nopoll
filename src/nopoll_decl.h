@@ -597,6 +597,11 @@ noPollPtr  nopoll_realloc (noPollPtr ref, size_t size);
 
 void       nopoll_free    (noPollPtr ref);
 
+/* NOTE: nopoll_allocation_handlers () is declared at nopoll.h, next to
+ * nopoll_thread_handlers (), because its arguments are the handler
+ * types defined by nopoll_handlers.h, which is included after this
+ * header */
+
 END_C_DECLS
 
 #endif

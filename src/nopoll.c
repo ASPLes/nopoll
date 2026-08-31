@@ -210,6 +210,9 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 
 #if !defined(NOPOLL_HAVE_VASPRINTF)
 	int       size;
+#else
+	int       length;
+	char    * aux      = NULL;
 #endif
 	char    * result   = NULL;
 
@@ -217,9 +220,25 @@ char  * nopoll_strdup_printfv    (const char * chunk, va_list args)
 		return NULL;
 
 #ifdef NOPOLL_HAVE_VASPRINTF
-	/* do the operation using the GNU extension */
-	if (vasprintf (&result, chunk, args) == -1)
+	/* do the operation using the GNU extension
+	 *
+	 * NOTE: vasprintf () allocates with the C library, but the value
+	 * returned by this function is released with nopoll_free (), so
+	 * the result is copied into memory owned by the noPoll allocator
+	 * and the temporary is released here. Without this, installing
+	 * handlers through \ref nopoll_allocation_handlers would make
+	 * every log message and every strdup_printf () be released by an
+	 * allocator that did not allocate it */
+	if (vasprintf (&aux, chunk, args) == -1)
 	        return NULL;
+
+	length = strlen (aux);
+	result = nopoll_new (char, length + 1);
+	if (result)
+		memcpy (result, aux, length + 1);
+
+	free (aux);
+	return result;
 #else
 	/* get the amount of memory to be allocated */
 	size = nopoll_vprintf_len (chunk, args);
@@ -760,10 +779,25 @@ int     nopoll_timeval_substract                  (struct timeval * a,
  */
 char      * nopoll_strdup (const char * buffer)
 {
+	int      length;
+	char   * result;
+
 	if (buffer == NULL)
 		return NULL;
 
-	return strdup (buffer);
+	/* NOTE: the copy is allocated through nopoll_new () instead of
+	 * calling strdup (): the result is released with nopoll_free (),
+	 * so using the C library allocator here would mix allocators as
+	 * soon as the application installs its own through \ref
+	 * nopoll_allocation_handlers */
+	length = strlen (buffer);
+	result = nopoll_new (char, length + 1);
+	if (result == NULL)
+		return NULL;
+
+	memcpy (result, buffer, length + 1);
+
+	return result;
 }
 
 

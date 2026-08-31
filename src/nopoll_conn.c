@@ -804,7 +804,32 @@ nopoll_bool __nopoll_conn_set_ssl_client_options (noPollCtx * ctx, noPollConn * 
 	return nopoll_true;
 }
 
-/** 
+/**
+ * @internal Releases a connection that was already registered at the
+ * context but that is not going to be reported to the caller.
+ *
+ * The registration takes a reference on the connection (and another one
+ * on the context), so a failure path that just returns NULL leaves the
+ * connection alive inside the context with nobody able to reach it: the
+ * caller got NULL, and the context reference it holds keeps the context
+ * itself from ever being released.
+ *
+ * @param ctx The context where the connection was registered.
+ *
+ * @param conn The connection to unregister and release.
+ */
+void __nopoll_conn_release_registered (noPollCtx * ctx, noPollConn * conn)
+{
+	/* drop the reference acquired by the registration */
+	nopoll_ctx_unregister_conn (ctx, conn);
+
+	/* and the one the connection was created with */
+	nopoll_conn_unref (conn);
+
+	return;
+}
+
+/**
  * @internal Internal implementation used to do a connect.
  */
 noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
@@ -866,7 +891,16 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 	/* register connection into context */
 	if (! nopoll_ctx_register_conn (ctx, conn)) {
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "Failed to register connection into the context, unable to create connection");
+
+		/* NOTE: the mutexes created above must be destroyed
+		 * here: releasing just the connection object leaked
+		 * both of them (the registration is what would have
+		 * made nopoll_conn_unref () take care of them) */
+		nopoll_mutex_destroy (conn->handshake_mutex);
+		nopoll_mutex_destroy (conn->ref_mutex);
 		nopoll_free (conn);
+		nopoll_close_socket (session);
+
 		/* release connection options */
 		__nopoll_conn_opts_release_if_needed (options);
 
@@ -931,6 +965,12 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 		/* release connection options */
 		__nopoll_conn_opts_release_if_needed (options);
 
+		/* drop the connection: it is already registered at the
+		 * context, so returning NULL without releasing it here
+		 * left it (and the context reference it holds) alive
+		 * with nobody able to reach it */
+		__nopoll_conn_release_registered (ctx, conn);
+
 		return NULL;
 	} /* end if */
 
@@ -946,6 +986,9 @@ noPollConn * __nopoll_conn_new_common (noPollCtx       * ctx,
 
 		/* release connection options */
 		__nopoll_conn_opts_release_if_needed (options);
+
+		/* see note at the failure path above */
+		__nopoll_conn_release_registered (ctx, conn);
 
 		return NULL;
 	} /* end if */

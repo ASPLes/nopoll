@@ -35,12 +35,63 @@
  *      Email address:
  *         info@aspl.es - http://www.aspl.es/nopoll
  */
-#include <nopoll_decl.h>
+#include <nopoll.h>
 
-/** 
+/**
  * \addtogroup nopoll_decl_module
  * @{
  */
+
+/* handlers used to allocate and release memory: when they are not
+ * installed the library uses the C library ones. See \ref
+ * nopoll_allocation_handlers */
+noPollCallocHandler  __nopoll_calloc  = NULL;
+noPollReallocHandler __nopoll_realloc = NULL;
+noPollFreeHandler    __nopoll_free    = NULL;
+
+/**
+ * @brief Allows to install the handlers the library must use to
+ * allocate and release memory, replacing the C library ones.
+ *
+ * Every allocation done by noPoll goes through \ref nopoll_calloc,
+ * \ref nopoll_realloc and \ref nopoll_free (and through \ref
+ * nopoll_new, \ref nopoll_strdup and \ref nopoll_strdup_printf, which
+ * are built on them), so installing these handlers redirects all of
+ * them at once.
+ *
+ * The handlers are global to the process and are not protected by any
+ * lock: install them before creating any \ref noPollCtx and do not
+ * change them while the library is in use.
+ *
+ * Two uses are expected: providing a custom allocator, and forcing
+ * allocation failures to check how an application survives a transient
+ * out of memory condition (which is what test_55 of the regression
+ * test does).
+ *
+ * @param calloc_handler The handler used to allocate memory, or NULL
+ * to restore the C library one.
+ *
+ * @param realloc_handler The handler used to resize memory, or NULL to
+ * restore the C library one.
+ *
+ * @param free_handler The handler used to release memory, or NULL to
+ * restore the C library one.
+ *
+ * IMPORTANT: memory allocated by one set of handlers must be released
+ * by that same set, so passing NULL to uninstall them while allocated
+ * objects are still alive mixes allocators. Restore them only after
+ * releasing everything allocated in between.
+ */
+void nopoll_allocation_handlers (noPollCallocHandler  calloc_handler,
+				 noPollReallocHandler realloc_handler,
+				 noPollFreeHandler    free_handler)
+{
+	__nopoll_calloc  = calloc_handler;
+	__nopoll_realloc = realloc_handler;
+	__nopoll_free    = free_handler;
+
+	return;
+}
 
 /**
  * @brief Calloc helper for nopoll library. The memory returned is
@@ -58,6 +109,9 @@
  */
 noPollPtr nopoll_calloc (size_t count, size_t size)
 {
+	if (__nopoll_calloc)
+		return __nopoll_calloc (count, size);
+
 	return calloc (count, size);
 }
 
@@ -81,6 +135,9 @@ noPollPtr nopoll_calloc (size_t count, size_t size)
  */
 noPollPtr nopoll_realloc (noPollPtr ref, size_t size)
 {
+	if (__nopoll_realloc)
+		return __nopoll_realloc (ref, size);
+
 	return realloc (ref, size);
 }
 
@@ -92,6 +149,11 @@ noPollPtr nopoll_realloc (noPollPtr ref, size_t size)
  */
 void nopoll_free (noPollPtr ref)
 {
+	if (__nopoll_free) {
+		__nopoll_free (ref);
+		return;
+	} /* end if */
+
 	free (ref);
 	return;
 }
