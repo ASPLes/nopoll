@@ -50,15 +50,22 @@ typedef struct _noPollMutex {
 	pthread_mutex_t mutex;
 } noPollMutex;
 
+/* when a test forces allocation failures on purpose (see test_55), a
+ * failed mutex allocation is the expected outcome, not a test failure:
+ * the flag keeps it from being reported as an ERROR, which made the
+ * output of a passing run look like a failing one */
+nopoll_bool regtest_expect_alloc_failures = nopoll_false;
+
 noPollPtr __nopoll_regtest_mutex_create (void) {
 	pthread_mutex_t     * mutex;
 	pthread_mutexattr_t   attr;
 	int                   error;
 
-	
+
 	mutex = nopoll_new (pthread_mutex_t, 1);
 	if (mutex == NULL) {
-		printf ("ERROR: failed to allocate memory for mutex..\n");
+		if (! regtest_expect_alloc_failures)
+			printf ("ERROR: failed to allocate memory for mutex..\n");
 		return NULL;
 	}
 

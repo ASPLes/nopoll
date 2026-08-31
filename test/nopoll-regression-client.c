@@ -5159,7 +5159,12 @@ nopoll_bool test_55 (void)
 
 	printf ("Test 55: checking the library survives allocation failures..\n");
 
-	/* install the failure injecting handlers */
+	/* install the failure injecting handlers
+	 *
+	 * NOTE: the flag tells the shared handlers (see
+	 * nopoll-regression-common.c) that the allocation failures that
+	 * follow are provoked, so they are not reported as errors */
+	regtest_expect_alloc_failures = nopoll_true;
 	nopoll_allocation_handlers (__test_55_calloc, __test_55_realloc, __test_55_free);
 
 	/* first, count how many allocations a complete cycle takes */
@@ -5215,7 +5220,8 @@ nopoll_bool test_55 (void)
 finish:
 	/* restore the C library allocator */
 	nopoll_allocation_handlers (NULL, NULL, NULL);
-	test_55_fail_at = 0;
+	test_55_fail_at               = 0;
+	regtest_expect_alloc_failures = nopoll_false;
 
 	return result;
 }

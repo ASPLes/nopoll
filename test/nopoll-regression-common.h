@@ -56,6 +56,10 @@ void __nopoll_regtest_mutex_unlock (noPollPtr _mutex);
  * progress. See regtest_configure_port_offset () */
 extern int regtest_port_offset;
 
+/* set by a test that forces allocation failures on purpose, so the
+ * shared handlers do not report those failures as test errors */
+extern nopoll_bool regtest_expect_alloc_failures;
+
 nopoll_bool  regtest_configure_port_offset (int argc, char ** argv);
 
 int          regtest_port_int (int base_port);
