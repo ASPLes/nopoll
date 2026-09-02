@@ -5226,6 +5226,173 @@ finish:
 	return result;
 }
 
+/* set by test_56_server_cycle () when the whole exchange completed */
+nopoll_bool test_56_echo_ok = nopoll_false;
+
+/* drives both sides of the connection a bounded number of rounds: the
+ * test owns the accept loop, so nobody else moves these connections */
+void test_56_drive (noPollConn * listener, noPollConn * conn, int rounds)
+{
+	noPollMsg * msg;
+	int         iterator = 0;
+
+	while (iterator < rounds) {
+		msg = nopoll_conn_get_msg (listener);
+		if (msg)
+			nopoll_msg_unref (msg);
+		msg = nopoll_conn_get_msg (conn);
+		if (msg)
+			nopoll_msg_unref (msg);
+
+		nopoll_sleep (2000);
+		iterator++;
+	} /* end while */
+
+	return;
+}
+
+/* runs a complete cycle with both peers inside this process, so the
+ * allocations of the listener side (accept, server handshake, reply)
+ * are covered by the failure injection too: the handlers are global to
+ * the process, so the regression listener running on another process is
+ * out of their reach */
+void test_56_server_cycle (void)
+{
+	noPollCtx  * ctx;
+	noPollConn * master   = NULL;
+	noPollConn * conn     = NULL;
+	noPollConn * listener = NULL;
+	noPollMsg  * msg;
+	int          iterator;
+
+	test_56_echo_ok = nopoll_false;
+
+	ctx = nopoll_ctx_new ();
+	if (ctx == NULL)
+		return;
+
+	master = nopoll_listener_new (ctx, "0.0.0.0", regtest_port (1258));
+	if (master != NULL && nopoll_conn_is_ok (master)) {
+
+		conn = nopoll_conn_new (ctx, "localhost", regtest_port (1258), NULL, NULL, NULL, NULL);
+		if (conn != NULL && nopoll_conn_is_ok (conn)) {
+
+			listener = nopoll_conn_accept (ctx, master);
+			if (listener != NULL) {
+				nopoll_conn_set_sock_block (nopoll_conn_socket (listener), nopoll_false);
+
+				/* complete the handshake on both sides */
+				iterator = 0;
+				while (iterator < 20 && ! (nopoll_conn_is_ready (listener) && nopoll_conn_is_ready (conn))) {
+					test_56_drive (listener, conn, 1);
+					iterator++;
+				} /* end while */
+
+				/* the client sends and the listener echoes it back */
+				nopoll_conn_send_text (conn, "server-side", 11);
+
+				iterator = 0;
+				while (iterator < 20) {
+					msg = nopoll_conn_get_msg (listener);
+					if (msg) {
+						nopoll_conn_send_text (listener, (const char *) nopoll_msg_get_payload (msg),
+								       nopoll_msg_get_payload_size (msg));
+						nopoll_msg_unref (msg);
+						break;
+					} /* end if */
+					if (! nopoll_conn_is_ok (listener))
+						break;
+					nopoll_sleep (2000);
+					iterator++;
+				} /* end while */
+
+				/* and the client reads the echo back */
+				iterator = 0;
+				while (iterator < 20) {
+					msg = nopoll_conn_get_msg (conn);
+					if (msg) {
+						if (nopoll_cmp ((const char *) nopoll_msg_get_payload (msg), "server-side"))
+							test_56_echo_ok = nopoll_true;
+						nopoll_msg_unref (msg);
+						break;
+					} /* end if */
+					if (! nopoll_conn_is_ok (conn))
+						break;
+					nopoll_sleep (2000);
+					iterator++;
+				} /* end while */
+			} /* end if */
+		} /* end if */
+	} /* end if */
+
+	nopoll_conn_close (listener);
+	nopoll_conn_close (conn);
+	nopoll_conn_close (master);
+	nopoll_ctx_unref (ctx);
+
+	return;
+}
+
+nopoll_bool test_56 (void)
+{
+	int          iterator;
+	int          total;
+	nopoll_bool  result = nopoll_false;
+
+	printf ("Test 56: checking the listener side survives allocation failures..\n");
+
+	regtest_expect_alloc_failures = nopoll_true;
+	nopoll_allocation_handlers (__test_55_calloc, __test_55_realloc, __test_55_free);
+
+	/* count the allocations of a complete cycle, and check the
+	 * cycle really does what it is supposed to do */
+	test_55_fail_at     = 0;
+	test_55_alloc_count = 0;
+	test_56_server_cycle ();
+	total = test_55_alloc_count;
+
+	if (! test_56_echo_ok) {
+		printf ("ERROR: expected the listener+client cycle to complete the echo before starting the sweep..\n");
+		goto finish;
+	} /* end if */
+
+	printf ("Test 56: a listener+client cycle takes %d allocations, failing each one in turn..\n", total);
+
+	iterator = 1;
+	while (iterator <= total) {
+		test_55_alloc_count = 0;
+		test_55_fail_at     = iterator;
+
+		test_56_server_cycle ();
+
+		iterator++;
+	} /* end while */
+
+	printf ("Test 56: survived %d allocation failures during the listener+client cycle..\n", total);
+
+	/* memory is available again: the cycle must work exactly as
+	 * before, echo included */
+	test_55_fail_at     = 0;
+	test_55_alloc_count = 0;
+	test_56_server_cycle ();
+
+	if (! test_56_echo_ok || test_55_alloc_count != total) {
+		printf ("ERROR: expected the cycle to work as before (%d allocations, echo %d) but found %d allocations, echo %d..\n",
+			total, nopoll_true, test_55_alloc_count, test_56_echo_ok);
+		goto finish;
+	} /* end if */
+
+	printf ("Test 56: the cycle works again after the failures..\n");
+	result = nopoll_true;
+
+finish:
+	nopoll_allocation_handlers (NULL, NULL, NULL);
+	test_55_fail_at               = 0;
+	regtest_expect_alloc_failures = nopoll_false;
+
+	return result;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -5757,6 +5924,13 @@ int main (int argc, char ** argv)
 		printf ("Test 55: check the library survives allocation failures     [   OK    ]\n");
 	} else {
 		printf ("Test 55: check the library survives allocation failures     [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_56 ()) {
+		printf ("Test 56: check the listener side survives allocation failures [   OK    ]\n");
+	} else {
+		printf ("Test 56: check the listener side survives allocation failures [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 
