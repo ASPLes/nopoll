@@ -105,7 +105,10 @@ void           nopoll_ctx_set_max_frame_size (noPollCtx * ctx, long int max_fram
 
 long int       nopoll_ctx_get_max_frame_size (noPollCtx * ctx);
 
-void           nopoll_ctx_free (noPollCtx * ctx);
+/* NOTE: nopoll_ctx_free () used to be declared here but it was never
+ * implemented, so any application calling it (a reasonable guess for
+ * the counterpart of nopoll_ctx_new ()) failed to link. The context is
+ * released by dropping its last reference with nopoll_ctx_unref () */
 
 END_C_DECLS
 

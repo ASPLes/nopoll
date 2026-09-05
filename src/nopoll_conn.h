@@ -246,6 +246,8 @@ long int           nopoll_conn_get_max_frame_size (noPollConn * conn);
 /** internal api **/
 void nopoll_conn_complete_handshake (noPollConn * conn);
 
+void __nopoll_conn_notify_on_ready_if_pending (noPollConn * conn);
+
 void __nopoll_conn_set_max_frame_size (noPollConn * conn, noPollConnOpts * options);
 
 int nopoll_conn_default_receive (noPollConn * conn, char * buffer, int buffer_size);

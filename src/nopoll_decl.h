@@ -177,7 +177,7 @@
  * @brief Convenient macro used to check and close a socket.
  * @param s The file descriptor socket to check and close
  */
-#define nopoll_close_socket(s) do {if ( s >= 0) {close (s);}} while (0)
+#define nopoll_close_socket(s) do {if ((s) >= 0) {close (s);}} while (0)
 /**
  * @brief Conviente macro used to check if disconnect signal is reported by errno system indication.
  */
@@ -231,7 +231,7 @@
  * @brief Convenient macro used to check and close a socket.
  * @param socket The file descriptor socket to check and close
  */
-#define nopoll_close_socket(s) do {if ( s >= 0) {closesocket (s);}} while (0)
+#define nopoll_close_socket(s) do {if ((s) >= 0) {closesocket (s);}} while (0)
 #define uint16_t               u_short
 #define nopoll_is_disconnected ((errno == WSAESHUTDOWN) || (errno == WSAECONNABORTED) || (errno == WSAECONNRESET))
 
@@ -431,8 +431,12 @@ typedef enum {
  * @param ctx The context where the operation will take place.
  * @param expr The expresion to check.
  */
+/* NOTE: wrapped in do { } while (0) so the macro is a single
+ * statement: written as a bare "if", an invocation used as the body of
+ * an if without braces stole the following else (the classic dangling
+ * else), silently changing which branch it belongs to */
 #define nopoll_return_if_fail(ctx, expr)					\
-	if (!(expr)) {__nopoll_log (ctx, __function_name__, __file__, __line__, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed at %s (%s:%d)", #expr, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return;}
+	do { if (!(expr)) {__nopoll_log (ctx, __function_name__, __file__, __line__, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed at %s (%s:%d)", #expr, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return;} } while (0)
 
 /** 
  * @brief Allows to check a condition and return the given value if it
@@ -444,8 +448,9 @@ typedef enum {
  *
  * @param val The value to return if the expression is not meet.
  */
+/* see the note at nopoll_return_if_fail () about the do { } while (0) */
 #define nopoll_return_val_if_fail(ctx, expr, val)			\
-	if (!(expr)) { __nopoll_log (ctx, __function_name__, __file__, __line__, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed, returning: %s at %s (%s:%d)", #expr, #val, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return val;}
+	do { if (!(expr)) { __nopoll_log (ctx, __function_name__, __file__, __line__, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed, returning: %s at %s (%s:%d)", #expr, #val, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return val;} } while (0)
 
 
 /** 

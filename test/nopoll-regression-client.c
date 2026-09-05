@@ -5393,6 +5393,158 @@ finish:
 	return result;
 }
 
+/* records what the on ready handler installed by test_57 observed */
+int         test_57_on_ready_calls = 0;
+nopoll_bool test_57_is_ready_ok    = nopoll_false;
+nopoll_bool test_57_get_msg_ok     = nopoll_false;
+
+/* the handler calls back into noPoll: both functions below take
+ * conn->handshake_mutex, which is held while the handshake completes,
+ * so calling them from here used to deadlock the process */
+nopoll_bool __test_57_on_ready (noPollCtx * ctx, noPollConn * conn, noPollPtr user_data)
+{
+	noPollMsg * msg;
+
+	/* avoid compiler warnings */
+	(void) ctx;
+	(void) user_data;
+
+	test_57_on_ready_calls++;
+
+	/* ask the connection about itself */
+	if (nopoll_conn_is_ready (conn))
+		test_57_is_ready_ok = nopoll_true;
+
+	/* and try to read from it: there is nothing to read yet, but
+	 * the call must return instead of blocking */
+	msg = nopoll_conn_get_msg (conn);
+	if (msg)
+		nopoll_msg_unref (msg);
+	test_57_get_msg_ok = nopoll_true;
+
+	return nopoll_true;
+}
+
+nopoll_bool test_57 (void)
+{
+	noPollCtx  * ctx;
+	noPollConn * master   = NULL;
+	noPollConn * conn     = NULL;
+	noPollConn * listener = NULL;
+	noPollMsg  * msg;
+	int          iterator;
+	nopoll_bool  result   = nopoll_false;
+
+	printf ("Test 57: checking noPoll can be called back from the on ready handler..\n");
+
+	ctx = create_ctx ();
+	if (ctx == NULL) {
+		printf ("ERROR (1): expected to find proper context creation..\n");
+		return nopoll_false;
+	} /* end if */
+
+	test_57_on_ready_calls = 0;
+	test_57_is_ready_ok    = nopoll_false;
+	test_57_get_msg_ok     = nopoll_false;
+	nopoll_ctx_set_on_ready (ctx, __test_57_on_ready, NULL);
+
+	/* both peers inside this process, so the handler runs here */
+	master = nopoll_listener_new (ctx, "0.0.0.0", regtest_port (1259));
+	if (! nopoll_conn_is_ok (master)) {
+		printf ("ERROR (2): expected to create a listener at 0.0.0.0:%s..\n", regtest_port (1259));
+		goto finish;
+	} /* end if */
+
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1259), NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR (3): expected to find proper client connection status..\n");
+		goto finish;
+	} /* end if */
+
+	listener = nopoll_conn_accept (ctx, master);
+	if (listener == NULL) {
+		printf ("ERROR (4): expected to accept the incoming connection..\n");
+		goto finish;
+	} /* end if */
+	nopoll_conn_set_sock_block (nopoll_conn_socket (listener), nopoll_false);
+
+	/* drive both sides until the handshake completes: if the
+	 * notification deadlocks, the run never gets past this loop */
+	iterator = 0;
+	while (iterator < 100 && ! (nopoll_conn_is_ready (listener) && nopoll_conn_is_ready (conn))) {
+		msg = nopoll_conn_get_msg (listener);
+		if (msg)
+			nopoll_msg_unref (msg);
+		msg = nopoll_conn_get_msg (conn);
+		if (msg)
+			nopoll_msg_unref (msg);
+
+		nopoll_sleep (10000);
+		iterator++;
+	} /* end while */
+
+	if (! nopoll_conn_is_ready (listener) || ! nopoll_conn_is_ready (conn)) {
+		printf ("ERROR (5): expected both sides to complete the handshake..\n");
+		goto finish;
+	} /* end if */
+
+	/* the handler must have run for both connections */
+	if (test_57_on_ready_calls < 2) {
+		printf ("ERROR (6): expected the on ready handler to be called for both peers but it ran %d time(s)..\n",
+			test_57_on_ready_calls);
+		goto finish;
+	} /* end if */
+
+	if (! test_57_is_ready_ok) {
+		printf ("ERROR (7): expected nopoll_conn_is_ready () to report the connection as ready from the handler..\n");
+		goto finish;
+	} /* end if */
+
+	if (! test_57_get_msg_ok) {
+		printf ("ERROR (8): expected nopoll_conn_get_msg () to return from the handler..\n");
+		goto finish;
+	} /* end if */
+
+	/* and the connection still works afterwards */
+	if (nopoll_conn_send_text (conn, "on-ready", 8) != 8) {
+		printf ("ERROR (9): expected to send content after the handshake..\n");
+		goto finish;
+	} /* end if */
+
+	iterator = 0;
+	msg      = NULL;
+	while (iterator < 100 && msg == NULL) {
+		msg = nopoll_conn_get_msg (listener);
+		if (msg == NULL) {
+			if (! nopoll_conn_is_ok (listener)) {
+				printf ("ERROR (10): connection closed while waiting for the content..\n");
+				goto finish;
+			} /* end if */
+			nopoll_sleep (10000);
+			iterator++;
+		} /* end if */
+	} /* end while */
+
+	if (msg == NULL || ! nopoll_cmp ((const char *) nopoll_msg_get_payload (msg), "on-ready")) {
+		printf ("ERROR (11): expected to receive 'on-ready' but found '%s'..\n",
+			msg ? (const char *) nopoll_msg_get_payload (msg) : "<null>");
+		nopoll_msg_unref (msg);
+		goto finish;
+	} /* end if */
+
+	nopoll_msg_unref (msg);
+	printf ("Test 57: the handler called back into noPoll %d times without blocking..\n", test_57_on_ready_calls);
+	result = nopoll_true;
+
+finish:
+	nopoll_conn_close (listener);
+	nopoll_conn_close (conn);
+	nopoll_conn_close (master);
+	nopoll_ctx_unref (ctx);
+
+	return result;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -5931,6 +6083,13 @@ int main (int argc, char ** argv)
 		printf ("Test 56: check the listener side survives allocation failures [   OK    ]\n");
 	} else {
 		printf ("Test 56: check the listener side survives allocation failures [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_57 ()) {
+		printf ("Test 57: check noPoll can be called back from on ready       [   OK    ]\n");
+	} else {
+		printf ("Test 57: check noPoll can be called back from on ready       [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

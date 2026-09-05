@@ -181,7 +181,21 @@ struct _noPollConn {
 	 */
 	nopoll_bool      handshake_ok;
 
-	/** 
+	/**
+	 * @internal Signals that the on ready handler configured by the
+	 * application is still to be called for this connection.
+	 *
+	 * The handshake completion runs with handshake_mutex acquired,
+	 * and the handler used to be called from inside it: any noPoll
+	 * function the application called from the handler that takes
+	 * that same mutex (nopoll_conn_is_ready, nopoll_conn_get_msg)
+	 * deadlocked, because the mutexes are not recursive. The flag
+	 * is set inside the critical section and consumed right after
+	 * releasing it.
+	 */
+	nopoll_bool      pending_on_ready;
+
+	/**
 	 * @internal Current connection receive function.
 	 */
 	noPollRead       receive;

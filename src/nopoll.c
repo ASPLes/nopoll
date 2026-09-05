@@ -601,9 +601,14 @@ nopoll_bool nopoll_base64_encode (const char  * content,
 	BIO     * bmem;
 	BUF_MEM * bptr;
 
-	if (content == NULL || output == NULL || length <= 0 || output_size == NULL)
+	/* NOTE: (*output_size) must be checked to be positive, like \ref
+	 * nopoll_base64_decode does: the size check below compares it
+	 * against a size_t, so a negative value is promoted into a huge
+	 * unsigned one, passes the check and lets the memcpy () write
+	 * past the end of the buffer provided */
+	if (content == NULL || output == NULL || length <= 0 || output_size == NULL || (*output_size) <= 0)
 		return nopoll_false;
-	
+
 	/* create bio */
 	b64  = BIO_new (BIO_f_base64());
 	bmem = BIO_new (BIO_s_mem());
@@ -635,11 +640,19 @@ nopoll_bool nopoll_base64_encode (const char  * content,
 	/* now get content */
 	BIO_get_mem_ptr (b64, &bptr);
 	
-	/* check output size */
-	if ((*output_size) < bptr->length) {
+	/* check the content produced and the output size: the
+	 * comparison is done in size_t on purpose (both values are
+	 * already known to be positive here), and a zero length would
+	 * make the memcpy () below receive (size_t) -1 */
+	if (bptr->length == 0) {
+		BIO_free_all (b64);
+		return nopoll_false;
+	} /* end if */
+
+	if (((size_t) (*output_size)) < bptr->length) {
 		BIO_free_all (b64);
 
-		*output_size = bptr->length;
+		*output_size = (int) bptr->length;
 		return nopoll_false;
 	}
 

@@ -1790,6 +1790,10 @@ nopoll_bool    nopoll_conn_is_ready (noPollConn * conn)
 
 		/* release here handshake mutex */
 		nopoll_mutex_unlock (conn->handshake_mutex);
+
+		/* notify the application level with the mutex already
+		 * released */
+		__nopoll_conn_notify_on_ready_if_pending (conn);
 	}
 	return conn->handshake_ok;
 }
@@ -2982,6 +2986,32 @@ nopoll_bool __nopoll_conn_call_on_ready_if_defined (noPollCtx * ctx, noPollConn 
 
 }
 
+/**
+ * @internal Calls the on ready handler when the handshake completion
+ * flagged it as pending.
+ *
+ * It must be called with conn->handshake_mutex already released: the
+ * handler belongs to the application, and it is free to call back into
+ * noPoll (nopoll_conn_is_ready (), nopoll_conn_get_msg (), ...), which
+ * would deadlock on that same mutex.
+ *
+ * @param conn The connection whose pending notification is delivered.
+ */
+void __nopoll_conn_notify_on_ready_if_pending (noPollConn * conn)
+{
+	if (conn == NULL || ! conn->pending_on_ready)
+		return;
+
+	/* clear it before calling, so a handler reentering this path
+	 * does not get notified twice */
+	conn->pending_on_ready = nopoll_false;
+
+	/* the handler denying the connection already shuts it down */
+	__nopoll_conn_call_on_ready_if_defined (conn->ctx, conn);
+
+	return;
+}
+
 nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPollConn * conn)
 {
 	char                 * reply;
@@ -3082,11 +3112,10 @@ nopoll_bool nopoll_conn_complete_handshake_check_listener (noPollCtx * ctx, noPo
 	/* free reply */
 	nopoll_free (reply);
 
-	/* now call the user app level to accept the websocket
-	   connection */
-	if (! __nopoll_conn_call_on_ready_if_defined (ctx, conn))
-		return nopoll_false;
-	
+	/* flag the application level notification as pending instead of
+	 * doing it here: see the note at noPollConn.pending_on_ready */
+	conn->pending_on_ready = nopoll_true;
+
 	return nopoll_true; /* signal handshake was completed */
 }
 
@@ -3136,10 +3165,9 @@ nopoll_bool nopoll_conn_complete_handshake_check_client (noPollCtx * ctx, noPoll
 	if (! result)
 		return nopoll_false;
 
-	/* now call the user app level to accept the websocket
-	   connection */
-	if (! __nopoll_conn_call_on_ready_if_defined (ctx, conn))
-		return nopoll_false;
+	/* flag the application level notification as pending instead of
+	 * doing it here: see the note at noPollConn.pending_on_ready */
+	conn->pending_on_ready = nopoll_true;
 
 	return result;
 }
@@ -3583,7 +3611,11 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 		/* release here handshake mutex */
 		nopoll_mutex_unlock (conn->handshake_mutex);
 
-		if (! conn->handshake_ok) 
+		/* notify the application level with the mutex already
+		 * released */
+		__nopoll_conn_notify_on_ready_if_pending (conn);
+
+		if (! conn->handshake_ok)
 			return NULL;
 	} /* end if */
 
@@ -4963,9 +4995,18 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	 * part of the public API, and a negative value reaches both the
 	 * header length codification (header[1] |= length, which sets
 	 * every length bit) and the memcpy () of the content below,
-	 * where it is converted into a huge size_t */
-	if (length < 0) {
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL, "Unable to send frame with a negative length (%ld)", length);
+	 * where it is converted into a huge size_t.
+	 *
+	 * The upper limit is checked here too: the send handler takes
+	 * the amount to write as an int, so a bigger frame was silently
+	 * truncated when the content was pushed to the wire (and so was
+	 * conn->pending_write_bytes), reporting a successful send of a
+	 * frame that never went out complete. The limit used is the same
+	 * one accepted for incoming frames */
+	if (length < 0 || length > (long) (NOPOLL_MAX_FRAME_SIZE_LIMIT - 16)) {
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL,
+			    "Unable to send frame with a length (%ld) that is negative or bigger than the maximum supported (%ld)",
+			    length, (long) (NOPOLL_MAX_FRAME_SIZE_LIMIT - 16));
 		return -1;
 	} /* end if */
 
