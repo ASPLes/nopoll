@@ -45,6 +45,7 @@
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/opensslv.h>
+#include <openssl/rand.h>
 
 #include <nopoll_handlers.h>
 

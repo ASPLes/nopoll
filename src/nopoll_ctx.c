@@ -746,6 +746,19 @@ nopoll_bool           nopoll_ctx_set_certificate (noPollCtx  * ctx,
  * after the connection has been fully accepted and handshake reply is
  * fully written.
  *
+ * IMPORTANT: this handler is called while the handshake of that
+ * connection is being completed, which holds an internal lock on
+ * it. Because of that, the handler must NOT call \ref
+ * nopoll_conn_is_ready or \ref nopoll_conn_get_msg over the connection
+ * received: both take that same lock and the call would deadlock (the
+ * mutexes installed through \ref nopoll_thread_handlers are not
+ * expected to be recursive). Everything else is safe, in particular
+ * the functions used to inspect what the client sent (\ref
+ * nopoll_conn_get_cookie, \ref nopoll_conn_get_origin, \ref
+ * nopoll_conn_get_requested_url, \ref nopoll_conn_get_host_header),
+ * which is what this handler is for. The same applies to the on close
+ * handler when the connection is closed during the handshake.
+ *
  * @param ctx The context that will be configured.
  *
  * @param on_open The handler to be configured on this context.

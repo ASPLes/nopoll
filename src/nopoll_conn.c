@@ -5025,14 +5025,26 @@ int nopoll_conn_send_frame (noPollConn * conn, nopoll_bool fin, nopoll_bool mask
 	if (masked) {
 		nopoll_set_bit (header + 1, 7);
 		
-		/* define a random mask */
-#if defined(NOPOLL_OS_WIN32)
-		mask_value = (unsigned int) rand ();
-#else
-		mask_value = (unsigned int) random ();
-#endif
+		/* define a random mask
+		 *
+		 * NOTE: the value is taken from the OpenSSL CSPRNG and
+		 * not from random ()/rand (). RFC 6455 section 5.3
+		 * requires the masking key to be derived from a strong
+		 * source of entropy and to not let a proxy predict the
+		 * key of a following frame: that unpredictability is the
+		 * whole security purpose of masking (it is what stops a
+		 * client from crafting content that a non conforming
+		 * intermediary would read as a separate request). The
+		 * generator used before was seeded from gettimeofday (),
+		 * which does not provide that property */
 		memset (mask, 0, 4);
-		nopoll_set_32bit (mask_value, mask);
+		if (RAND_bytes ((unsigned char *) mask, 4) != 1) {
+			nopoll_log (conn->ctx, NOPOLL_LEVEL_CRITICAL,
+				    "Unable to get a random masking key (RAND_bytes () failed), refusing to send the frame with a predictable mask, conn-id=%d",
+				    conn->id);
+			return -1;
+		} /* end if */
+		mask_value = (unsigned int) nopoll_get_32bit (mask);
 	} /* end if */
 
 	if (op_code) {
