@@ -476,13 +476,24 @@ int nopoll_conn_log_ssl (noPollConn * conn)
 		if (strstr (log_buffer, "1409442E")) 
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "tls stack: err=%lu, %s :: found TLS mismatch (peers running different TLS versions)", err, log_buffer);
 
-		/* find error code position */
+		/* find error code position
+		 *
+		 * NOTE: the bound is checked BEFORE indexing, and both
+		 * positions are kept inside the buffer: written the
+		 * other way around, a string without ':' in its first
+		 * 511 octets left error_position at 512 after the
+		 * increment below, and the second loop then read (and
+		 * could write the terminator) past the end of this
+		 * stack buffer. The strings reported by OpenSSL always
+		 * carry ':', so the path was not reachable, but it only
+		 * held by the shape of someone else's output */
 		error_position = 0;
-		while (log_buffer[error_position] != ':' && log_buffer[error_position] != 0 && error_position < 511)
+		while (error_position < 511 && log_buffer[error_position] != ':' && log_buffer[error_position] != 0)
 			error_position++;
-		error_position++;
+		if (error_position < 511)
+			error_position++;
 		aux_position = error_position;
-		while (log_buffer[aux_position] != 0) {
+		while (aux_position < 511 && log_buffer[aux_position] != 0) {
 			if (log_buffer[aux_position] == ':') {
 				log_buffer[aux_position] = 0;
 				break;
@@ -492,6 +503,10 @@ int nopoll_conn_log_ssl (noPollConn * conn)
 		nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "    details, run: openssl errstr %s", log_buffer + error_position);
 	}
 
+	/* NOTE: this read is done for its side effect, not for its
+	 * result: it refreshes errno so the log below reports what the
+	 * socket is really saying. The octet peeked is left in the
+	 * socket queue and log_buffer is not used after this point */
 	recv (conn->session, log_buffer, 1, MSG_PEEK);
 	nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "    noPoll id=%d, socket: %d (after testing errno: %d)",
 		    conn->id, conn->session, errno);

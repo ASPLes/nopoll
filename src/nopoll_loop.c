@@ -74,9 +74,18 @@ nopoll_bool nopoll_loop_register (noPollCtx * ctx, noPollConn * conn, noPollPtr 
 	/* nopoll_log (ctx, NOPOLL_LEVEL_DEBUG, "Adding socket id: %d", conn->session);*/
 	if (! ctx->io_engine->add_to (conn->session, ctx, conn, ctx->io_engine->io_object)) {
 
-		/* remove this connection from registry */
-		nopoll_ctx_unregister_conn (ctx, conn);
-		nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "Failed to add socket %d to the watching set", conn->session);
+		/* NOTE: the connection is NOT unregistered here. The
+		 * engine also refuses the socket when the watching set
+		 * is full (FD_SETSIZE reached), which is a transient
+		 * condition of this round: dropping the connection from
+		 * the registry left it open but unreachable, so it was
+		 * never watched again, never closed, and its descriptor
+		 * was leaked for the life of the process. Connections
+		 * that are really broken were already unregistered by
+		 * the nopoll_conn_is_ok () check above, and leaving this
+		 * one registered lets it be watched again as soon as
+		 * there is room */
+		nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "Failed to add socket %d to the watching set, it will not be watched on this round", conn->session);
 
 	}
 
@@ -240,6 +249,12 @@ void nopoll_loop_stop (noPollCtx * ctx)
  * blocked up to its own internal wait period (500ms for the select(2)
  * based engine) before the timeout is noticed. Timeouts smaller than
  * that period will still block the caller for that period.
+ *
+ * NOTE: this function is not reentrant over the same context: the io
+ * wait engine is stored at the context and released when the function
+ * returns, so two threads calling it with the same \ref noPollCtx
+ * share (and release) the same engine. Drive one context from one
+ * thread, or drive the sockets yourself.
  *
  * @return The function returns 0 when finished without error or -2 in
  * the case ctx is NULL or timeout is negative. Function returns -3 if
