@@ -2573,10 +2573,22 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 					if ((n + desp - 1) > 0) {
 						buffer[n+desp - 1] = 0;
 						conn->pending_line = nopoll_strdup (buffer);
-						if (conn->pending_line == NULL)
+						if (conn->pending_line == NULL) {
+							/* the octets were already taken
+							 * from the socket and there is
+							 * nowhere to keep them, so they
+							 * are gone: reporting -2 (retry
+							 * later) would resume the read in
+							 * the middle of a line and feed a
+							 * truncated header to the
+							 * handshake. Report the failure as
+							 * what it is */
 							nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL,
-								    "Unable to acquire memory to store partially read line, %d bytes already read are lost, conn-id=%d",
+								    "Unable to acquire memory to store partially read line, %d bytes already read are lost, closing conn-id=%d",
 								    n + desp - 1, conn->id);
+							nopoll_conn_shutdown (conn);
+							return -1;
+						} /* end if */
 					} /* end if */
 				} /* end if */
 				return -2;
