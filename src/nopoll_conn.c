@@ -2279,8 +2279,14 @@ void          nopoll_conn_close_ext  (noPollConn  * conn, int status, const char
 	 * that as soon as it finds a connection that is not working):
 	 * in that case every reference counted is owned by the caller
 	 * and the one it owns must be released here, otherwise the
-	 * connection is leaked */
-	if (refs <= (registered ? 1 : 1))
+	 * connection is leaked.
+	 *
+	 * NOTE: the threshold was written (registered ? 1 : 1), which
+	 * made both cases behave as the registered one, so closing an
+	 * already unregistered connection returned without releasing
+	 * the only reference left and leaked it (the very thing the
+	 * paragraph above describes). See test_59 */
+	if (refs <= (registered ? 1 : 0))
 		return;
 
 	/* call to unref connection */
@@ -2637,7 +2643,7 @@ void __nopoll_pack_content (char * buffer, int start, int bytes)
 {
 	int iterator = 0;
 	while (iterator < bytes) {
-		/* copy bytes to the begining of the array */
+		/* copy bytes to the beginning of the array */
 		buffer[iterator] = buffer[start + iterator];
 		
 		/* next position */
@@ -3593,7 +3599,7 @@ noPollMsg   * nopoll_conn_get_msg (noPollConn * conn)
 
 #if defined(SHOW_DEBUG_LOG)
 		result = SSL_get_verify_result (conn->ssl);
-		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Completed TLS operation from %s:%s (conn id %d, ssl veriry result: %d)",
+		nopoll_log (conn->ctx, NOPOLL_LEVEL_DEBUG, "Completed TLS operation from %s:%s (conn id %d, ssl verify result: %d)",
 			    conn->host, conn->port, conn->id, (int) result);
 #endif
 

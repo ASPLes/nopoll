@@ -5545,6 +5545,167 @@ finish:
 	return result;
 }
 
+/* checks the limits of two public functions that take a size from the
+ * caller: both used to trust it, and the value reached a memcpy () */
+nopoll_bool test_58 (void)
+{
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	char         output[128];
+	int          output_size;
+	nopoll_bool  result = nopoll_false;
+
+	printf ("Test 58: checking size limits reported by the public API..\n");
+
+	/* nopoll_base64_encode (): a negative or zero output size must be
+	 * rejected. It used to be compared against a size_t, so a
+	 * negative value was promoted into a huge unsigned one, passed
+	 * the room check and let the copy write past the buffer */
+	output_size = -1;
+	if (nopoll_base64_encode ("content", 7, output, &output_size)) {
+		printf ("ERROR (1): expected nopoll_base64_encode () to reject a negative output size..\n");
+		return nopoll_false;
+	} /* end if */
+
+	output_size = 0;
+	if (nopoll_base64_encode ("content", 7, output, &output_size)) {
+		printf ("ERROR (2): expected nopoll_base64_encode () to reject a zero output size..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* a buffer that is too small must be reported too (and the size
+	 * needed left at output_size), without writing anything */
+	output_size = 2;
+	if (nopoll_base64_encode ("content", 7, output, &output_size)) {
+		printf ("ERROR (3): expected nopoll_base64_encode () to reject a buffer too small..\n");
+		return nopoll_false;
+	} /* end if */
+
+	/* and the regular case must still work */
+	output_size = 128;
+	if (! nopoll_base64_encode ("content", 7, output, &output_size)) {
+		printf ("ERROR (4): expected nopoll_base64_encode () to encode with enough room..\n");
+		return nopoll_false;
+	} /* end if */
+
+	printf ("Test 58: base64 encoded 'content' as %s (size %d)..\n", output, output_size);
+
+	/* nopoll_conn_send_frame (): a negative length, and a length the
+	 * write path cannot represent, must be rejected. The send
+	 * handler takes an int, so a bigger frame was silently truncated
+	 * when pushed to the wire */
+	ctx = create_ctx ();
+	if (ctx == NULL) {
+		printf ("ERROR (5): expected to find proper context creation..\n");
+		return nopoll_false;
+	} /* end if */
+
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR (6): expected to find proper client connection status..\n");
+		goto finish;
+	} /* end if */
+
+	if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
+		printf ("ERROR (7): expected the connection to be ready..\n");
+		goto finish;
+	} /* end if */
+
+	if (nopoll_conn_send_frame (conn, nopoll_true, nopoll_true, NOPOLL_BINARY_FRAME,
+				    -1, (noPollPtr) "content", 0) != -1) {
+		printf ("ERROR (8): expected nopoll_conn_send_frame () to reject a negative length..\n");
+		goto finish;
+	} /* end if */
+
+	if (nopoll_conn_send_frame (conn, nopoll_true, nopoll_true, NOPOLL_BINARY_FRAME,
+				    (long) NOPOLL_MAX_FRAME_SIZE_LIMIT, (noPollPtr) "content", 0) != -1) {
+		printf ("ERROR (9): expected nopoll_conn_send_frame () to reject a length over the supported maximum..\n");
+		goto finish;
+	} /* end if */
+
+	/* the connection must be usable after both rejections: they are
+	 * reported, not fatal */
+	if (nopoll_conn_send_text (conn, "size-limits", 11) != 11) {
+		printf ("ERROR (10): expected the connection to keep working after the rejected frames..\n");
+		goto finish;
+	} /* end if */
+
+	printf ("Test 58: both frame lengths were rejected and the connection still works..\n");
+	result = nopoll_true;
+
+finish:
+	nopoll_conn_close (conn);
+	nopoll_ctx_unref (ctx);
+
+	return result;
+}
+
+/* closing a connection that was already unregistered from the context
+ * (what the built-in loop does as soon as it finds one that is not
+ * working) must release it: the reference left is owned by the caller,
+ * who is handing it over with this very call */
+nopoll_bool test_59 (void)
+{
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	int          refs_before;
+	int          refs_after;
+
+	printf ("Test 59: checking a connection closed after being unregistered is released..\n");
+
+	ctx = create_ctx ();
+	if (ctx == NULL) {
+		printf ("ERROR (1): expected to find proper context creation..\n");
+		return nopoll_false;
+	} /* end if */
+
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR (2): expected to find proper client connection status..\n");
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	if (! nopoll_conn_wait_until_connection_ready (conn, 5)) {
+		printf ("ERROR (3): expected the connection to be ready..\n");
+		nopoll_conn_close (conn);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* the registry holds one reference and this test holds another */
+	refs_before = __nopoll_conn_owner_ref_count (conn);
+	if (! __nopoll_ctx_conn_is_registered (ctx, conn) || refs_before != 2) {
+		printf ("ERROR (4): expected the connection registered with 2 owner references but found registered=%d, refs=%d..\n",
+			__nopoll_ctx_conn_is_registered (ctx, conn), refs_before);
+		nopoll_conn_close (conn);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* drop it from the registry, as the loop does with a broken
+	 * connection */
+	nopoll_ctx_unregister_conn (ctx, conn);
+
+	refs_after = __nopoll_conn_owner_ref_count (conn);
+	if (__nopoll_ctx_conn_is_registered (ctx, conn) || refs_after != 1) {
+		printf ("ERROR (5): expected the connection unregistered with 1 owner reference but found registered=%d, refs=%d..\n",
+			__nopoll_ctx_conn_is_registered (ctx, conn), refs_after);
+		nopoll_conn_close (conn);
+		nopoll_ctx_unref (ctx);
+		return nopoll_false;
+	} /* end if */
+
+	/* this must release it: run under Valgrind, which is what
+	 * reports the leak this test was written for */
+	nopoll_conn_close (conn);
+
+	nopoll_ctx_unref (ctx);
+
+	printf ("Test 59: the connection was closed after being unregistered..\n");
+	return nopoll_true;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -6090,6 +6251,20 @@ int main (int argc, char ** argv)
 		printf ("Test 57: check noPoll can be called back from on ready       [   OK    ]\n");
 	} else {
 		printf ("Test 57: check noPoll can be called back from on ready       [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_58 ()) {
+		printf ("Test 58: check size limits reported by the public API        [   OK    ]\n");
+	} else {
+		printf ("Test 58: check size limits reported by the public API        [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_59 ()) {
+		printf ("Test 59: check close releases an unregistered connection     [   OK    ]\n");
+	} else {
+		printf ("Test 59: check close releases an unregistered connection     [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

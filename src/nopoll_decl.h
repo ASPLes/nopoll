@@ -179,7 +179,7 @@
  */
 #define nopoll_close_socket(s) do {if ((s) >= 0) {close (s);}} while (0)
 /**
- * @brief Conviente macro used to check if disconnect signal is reported by errno system indication.
+ * @brief Convenient macro used to check if disconnect signal is reported by errno system indication.
  */
 #define nopoll_is_disconnected (errno == EPIPE)
 
@@ -436,7 +436,7 @@ typedef enum {
  * an if without braces stole the following else (the classic dangling
  * else), silently changing which branch it belongs to */
 #define nopoll_return_if_fail(ctx, expr)					\
-	do { if (!(expr)) {__nopoll_log (ctx, __function_name__, __file__, __line__, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed at %s (%s:%d)", #expr, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return;} } while (0)
+	do { if (!(expr)) {__nopoll_log (ctx, __function_name__, __file__, __line__, NOPOLL_LEVEL_CRITICAL, "Expression '%s' has failed at %s (%s:%d)", #expr, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return;} } while (0)
 
 /** 
  * @brief Allows to check a condition and return the given value if it
@@ -450,7 +450,7 @@ typedef enum {
  */
 /* see the note at nopoll_return_if_fail () about the do { } while (0) */
 #define nopoll_return_val_if_fail(ctx, expr, val)			\
-	do { if (!(expr)) { __nopoll_log (ctx, __function_name__, __file__, __line__, NOPOLL_LEVEL_CRITICAL, "Expresion '%s' have failed, returning: %s at %s (%s:%d)", #expr, #val, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return val;} } while (0)
+	do { if (!(expr)) { __nopoll_log (ctx, __function_name__, __file__, __line__, NOPOLL_LEVEL_CRITICAL, "Expression '%s' has failed, returning: %s at %s (%s:%d)", #expr, #val, __NOPOLL_PRETTY_FUNCTION__, __NOPOLL_FILE__, __NOPOLL_LINE__); return val;} } while (0)
 
 
 /** 

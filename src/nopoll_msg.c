@@ -165,7 +165,7 @@ int          nopoll_msg_ref_count (noPollMsg * msg)
  * single message, the last message is flagged with FIN = 1 while the
  * rest before go with FIN = 0. 
  *
- * For example, if a user level application is splitted into 4 frame
+ * For example, if a user level application message is split into 4 frame
  * fragments, then the WebSocket peer will receive 3 fragments with
  * FIN = 0 and the last fragment with FIN = 1.
  *
@@ -194,7 +194,7 @@ nopoll_bool  nopoll_msg_is_final (noPollMsg * msg)
  * @brief Allows to check if the message represents a frame fragment.
  *
  * The function allows to check if the provided noPollMsg is a
- * fragment from a bigger frame or message that was splitted as a
+ * fragment from a bigger frame or message that was split as a
  * consequence of not being able to read the entire frame or because
  * it wasn't sent complete from the other side. See \ref
  * nopoll_msg_is_final for more information.

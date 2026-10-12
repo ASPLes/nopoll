@@ -650,9 +650,14 @@ nopoll_bool nopoll_base64_encode (const char  * content,
 	} /* end if */
 
 	if (((size_t) (*output_size)) < bptr->length) {
-		BIO_free_all (b64);
-
+		/* NOTE: the size needed is reported BEFORE releasing the
+		 * BIO. bptr points into the memory BIO, so BIO_free_all
+		 * () releases it too and reading bptr->length afterwards
+		 * was a use after free (caught by test_58, the first
+		 * caller to exercise this branch) */
 		*output_size = (int) bptr->length;
+
+		BIO_free_all (b64);
 		return nopoll_false;
 	}
 
