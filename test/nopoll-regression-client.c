@@ -5706,6 +5706,146 @@ nopoll_bool test_59 (void)
 	return nopoll_true;
 }
 
+/* readline is internal and carries no public prototype, but this test
+ * drives it directly to check the bounded retry below */
+int nopoll_conn_readline (noPollConn * conn, char * buffer, int maxlen);
+
+/* how many retries nopoll_conn_readline () allows before giving up
+ * (NOPOLL_READLINE_NO_ERRNO_MAX in nopoll_conn.c) */
+#define TEST_60_MAX_RETRIES (5)
+
+/* when true the receive handler hands over one byte instead of failing */
+nopoll_bool test_60_deliver_byte = nopoll_false;
+
+/* a read that fails reporting no errno at all: this is what SSL_read
+ * can produce, and what the retry branch was written for */
+int __test_60_receive (noPollConn * conn, char * buffer, int buffer_size)
+{
+	/* avoid compiler warnings */
+	(void) conn;
+
+	if (test_60_deliver_byte && buffer_size > 0) {
+		test_60_deliver_byte = nopoll_false;
+		buffer[0]            = '\n';
+		return 1;
+	} /* end if */
+
+	errno = 0;
+	return -1;
+}
+
+nopoll_bool test_60 (void)
+{
+	noPollCtx  * ctx;
+	noPollConn * conn;
+	char         buffer[64];
+	int          iterator;
+	int          value;
+	nopoll_bool  result = nopoll_false;
+
+	printf ("Test 60: checking a read that reports no errno is retried a bounded number of times..\n");
+
+	ctx = create_ctx ();
+	if (ctx == NULL) {
+		printf ("ERROR (1): expected to find proper context creation..\n");
+		return nopoll_false;
+	} /* end if */
+
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn) || ! nopoll_conn_wait_until_connection_ready (conn, 5)) {
+		printf ("ERROR (2): expected to find proper client connection status..\n");
+		goto finish;
+	} /* end if */
+
+	/* replace the receive handler to produce the condition */
+	conn->receive = __test_60_receive;
+
+	/* the first retries must report "no data by now" and keep the
+	 * connection open */
+	iterator = 0;
+	while (iterator < TEST_60_MAX_RETRIES) {
+		value = nopoll_conn_readline (conn, buffer, 64);
+		if (value != -2) {
+			printf ("ERROR (3): expected -2 on retry %d but found %d..\n", iterator + 1, value);
+			goto finish;
+		} /* end if */
+
+		if (! nopoll_conn_is_ok (conn)) {
+			printf ("ERROR (4): the connection was closed on retry %d, before exhausting the retries..\n", iterator + 1);
+			goto finish;
+		} /* end if */
+
+		iterator++;
+	} /* end while */
+
+	/* one more and the connection must be given up */
+	value = nopoll_conn_readline (conn, buffer, 64);
+	if (value != -1) {
+		printf ("ERROR (5): expected -1 after exhausting the retries but found %d..\n", value);
+		goto finish;
+	} /* end if */
+
+	if (nopoll_conn_is_ok (conn)) {
+		printf ("ERROR (6): expected the connection to be closed after exhausting the retries..\n");
+		goto finish;
+	} /* end if */
+
+	printf ("Test 60: the connection was given up after %d retries..\n", TEST_60_MAX_RETRIES);
+	nopoll_conn_close (conn);
+
+	/* now check a byte actually read resets the count: fail a few
+	 * times, read one byte, and fail again the same amount. The
+	 * connection must still be open */
+	conn = nopoll_conn_new (ctx, "localhost", regtest_port (1234), NULL, NULL, NULL, NULL);
+	if (! nopoll_conn_is_ok (conn) || ! nopoll_conn_wait_until_connection_ready (conn, 5)) {
+		printf ("ERROR (7): expected to find proper client connection status (second connection)..\n");
+		goto finish;
+	} /* end if */
+
+	conn->receive = __test_60_receive;
+
+	iterator = 0;
+	while (iterator < (TEST_60_MAX_RETRIES - 1)) {
+		if (nopoll_conn_readline (conn, buffer, 64) != -2) {
+			printf ("ERROR (8): expected -2 while filling the retry count..\n");
+			goto finish;
+		} /* end if */
+		iterator++;
+	} /* end while */
+
+	/* deliver one byte: a complete line, which resets the count */
+	test_60_deliver_byte = nopoll_true;
+	value = nopoll_conn_readline (conn, buffer, 64);
+	if (value <= 0) {
+		printf ("ERROR (9): expected the line delivered to be reported but found %d..\n", value);
+		goto finish;
+	} /* end if */
+
+	/* the same amount of failures must be allowed again */
+	iterator = 0;
+	while (iterator < (TEST_60_MAX_RETRIES - 1)) {
+		if (nopoll_conn_readline (conn, buffer, 64) != -2) {
+			printf ("ERROR (10): expected -2 after the count was reset (attempt %d)..\n", iterator + 1);
+			goto finish;
+		} /* end if */
+		iterator++;
+	} /* end while */
+
+	if (! nopoll_conn_is_ok (conn)) {
+		printf ("ERROR (11): expected the connection to be open: the retry count was not reset by the byte read..\n");
+		goto finish;
+	} /* end if */
+
+	printf ("Test 60: a byte read reset the retry count..\n");
+	result = nopoll_true;
+
+finish:
+	nopoll_conn_close (conn);
+	nopoll_ctx_unref (ctx);
+
+	return result;
+}
+
 int main (int argc, char ** argv)
 {
 	int iterator;
@@ -6265,6 +6405,13 @@ int main (int argc, char ** argv)
 		printf ("Test 59: check close releases an unregistered connection     [   OK    ]\n");
 	} else {
 		printf ("Test 59: check close releases an unregistered connection     [ FAILED  ]\n");
+		return -1;
+	} /* end if */
+
+	if (test_60 ()) {
+		printf ("Test 60: check bounded retry on reads reporting no errno     [   OK    ]\n");
+	} else {
+		printf ("Test 60: check bounded retry on reads reporting no errno     [ FAILED  ]\n");
 		return -1;
 	} /* end if */
 

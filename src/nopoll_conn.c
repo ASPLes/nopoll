@@ -2520,8 +2520,13 @@ int nopoll_conn_default_send (noPollConn * conn, char * buffer, int buffer_size)
  * -1 - an error has happened while reading
  * -2 - could not read because this connection is on non-blocking mode and there is no data.
  *  n - some data was read.
- * 
+ *
  **/
+
+/* how many consecutive failed reads reporting no errno are retried
+ * before giving the connection up (see the branch using it) */
+#define NOPOLL_READLINE_NO_ERRNO_MAX (5)
+
 int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxlen)
 {
 	int         n, rc;
@@ -2562,6 +2567,11 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 	for (n = 1; n < (maxlen - desp); n++) {
 	nopoll_readline_again:
 		if (( rc = conn->receive (conn, &c, 1)) == 1) {
+			/* a byte was read: the connection is making
+			 * progress, so the no-errno retry count starts
+			 * over (see the branch below) */
+			conn->readline_no_errno_retries = 0;
+
 			*ptr++ = c;
 			if (c == '\x0A')
 				break;
@@ -2600,11 +2610,39 @@ int          nopoll_conn_readline (noPollConn * conn, char  * buffer, int  maxle
 				return -2;
 			}
 
-			if (nopoll_conn_is_ok (conn) && errno == 0 && rc == 0) {
-				nopoll_log (ctx, NOPOLL_LEVEL_WARNING, "unable to read line, but errno is 0, and connection is ok, return to keep on trying..");
-				return -2;
+			/* NOTE: the condition used to be (rc == 0), which
+			 * is unreachable here: this else branch is only
+			 * entered when rc is neither 1 nor 0, so the case
+			 * this check was written for (a failed read that
+			 * reports no errno over a healthy connection,
+			 * which SSL_read can produce) fell into the
+			 * return -1 below and closed a connection that
+			 * was fine.
+			 *
+			 * The retry is bounded: a condition that does not
+			 * clear would otherwise keep the caller asking
+			 * forever, so after NOPOLL_READLINE_NO_ERRNO_MAX
+			 * consecutive times the connection is closed and
+			 * the failure reported. Any byte read resets the
+			 * count */
+			if (nopoll_conn_is_ok (conn) && errno == 0 && rc < 0) {
+				conn->readline_no_errno_retries++;
+
+				if (conn->readline_no_errno_retries <= NOPOLL_READLINE_NO_ERRNO_MAX) {
+					nopoll_log (ctx, NOPOLL_LEVEL_WARNING,
+						    "unable to read line, but errno is 0, and connection is ok, return to keep on trying (%d of %d)..",
+						    conn->readline_no_errno_retries, NOPOLL_READLINE_NO_ERRNO_MAX);
+					return -2;
+				} /* end if */
+
+				nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL,
+					    "unable to read line with errno 0 after %d consecutive attempts, closing conn-id=%d",
+					    conn->readline_no_errno_retries, conn->id);
+				nopoll_conn_shutdown (conn);
+				return -1;
 			}
-			
+
+
 			/* if the conn is closed, just return
 			 * without logging a message */
 			nopoll_log (ctx, NOPOLL_LEVEL_CRITICAL, "unable to read line, error code errno: %d, rc: %d (%s)", 

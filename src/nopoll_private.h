@@ -274,6 +274,16 @@ struct _noPollConn {
 	char * pending_line;
 
 	/**
+	 * @internal Consecutive times nopoll_conn_readline () found a
+	 * failed read that reported no errno over a connection that is
+	 * still ok. That situation is retried (the read is not a real
+	 * failure) but it is bounded: without a limit, a condition that
+	 * does not clear would keep the handshake spinning forever
+	 * instead of closing. Any byte actually read resets it.
+	 */
+	int    readline_no_errno_retries;
+
+	/**
 	 * @internal connection reference counting.
 	 */
 	int    refs;
